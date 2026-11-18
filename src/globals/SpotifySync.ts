@@ -27,5 +27,7 @@ export const SpotifySync: GlobalConfig = {
     // 한국어 이름 맞추기: 어디까지 했는지와 지금까지 바꾼 곡 수
     { name: 'renameOffset', type: 'number', admin: { hidden: true } },
     { name: 'renameChanged', type: 'number', admin: { hidden: true } },
+    // Spotify가 '잠깐 쉬라'고 한 시각까지는 묻지 않아요.
+    { name: 'pausedUntil', type: 'date', admin: { hidden: true } },
   ],
 }

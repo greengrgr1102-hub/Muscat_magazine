@@ -1133,6 +1133,7 @@ export interface SpotifySync {
   scannedCount?: number | null;
   renameOffset?: number | null;
   renameChanged?: number | null;
+  pausedUntil?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1203,6 +1204,7 @@ export interface SpotifySyncSelect<T extends boolean = true> {
   scannedCount?: T;
   renameOffset?: T;
   renameChanged?: T;
+  pausedUntil?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

@@ -13,6 +13,7 @@ import * as migration_20261118_164347_captions_face from './20261118_164347_capt
 import * as migration_20261118_180732_spotify_scanned from './20261118_180732_spotify_scanned';
 import * as migration_20261118_181558_spotify_rename from './20261118_181558_spotify_rename';
 import * as migration_20261118_183226_pick_album from './20261118_183226_pick_album';
+import * as migration_20261118_183834_spotify_pause from './20261118_183834_spotify_pause';
 
 export const migrations = [
   {
@@ -88,6 +89,11 @@ export const migrations = [
   {
     up: migration_20261118_183226_pick_album.up,
     down: migration_20261118_183226_pick_album.down,
-    name: '20261118_183226_pick_album'
+    name: '20261118_183226_pick_album',
+  },
+  {
+    up: migration_20261118_183834_spotify_pause.up,
+    down: migration_20261118_183834_spotify_pause.down,
+    name: '20261118_183834_spotify_pause'
   },
 ];

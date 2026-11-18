@@ -78,7 +78,30 @@ type SpTrack = {
 }
 type SpItem = { added_at?: string; item?: SpTrack; track?: SpTrack }
 
-class SpotifyBusy extends Error {}
+class SpotifyBusy extends Error {
+  until: number
+  constructor(message: string, waitMs: number) {
+    super(message)
+    this.until = Date.now() + waitMs
+  }
+}
+
+const untilLabel = (ms: number) =>
+  new Date(ms).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+
+// Spotify가 쉬라고 한 시간이 아직 안 지났으면 묻지 않아요 (계속 물으면 더 오래 막혀요).
+function pausedMessage(cfg: { pausedUntil?: string | null }) {
+  const t = cfg.pausedUntil ? new Date(cfg.pausedUntil).getTime() : 0
+  return t > Date.now() ? `Spotify가 잠깐 쉬어 가재요. ${untilLabel(t)} 이후에 자동으로 이어서 해요.` : null
+}
+
+async function rememberPause(payload: Payload, e: unknown) {
+  if (e instanceof SpotifyBusy) {
+    await payload.updateGlobal({ slug: 'spotify-sync', overrideAccess: true, data: { pausedUntil: new Date(e.until).toISOString() } })
+    return `Spotify가 잠깐 쉬어 가재요. ${untilLabel(e.until)} 이후에 자동으로 이어서 해요.`
+  }
+  return null
+}
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // Spotify가 "너무 자주 물어본다(429)"고 하면 알려준 시간만큼 기다렸다가 한 번 더 시도해요.
@@ -88,14 +111,14 @@ async function getJSON<T>(url: string, token: string, deadline: number): Promise
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, 'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.5' } })
     if (res.status === 429) {
       const wait = (Number(res.headers.get('retry-after')) || 5) * 1000
-      if (Date.now() + wait > deadline) throw new SpotifyBusy(`Spotify가 잠깐 쉬어 가재요. ${Math.ceil(wait / 1000)}초쯤 뒤에 다시 가져와 주세요.`)
+      if (Date.now() + wait > deadline) throw new SpotifyBusy('Spotify가 잠깐 쉬어 가재요.', wait)
       await sleep(wait)
       continue
     }
     if (!res.ok) return { status: res.status }
     return { status: res.status, body: (await res.json()) as T }
   }
-  throw new SpotifyBusy('Spotify가 잠깐 쉬어 가재요. 조금 뒤에 다시 가져와 주세요.')
+  throw new SpotifyBusy('Spotify가 잠깐 쉬어 가재요.', 60_000)
 }
 
 type ItemsPage = { items?: SpItem[]; next?: string | null; total?: number }
@@ -142,6 +165,8 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
   if (minIntervalMin && cfg.lastSyncedAt && Date.now() - new Date(cfg.lastSyncedAt).getTime() < minIntervalMin * 60_000) {
     return { skipped: 'recent' as const }
   }
+  const paused = pausedMessage(cfg)
+  if (paused) return { error: paused }
 
   let added = 0
   let message = ''
@@ -215,6 +240,8 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
       },
     })
   } catch (e) {
+    const busy = await rememberPause(payload, e)
+    if (busy) return { error: busy }
     message = e instanceof Error ? e.message : '동기화 중 문제가 생겼어요.'
     await payload.updateGlobal({
       slug: 'spotify-sync',
@@ -247,6 +274,8 @@ export async function renameToKorean(payload: Payload) {
   if (!spotifyConfigured() || !cfg.refreshToken) return { error: 'Spotify 연결이 필요해요.' }
   const pid = playlistId(cfg.playlistUrl)
   if (!pid) return { error: '먼저 플레이리스트 링크를 저장해 주세요.' }
+  const paused = pausedMessage(cfg)
+  if (paused) return { error: paused }
   const started = Date.now()
   const deadline = started + 40_000
   let offset = typeof cfg.renameOffset === 'number' ? cfg.renameOffset : 0
@@ -319,11 +348,12 @@ export async function renameToKorean(payload: Payload) {
     })
     return { ok: message, finished }
   } catch (e) {
+    const busy = await rememberPause(payload, e)
     await payload.updateGlobal({
       slug: 'spotify-sync',
       overrideAccess: true,
       data: { renameOffset: offset, renameChanged: changed },
     })
-    return { error: e instanceof Error ? e.message : '이름을 맞추는 중 문제가 생겼어요.' }
+    return { error: busy || (e instanceof Error ? e.message : '곡 정보를 고치는 중 문제가 생겼어요.') }
   }
 }
