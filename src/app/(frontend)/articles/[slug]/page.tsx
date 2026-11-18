@@ -44,8 +44,7 @@ export default async function ArticlePage({ params }: { params: Params }) {
     ['Published', formatDate(article.publishedAt)],
   ]
   if (author?.name) metaInfo.push(['Editor', author.name])
-  const isInterview = article.type === 'interview'
-  if (artists.length && !isInterview)
+  if (artists.length)
     metaInfo.push([
       'Artists',
       <span key="a" className="inline-links">
@@ -95,19 +94,6 @@ export default async function ArticlePage({ params }: { params: Params }) {
           ) : null}
           <div className="article-body wrap grid12">
             <aside className="article-side col-3">
-              {isInterview && artists.length ? (
-                <div className={`interviewee${artists.length > 1 ? ' interviewee--multi' : ''}`}>
-                  {artists.map((ar) => (
-                    <Link key={ar.id} href={`/artists/${ar.slug}`} className="interviewee__item">
-                      {asMedia(ar.photo)?.url ? (
-                        <Img media={ar.photo} ratio="4 / 5" className="interviewee__img" sizes="(max-width: 768px) 50vw, 25vw" priority />
-                      ) : null}
-                      <span className="label">Interviewee</span>
-                      <span className="h-sm interviewee__name">{ar.name}</span>
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
               <dl className="meta-list">
                 {metaInfo.map(([k, v]) => (
                   <div key={k}>
@@ -210,6 +196,9 @@ function ReviewBody({ article }: { article: Article }) {
 }
 
 function InterviewBody({ article }: { article: Article }) {
+  const speaker = asArtists(article.artists)[0]
+  const photo = speaker ? asMedia(speaker.photo) : null
+  const thumb = photo?.sizes?.thumb?.url || photo?.sizes?.card?.url || photo?.url
   return (
     <>
       {(article.qa || []).map((q, i) => (
@@ -219,8 +208,22 @@ function InterviewBody({ article }: { article: Article }) {
             <span className="qa__mark qa__mark--q">Q.</span>
             <p className="h-md">{q.question}</p>
           </div>
-          <div className="qa__row">
-            <span className="qa__mark">A.</span>
+          <div className={`qa__row${speaker ? ' qa__a' : ''}`}>
+            {speaker ? (
+              <span className="qa__who">
+                {thumb ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={thumb} alt={speaker.name} className="qa__face" loading="lazy" />
+                ) : (
+                  <span className="qa__face qa__face--empty" aria-hidden>
+                    {speaker.name.slice(0, 1)}
+                  </span>
+                )}
+                <span className="qa__who-name">{speaker.name}</span>
+              </span>
+            ) : (
+              <span className="qa__mark">A.</span>
+            )}
             <RichText data={q.answer} />
           </div>
           {q.pullQuote ? <blockquote className="pull-quote h-lg">{q.pullQuote}</blockquote> : null}

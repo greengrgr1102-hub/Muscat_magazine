@@ -1057,38 +1057,6 @@ button {
     padding-bottom: 56px;
   }
 }
-/* 인터뷰: 사이드에 아티스트 얼굴 + 이름 */
-.interviewee {
-  display: grid;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.interviewee--multi {
-  grid-template-columns: 1fr 1fr;
-}
-.interviewee__item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.interviewee__img {
-  margin-bottom: 8px;
-  transition: opacity 0.2s;
-}
-.interviewee__item:hover .interviewee__img {
-  opacity: 0.85;
-}
-.interviewee__item:hover .interviewee__name {
-  color: var(--accent-ink);
-}
-@media (max-width: 768px) {
-  .interviewee {
-    grid-template-columns: minmax(0, 200px);
-  }
-  .interviewee--multi {
-    grid-template-columns: repeat(2, minmax(0, 160px));
-  }
-}
 .meta-list > div {
   display: flex;
   flex-direction: column;
@@ -1241,6 +1209,44 @@ button {
 .qa__row .prose {
   padding-top: 0.15em;
 }
+/* 답변: 왼쪽에 작은 아티스트 사진, 그 아래 이름 */
+.qa:has(.qa__a) .qa__row {
+  grid-template-columns: 64px 1fr;
+  gap: 20px;
+}
+.qa:has(.qa__a) .qa__q .qa__mark {
+  text-align: center;
+}
+.qa__who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+.qa__face {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--tint);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--accent);
+}
+.qa__face--empty {
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--accent-ink);
+}
+.qa__who-name {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--ink-muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+  max-width: 64px;
+}
 .pull-quote {
   margin-top: 44px;
   border-left: 2px solid var(--accent);
@@ -1251,6 +1257,18 @@ button {
   .qa__row {
     grid-template-columns: 24px 1fr;
     gap: 10px;
+  }
+  .qa:has(.qa__a) .qa__row {
+    grid-template-columns: 48px 1fr;
+    gap: 12px;
+  }
+  .qa__face {
+    width: 36px;
+    height: 36px;
+  }
+  .qa__who-name {
+    font-size: 10px;
+    max-width: 48px;
   }
   .pull-quote {
     padding-left: 20px;
