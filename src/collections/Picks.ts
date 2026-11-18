@@ -23,11 +23,12 @@ export const Picks: CollectionConfig = {
   access: { read: () => true },
   hooks: {
     beforeChange: [
-      async ({ data, originalDoc }) => {
+      async ({ data, originalDoc, operation }) => {
         const sp = parseSpotify(data.spotifyUrl)
         if (!sp) return data
         const changed = data.spotifyUrl !== originalDoc?.spotifyUrl
-        if (!changed && data.track && data.coverUrl) return data
+        // 곡 이름과 커버가 이미 있으면(플레이리스트 자동 가져오기 등) Spotify에 다시 묻지 않아요.
+        if ((!changed || operation === 'create') && data.track && data.coverUrl) return data
         try {
           const res = await fetch(
             `https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${sp.kind}/${sp.id}`)}`,

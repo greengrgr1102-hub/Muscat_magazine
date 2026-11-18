@@ -1,5 +1,6 @@
 import 'server-only'
 import type { Payload } from 'payload'
+import { parseSpotify } from '../collections/Picks'
 
 // Spotify 연동 — 에디터 본인 계정의 플레이리스트를 읽어 Editor's Picks로 옮깁니다.
 // 필요한 환경 변수: SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET (Vercel 프로젝트 설정에서 입력)
@@ -114,22 +115,35 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
 
   let added = 0
   let message = ''
+  const started = Date.now()
+  const BUDGET_MS = 40_000 // 한 번에 너무 오래 걸리면 끊기므로, 40초 안에서 가져오고 나머지는 다음에 이어서
   try {
     const tok = await refreshAccess(cfg.refreshToken)
     const items = await playlistItems(tok.access_token, pid)
     const artists = (await payload.find({ collection: 'artists', limit: 1000, depth: 0, overrideAccess: true })).docs
-    for (const it of items) {
-      const t = it.item || it.track
-      if (!t?.id || (t.type && t.type !== 'track')) continue
-      const url = `https://open.spotify.com/track/${t.id}`
-      const exists = await payload.find({
-        collection: 'picks',
-        where: { spotifyUrl: { like: t.id } },
-        limit: 1,
-        depth: 0,
-        overrideAccess: true,
-      })
-      if (exists.docs.length) continue
+    // 이미 있는 곡 목록을 한 번에 불러와서 비교합니다.
+    const existing = await payload.find({
+      collection: 'picks',
+      pagination: false,
+      depth: 0,
+      overrideAccess: true,
+      select: { spotifyUrl: true },
+    })
+    const have = new Set(
+      existing.docs.map((d) => parseSpotify((d as { spotifyUrl?: string }).spotifyUrl || '')?.id).filter(Boolean) as string[],
+    )
+    const todo = items
+      .map((it) => ({ it, t: it.item || it.track }))
+      .filter(({ t }) => t?.id && (!t.type || t.type === 'track') && !have.has(t.id))
+    let left = 0
+    for (let i = 0; i < todo.length; i++) {
+      if (Date.now() - started > BUDGET_MS) {
+        left = todo.length - i
+        break
+      }
+      const { it, t } = todo[i]
+      if (!t?.id || have.has(t.id)) continue
+      have.add(t.id)
       const names = (t.artists || []).map((a) => a.name)
       const match = artists.find((a) =>
         names.some((n) => norm(n) === norm(a.name) || (a.nameAlt && norm(a.nameAlt).includes(norm(n)))),
@@ -138,7 +152,7 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
         collection: 'picks',
         overrideAccess: true,
         data: {
-          spotifyUrl: url,
+          spotifyUrl: `https://open.spotify.com/track/${t.id}`,
           track: t.name,
           artistName: names.join(', ') || 'Unknown',
           coverUrl: t.album?.images?.[0]?.url,
@@ -148,11 +162,20 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
       })
       added++
     }
-    message = added ? `새 곡 ${added}곡을 가져왔어요.` : '새로 추가된 곡이 없어요.'
+    message = left
+      ? `새 곡 ${added}곡을 가져왔어요. 곡이 많아서 ${left}곡은 남았어요 — 「지금 가져오기」를 한 번 더 누르면 이어서 가져와요.`
+      : added
+        ? `새 곡 ${added}곡을 가져왔어요.`
+        : '새로 추가된 곡이 없어요.'
     await payload.updateGlobal({
       slug: 'spotify-sync',
       overrideAccess: true,
-      data: { lastSyncedAt: new Date().toISOString(), lastResult: message, ...(tok.refresh_token ? { refreshToken: tok.refresh_token } : {}) },
+      data: {
+        // 남은 곡이 있으면 다음 자동 확인 때 바로 이어서 가져오도록 시각을 비워 둡니다.
+        lastSyncedAt: left ? null : new Date().toISOString(),
+        lastResult: message,
+        ...(tok.refresh_token ? { refreshToken: tok.refresh_token } : {}),
+      },
     })
   } catch (e) {
     message = e instanceof Error ? e.message : '동기화 중 문제가 생겼어요.'

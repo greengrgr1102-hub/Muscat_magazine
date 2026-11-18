@@ -8,3 +8,6 @@ export async function GET() {
   const r = await syncPlaylist(payload, { minIntervalMin: 10 })
   return NextResponse.json(r)
 }
+
+// Spotify 가져오기가 도는 화면: 넉넉하게 60초까지 기다려요.
+export const maxDuration = 60

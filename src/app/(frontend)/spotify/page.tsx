@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import { headers } from 'next/headers'
-import { getClient, formatDate } from '@/lib/data'
+import { currentAdmin } from '@/lib/admin'
+import { formatDate } from '@/lib/data'
 import { redirectUri, spotifyKeyProblem } from '@/lib/spotify'
 import { PlaylistForm, SyncButton } from './SpotifyForms'
 
@@ -14,8 +14,7 @@ const ERR: Record<string, string> = {
 
 export default async function SpotifyPage({ searchParams }: { searchParams: Promise<{ e?: string; ok?: string }> }) {
   const sp = await searchParams
-  const payload = await getClient()
-  const { user } = await payload.auth({ headers: await headers() })
+  const { payload, user } = await currentAdmin()
 
   if (!user) {
     return (
@@ -89,3 +88,6 @@ export default async function SpotifyPage({ searchParams }: { searchParams: Prom
     </section>
   )
 }
+
+// Spotify 가져오기가 도는 화면: 넉넉하게 60초까지 기다려요.
+export const maxDuration = 60

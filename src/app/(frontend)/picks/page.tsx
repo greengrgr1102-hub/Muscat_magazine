@@ -68,3 +68,6 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
     </>
   )
 }
+
+// Spotify 가져오기가 도는 화면: 넉넉하게 60초까지 기다려요.
+export const maxDuration = 60
