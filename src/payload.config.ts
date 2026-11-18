@@ -33,7 +33,10 @@ export default buildConfig({
   serverURL: SERVER_URL,
   admin: {
     user: Users.slug,
-    meta: { titleSuffix: ' — Muscat Magazine 관리자' },
+    meta: {
+      titleSuffix: ' — Muscat Magazine 관리자',
+      icons: [{ rel: 'icon', type: 'image/png', url: '/favicon.png' }],
+    },
     importMap: {
       baseDir: path.resolve(dirname),
     },
