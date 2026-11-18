@@ -1,14 +1,12 @@
-import { headers } from 'next/headers'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
-import { getClient } from '@/lib/data'
+import { currentAdmin } from '@/lib/admin'
 import { SPOTIFY_SCOPES, clientId, redirectUri, siteUrl, spotifyConfigured } from '@/lib/spotify'
 
 // 관리자만: Spotify 로그인 화면으로 보냅니다.
 export async function GET() {
-  const payload = await getClient()
-  const { user } = await payload.auth({ headers: await headers() })
+  const { payload, user } = await currentAdmin()
   if (!user) return NextResponse.redirect(`${siteUrl()}/admin/login?redirect=%2Fspotify`)
   if (!spotifyConfigured()) return NextResponse.redirect(`${siteUrl()}/spotify?e=config`)
   const state = randomBytes(16).toString('hex')
