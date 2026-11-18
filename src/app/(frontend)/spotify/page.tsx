@@ -1,0 +1,88 @@
+import type { Metadata } from 'next'
+import { headers } from 'next/headers'
+import { getClient, formatDate } from '@/lib/data'
+import { redirectUri, spotifyConfigured } from '@/lib/spotify'
+import { PlaylistForm, SyncButton } from './SpotifyForms'
+
+export const metadata: Metadata = { title: 'Spotify 연동', robots: { index: false, follow: false } }
+
+const ERR: Record<string, string> = {
+  config: 'Vercel에 SPOTIFY_CLIENT_ID와 SPOTIFY_CLIENT_SECRET이 아직 없어요. 아래 1단계를 먼저 해 주세요.',
+  denied: 'Spotify 연결이 취소됐어요. 다시 시도해 주세요.',
+  token: 'Spotify 연결에 실패했어요. Spotify 앱 설정의 Redirect URI가 아래 주소와 똑같은지 확인해 주세요.',
+}
+
+export default async function SpotifyPage({ searchParams }: { searchParams: Promise<{ e?: string; ok?: string }> }) {
+  const sp = await searchParams
+  const payload = await getClient()
+  const { user } = await payload.auth({ headers: await headers() })
+
+  if (!user) {
+    return (
+      <section className="wrap section stack-20" style={{ maxWidth: 720, paddingTop: 96 }}>
+        <p className="label">Admin · Spotify</p>
+        <h1 className="h-xl">Spotify 연동</h1>
+        <p className="muted">관리자만 쓸 수 있는 화면이에요. 먼저 로그인해 주세요.</p>
+        <a className="btn btn--filled" href="/admin/login?redirect=%2Fspotify">
+          <span>관리자 로그인</span>
+        </a>
+      </section>
+    )
+  }
+
+  const cfg = await payload.findGlobal({ slug: 'spotify-sync', overrideAccess: true })
+  const configured = spotifyConfigured()
+  const connected = Boolean(cfg.refreshToken)
+
+  return (
+    <section className="wrap section stack-48" style={{ maxWidth: 760, paddingTop: 96 }}>
+      <div className="stack-16">
+        <p className="label">Admin · Spotify</p>
+        <h1 className="h-xl">Spotify 연동</h1>
+        <p className="muted">
+          내 Spotify 플레이리스트에 곡을 추가하면 Editor&apos;s Picks에 자동으로 올라와요. 하루 한 번, 그리고 누군가
+          Editor&apos;s Picks를 열 때(최대 한 시간에 한 번) 새 곡을 확인해요. 코멘트와 태그는 나중에 관리자 화면에서
+          덧붙이면 돼요.
+        </p>
+        {sp.e ? <p style={{ color: '#B3261E' }}>{ERR[sp.e] || '문제가 생겼어요.'}</p> : null}
+        {sp.ok ? <p style={{ color: 'var(--accent-ink)' }}>Spotify 계정이 연결됐어요.</p> : null}
+      </div>
+
+      <div className="stack-12">
+        <p className="label">1단계 · Spotify 앱 정보 {configured ? '✓' : ''}</p>
+        {configured ? (
+          <p>Vercel에 Spotify 앱 정보가 들어가 있어요.</p>
+        ) : (
+          <p className="muted">
+            Spotify 개발자 대시보드에서 앱을 만들고, 받은 Client ID·Client Secret을 Vercel 환경 변수에 넣어 주세요. 앱의
+            Redirect URI에는 아래 주소를 그대로 넣어야 해요.
+          </p>
+        )}
+        <code style={{ background: 'var(--surface)', padding: '10px 14px', wordBreak: 'break-all' }}>{redirectUri()}</code>
+      </div>
+
+      <div className="stack-12">
+        <p className="label">2단계 · 내 Spotify 계정 연결 {connected ? '✓' : ''}</p>
+        {connected ? <p>연결된 계정: {cfg.connectedAs}</p> : null}
+        <a className={`btn ${connected ? 'btn--outline' : 'btn--filled'}`} href="/spotify/login">
+          <span>{connected ? '다시 연결하기' : 'Spotify로 연결하기'}</span>
+        </a>
+      </div>
+
+      <div className="stack-12">
+        <p className="label">3단계 · 플레이리스트 정하기 {cfg.playlistUrl ? '✓' : ''}</p>
+        <PlaylistForm initial={cfg.playlistUrl} />
+      </div>
+
+      <div className="stack-12">
+        <p className="label">가져오기</p>
+        {cfg.lastSyncedAt ? (
+          <p className="muted small">
+            마지막 확인: {formatDate(cfg.lastSyncedAt)} {new Date(cfg.lastSyncedAt).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit' })} · {cfg.lastResult}
+          </p>
+        ) : null}
+        <SyncButton />
+      </div>
+    </section>
+  )
+}

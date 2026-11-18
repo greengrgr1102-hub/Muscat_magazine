@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { after } from 'next/server'
 import { PickGrid } from '@/components/Picks'
-import { findPicks, getTag } from '@/lib/data'
+import { findPicks, getClient, getTag } from '@/lib/data'
+import { syncPlaylist } from '@/lib/spotify'
 
 export const metadata: Metadata = {
   title: "Editor's Picks",
@@ -12,6 +14,10 @@ const PER_PAGE = 24
 
 export default async function PicksPage({ searchParams }: { searchParams: Promise<{ page?: string; tag?: string }> }) {
   const sp = await searchParams
+  // 페이지를 연 뒤에, 한 시간 넘게 지났으면 Spotify 플레이리스트에서 새 곡을 확인해요.
+  after(async () => {
+    await syncPlaylist(await getClient(), { minIntervalMin: 60 }).catch(() => null)
+  })
   const page = Math.max(1, Number(sp.page) || 1)
   const tag = sp.tag ? await getTag(sp.tag) : null
   const res = await findPicks({ where: tag ? { tags: { in: [tag.id] } } : undefined, limit: PER_PAGE * page })

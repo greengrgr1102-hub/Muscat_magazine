@@ -65,9 +65,8 @@ export const Picks: CollectionConfig = {
       name: 'comment',
       label: '에디터 한 줄',
       type: 'textarea',
-      required: true,
       maxLength: 300,
-      admin: { description: '왜 좋았는지 한두 문장으로' },
+      admin: { description: '왜 좋았는지 한두 문장으로 (비워 둬도 돼요)' },
     },
     {
       type: 'row',

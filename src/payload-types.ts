@@ -104,10 +104,12 @@ export interface Config {
   globals: {
     'site-settings': SiteSetting;
     'about-page': AboutPage;
+    'spotify-sync': SpotifySync;
   };
   globalsSelect: {
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     'about-page': AboutPageSelect<false> | AboutPageSelect<true>;
+    'spotify-sync': SpotifySyncSelect<false> | SpotifySyncSelect<true>;
   };
   locale: null;
   widgets: {
@@ -488,9 +490,9 @@ export interface Pick {
   spotifyUrl: string;
   artistName: string;
   /**
-   * 왜 좋았는지 한두 문장으로
+   * 왜 좋았는지 한두 문장으로 (비워 둬도 돼요)
    */
-  comment: string;
+  comment?: string | null;
   pickedAt: string;
   /**
    * 비워 두면 Spotify에서 가져와요
@@ -1011,6 +1013,25 @@ export interface AboutPage {
   createdAt?: string | null;
 }
 /**
+ * 연결·동기화는 사이트 주소 뒤에 /spotify 를 붙인 화면에서 할 수 있어요.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "spotify-sync".
+ */
+export interface SpotifySync {
+  id: number;
+  /**
+   * 내 Spotify 플레이리스트 링크 (공유 → 링크 복사)
+   */
+  playlistUrl?: string | null;
+  connectedAs?: string | null;
+  lastSyncedAt?: string | null;
+  lastResult?: string | null;
+  refreshToken?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings_select".
  */
@@ -1058,6 +1079,20 @@ export interface AboutPageSelect<T extends boolean = true> {
         description?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "spotify-sync_select".
+ */
+export interface SpotifySyncSelect<T extends boolean = true> {
+  playlistUrl?: T;
+  connectedAs?: T;
+  lastSyncedAt?: T;
+  lastResult?: T;
+  refreshToken?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

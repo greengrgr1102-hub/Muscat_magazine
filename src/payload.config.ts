@@ -18,6 +18,7 @@ import { Artists } from './collections/Artists'
 import { Articles } from './collections/Articles'
 import { Inquiries, Subscribers } from './collections/Inquiries'
 import { AboutPage, SiteSettings } from './globals/Settings'
+import { SpotifySync } from './globals/SpotifySync'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -48,7 +49,7 @@ export default buildConfig({
     supportedLanguages: { ko, en },
   },
   collections: [Articles, Picks, Artists, Genres, Tags, Media, Inquiries, Subscribers, Users],
-  globals: [SiteSettings, AboutPage],
+  globals: [SiteSettings, AboutPage, SpotifySync],
   editor: lexicalEditor(),
   secret: SECRET,
   typescript: {

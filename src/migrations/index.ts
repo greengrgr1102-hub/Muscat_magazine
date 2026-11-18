@@ -4,6 +4,7 @@ import * as migration_20261118_053500_seed_genres from './20261118_053500_seed_g
 import * as migration_20261118_110532_blob_object_key from './20261118_110532_blob_object_key';
 import * as migration_20261118_112029_editor_picks from './20261118_112029_editor_picks';
 import * as migration_20261118_114020_picks_custom_tags from './20261118_114020_picks_custom_tags';
+import * as migration_20261118_114828_spotify_sync from './20261118_114828_spotify_sync';
 
 export const migrations = [
   {
@@ -34,6 +35,11 @@ export const migrations = [
   {
     up: migration_20261118_114020_picks_custom_tags.up,
     down: migration_20261118_114020_picks_custom_tags.down,
-    name: '20261118_114020_picks_custom_tags'
+    name: '20261118_114020_picks_custom_tags',
+  },
+  {
+    up: migration_20261118_114828_spotify_sync.up,
+    down: migration_20261118_114828_spotify_sync.down,
+    name: '20261118_114828_spotify_sync'
   },
 ];
