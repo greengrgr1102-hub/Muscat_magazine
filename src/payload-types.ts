@@ -289,6 +289,10 @@ export interface Article {
     };
     [k: string]: unknown;
   } | null;
+  /**
+   * 여러 장을 한 번에 올릴 수 있어요. "새로 만들기"에서 사진을 여러 장 끌어다 놓으면 한꺼번에 올라가요. 글 맨 아래에 사진 모음으로 보여요. 끌어서 순서를 바꿀 수 있어요.
+   */
+  gallery?: (number | Media)[] | null;
   listen?:
     | {
         service: 'melon' | 'spotify' | 'youtube' | 'apple' | 'bandcamp' | 'soundcloud' | 'instagram' | 'other';
@@ -354,6 +358,7 @@ export interface Media {
    * 이미지를 설명하는 짧은 문장 (예: Album Title 앨범 커버)
    */
   alt: string;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -726,6 +731,7 @@ export interface ArticlesSelect<T extends boolean = true> {
         id?: T;
       };
   body?: T;
+  gallery?: T;
   listen?:
     | T
     | {
@@ -815,6 +821,7 @@ export interface TagsSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

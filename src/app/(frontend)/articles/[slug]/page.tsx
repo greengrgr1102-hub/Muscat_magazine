@@ -107,6 +107,7 @@ export default async function ArticlePage({ params }: { params: Params }) {
               {article.type === 'interview' ? <InterviewBody article={article} /> : null}
               {article.type === 'release' ? <ReleaseBody article={article} /> : null}
               <RichText data={article.body} />
+              <Gallery items={article.gallery} />
               <ListenLinks links={article.listen} label="Listen" />
               {article.tags?.length ? (
                 <div className="chips">
@@ -290,6 +291,21 @@ function PlaylistBody({ article }: { article: Article }) {
         </ol>
         <RichText data={article.body} />
       </div>
+    </div>
+  )
+}
+
+function Gallery({ items }: { items: Article['gallery'] }) {
+  const photos = (items || []).map((m) => asMedia(m)).filter((m): m is NonNullable<ReturnType<typeof asMedia>> => Boolean(m?.url))
+  if (!photos.length) return null
+  return (
+    <div className={`gallery ${photos.length === 1 ? 'gallery--single' : ''}`}>
+      {photos.map((m) => (
+        <figure key={m.id} className="gallery__item">
+          <Img media={m} ratio={m.width && m.height ? `${m.width} / ${m.height}` : '4 / 3'} sizes="(max-width: 900px) 100vw, 50vw" />
+          {m.alt ? <figcaption className="small muted">{m.alt}</figcaption> : null}
+        </figure>
+      ))}
     </div>
   )
 }

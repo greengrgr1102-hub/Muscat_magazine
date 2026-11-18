@@ -242,6 +242,17 @@ export const Articles: CollectionConfig = {
               type: 'richText',
               admin: { description: '본문 맨 끝에 오는 글' },
             },
+            {
+              name: 'gallery',
+              label: '사진 모음 (선택)',
+              type: 'upload',
+              relationTo: 'media',
+              hasMany: true,
+              admin: {
+                description:
+                  '여러 장을 한 번에 올릴 수 있어요. "새로 만들기"에서 사진을 여러 장 끌어다 놓으면 한꺼번에 올라가요. 글 맨 아래에 사진 모음으로 보여요. 끌어서 순서를 바꿀 수 있어요.',
+              },
+            },
           ],
         },
         {
