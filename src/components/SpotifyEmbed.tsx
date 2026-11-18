@@ -91,5 +91,13 @@ export function SpotifyEmbed({
   }, [uri, embed, height, autoPlay, title])
 
   if (!uri) return null
-  return <div ref={box} className={`spotify-embed ${className}`} style={{ minHeight: height }} aria-label={`Spotify 플레이어: ${title}`} />
+  // Spotify가 높이를 마음대로 줄이지 않도록 CSS 변수로 높이를 고정해요.
+  return (
+    <div
+      ref={box}
+      className={`spotify-embed ${className}`}
+      style={{ minHeight: height, ['--embed-h' as string]: `${height}px` }}
+      aria-label={`Spotify 플레이어: ${title}`}
+    />
+  )
 }

@@ -2341,6 +2341,8 @@ figure {
   display: block;
   border: 0;
   border-radius: 12px;
+  width: 100% !important;
+  height: var(--embed-h, 152px) !important;
 }
 .epick__media--player {
   aspect-ratio: auto;

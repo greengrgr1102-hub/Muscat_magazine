@@ -89,8 +89,8 @@ export default async function PickPage({ params }: { params: Params }) {
       {similar.docs.length ? (
         <section className="wrap section">
           <SectionHeader
-            title={similar.filled ? '최근 추천곡' : '비슷한 곡'}
-            right={<span className="muted small">{similar.filled ? '' : '같은 취향 태그·장르로 골랐어요'}</span>}
+            title={similar.filled ? '이런 곡은 어때요' : '비슷한 곡 추천'}
+            right={<span className="muted small">{similar.filled ? '랜덤으로 골랐어요' : '장르·취향 태그가 비슷한 곡이에요'}</span>}
           />
           <PickGrid picks={similar.docs} />
         </section>

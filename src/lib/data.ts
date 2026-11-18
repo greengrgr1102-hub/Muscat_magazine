@@ -220,39 +220,82 @@ const ids = (list: unknown) =>
   (Array.isArray(list) ? list : []).map((x) => (typeof x === 'object' && x ? (x as { id: number }).id : (x as number)))
 
 /** 같은 취향 태그·장르·아티스트를 많이 공유할수록 위로 오는 '비슷한 곡'. */
-export async function similarPicks(pick: import('@/payload-types').Pick, limit = 6) {
+export async function similarPicks(pick: import('@/payload-types').Pick, limit = 12) {
   const payload = await getClient()
+  type Row = { id: number; artistName?: string; genres?: unknown; tags?: unknown }
+  const firstArtist = (n?: string | null) => (n || '').split(',')[0].trim().toLowerCase()
+  const me = firstArtist(pick.artistName)
   const tagIds = ids(pick.tags)
-  const genreIds = ids(pick.genres)
-  const artistId = typeof pick.artist === 'object' && pick.artist ? pick.artist.id : pick.artist
+  let genreIds = ids(pick.genres)
+  // 이 곡에 장르가 없으면, 같은 아티스트의 다른 곡에 붙은 장르를 빌려 써요.
+  if (!genreIds.length && me) {
+    const same = await payload.find({
+      collection: 'picks',
+      where: { artistName: { like: pick.artistName.split(',')[0].trim() } },
+      limit: 50,
+      depth: 0,
+      select: { genres: true },
+    })
+    const count = new Map<number, number>()
+    for (const d of same.docs) for (const g of ids((d as Row).genres as never)) count.set(g, (count.get(g) || 0) + 1)
+    genreIds = [...count.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([g]) => g)
+  }
   const or: Where[] = []
   if (tagIds.length) or.push({ tags: { in: tagIds } })
   if (genreIds.length) or.push({ genres: { in: genreIds } })
-  if (artistId) or.push({ artist: { equals: artistId } })
   const pool = or.length
-    ? (await payload.find({ collection: 'picks', where: { and: [{ id: { not_equals: pick.id } }, { or }] }, limit: 200, depth: 1 })).docs
+    ? ((
+        await payload.find({
+          collection: 'picks',
+          where: { and: [{ id: { not_equals: pick.id } }, { or }] },
+          pagination: false,
+          depth: 0,
+          select: { artistName: true, genres: true, tags: true },
+        })
+      ).docs as Row[])
     : []
-  const score = (p: typeof pick) => {
-    const t = ids(p.tags).filter((x) => tagIds.includes(x)).length
-    const g = ids(p.genres).filter((x) => genreIds.includes(x)).length
-    const a = artistId && (typeof p.artist === 'object' && p.artist ? p.artist.id : p.artist) === artistId ? 1 : 0
-    return t * 3 + g * 2 + a
+  // 같은 점수끼리는 섞어서, 열 때마다 조금씩 다른 곡이 나오게 해요.
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[pool[i], pool[j]] = [pool[j], pool[i]]
+  }
+  const score = (p: Row) => {
+    const t = ids(p.tags as never).filter((x) => tagIds.includes(x)).length
+    const gs = ids(p.genres as never)
+    const g = gs.filter((x) => genreIds.includes(x)).length
+    // 장르가 딱 겹칠수록(덜 섞일수록) 더 비슷하다고 봐요.
+    const exact = g && g === gs.length && g === genreIds.length ? 1 : 0
+    return t * 3 + g * 2 + exact
   }
   const ranked = pool
     .map((p) => ({ p, s: score(p) }))
     .filter((x) => x.s > 0)
-    .sort((a, b) => b.s - a.s || String(b.p.pickedAt).localeCompare(String(a.p.pickedAt)))
-    .map((x) => x.p)
-    .slice(0, limit)
-  if (ranked.length >= limit) return { docs: ranked, filled: false }
-  // 비슷한 곡이 모자라면 최근 추천곡으로 채웁니다.
-  const exclude = [pick.id, ...ranked.map((p) => p.id)]
-  const recent = await payload.find({
-    collection: 'picks',
-    where: { id: { not_in: exclude } },
-    sort: '-pickedAt',
-    limit: limit - ranked.length,
-    depth: 1,
-  })
-  return { docs: [...ranked, ...recent.docs], filled: ranked.length === 0 }
+    .sort((a, b) => b.s - a.s)
+  // 한 아티스트가 목록을 다 차지하지 않게 아티스트당 2곡까지만.
+  const perArtist = new Map<string, number>()
+  const chosen: number[] = []
+  for (const { p } of ranked) {
+    const a = firstArtist(p.artistName)
+    if ((perArtist.get(a) || 0) >= (a === me ? 1 : 2)) continue
+    perArtist.set(a, (perArtist.get(a) || 0) + 1)
+    chosen.push(p.id)
+    if (chosen.length >= limit) break
+  }
+  let filled = false
+  if (chosen.length < limit) {
+    // 그래도 모자라면 아무 곡이나 랜덤으로 채워요.
+    const all = (await payload.find({ collection: 'picks', pagination: false, depth: 0, select: { artistName: true } })).docs
+    const rest = all.filter((d) => d.id !== pick.id && !chosen.includes(d.id as number))
+    for (let i = 0; i < limit - chosen.length && rest.length; i++) {
+      const k = Math.floor(Math.random() * rest.length)
+      chosen.push(rest.splice(k, 1)[0].id as number)
+    }
+    filled = ranked.length === 0
+  }
+  const docs = chosen.length
+    ? (await payload.find({ collection: 'picks', where: { id: { in: chosen } }, limit: chosen.length, depth: 1 })).docs
+    : []
+  const order = new Map(chosen.map((id, i) => [id, i]))
+  docs.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+  return { docs, filled }
 }
