@@ -22,5 +22,7 @@ export const SpotifySync: GlobalConfig = {
     { name: 'lastResult', label: '마지막 결과', type: 'text', admin: { readOnly: true } },
     // 화면에 보이지 않는 연결 정보
     { name: 'refreshToken', type: 'text', admin: { hidden: true } },
+    // 지난번에 끝까지 확인한 플레이리스트 곡 수 — 다음엔 그 뒤쪽(새로 추가된 곡)만 읽어요.
+    { name: 'scannedCount', type: 'number', admin: { hidden: true } },
   ],
 }

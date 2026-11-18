@@ -10,6 +10,7 @@ import * as migration_20261118_150834_article_gallery from './20261118_150834_ar
 import * as migration_20261118_155506_stats from './20261118_155506_stats';
 import * as migration_20261118_162229_band_members from './20261118_162229_band_members';
 import * as migration_20261118_164347_captions_face from './20261118_164347_captions_face';
+import * as migration_20261118_180732_spotify_scanned from './20261118_180732_spotify_scanned';
 
 export const migrations = [
   {
@@ -70,6 +71,11 @@ export const migrations = [
   {
     up: migration_20261118_164347_captions_face.up,
     down: migration_20261118_164347_captions_face.down,
-    name: '20261118_164347_captions_face'
+    name: '20261118_164347_captions_face',
+  },
+  {
+    up: migration_20261118_180732_spotify_scanned.up,
+    down: migration_20261118_180732_spotify_scanned.down,
+    name: '20261118_180732_spotify_scanned'
   },
 ];
