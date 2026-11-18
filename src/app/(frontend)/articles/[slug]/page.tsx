@@ -199,7 +199,7 @@ function InterviewBody({ article }: { article: Article }) {
         <div key={q.id || i} className="qa">
           {q.background ? <p className="qa__bg">{q.background}</p> : null}
           <div className="qa__row qa__q">
-            <span className="qa__mark">Q.</span>
+            <span className="qa__mark qa__mark--q">Q.</span>
             <p className="h-md">{q.question}</p>
           </div>
           <div className="qa__row">

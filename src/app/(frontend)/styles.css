@@ -4,12 +4,13 @@
 :root {
   --bg: #fafafa;
   --surface: #efefeb;
-  --tint: #e4ecc6;
+  --tint: #e2f3e8; /* 로고 녹색을 아주 옅게 — 이미지 자리, 배경 터치 */
   --ink: #111111;
   --ink-muted: #6f6f6b;
   --ink-subtle: #a5a5a0;
   --line: #e2e2dd;
-  --accent: #bedb5e;
+  --accent: #00bf63; /* 로고 키 컬러 */
+  --accent-ink: #008a47; /* 밝은 배경 위 글자·선에 쓰는 진한 녹색 */
   --inverse-bg: #111111;
   --inverse-ink: #fafafa;
   --inverse-muted: #8d8d88;
@@ -338,7 +339,8 @@ button {
   color: var(--bg);
 }
 .btn--filled:hover {
-  background: #2b2b29;
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
 }
 .btn--outline {
   background: transparent;
@@ -417,10 +419,15 @@ button {
   transition: border-color 0.2s, background 0.2s, color 0.2s;
 }
 .chip:hover {
-  border-color: var(--ink);
+  border-color: var(--accent-ink);
+  color: var(--accent-ink);
 }
 .chip--active {
   background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+.chip--active:hover {
   border-color: var(--ink);
   color: var(--bg);
 }
@@ -464,9 +471,10 @@ button {
   gap: 5px;
 }
 .logo__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  /* 로고의 녹색 세로 막대 */
+  width: 4px;
+  height: 18px;
+  border-radius: 0;
   background: var(--accent);
   align-self: center;
   margin-right: 5px;
@@ -494,6 +502,12 @@ button {
   font-weight: 500;
   color: var(--ink-muted);
   transition: color 0.2s;
+}
+.nav-link--active {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 8px;
 }
 .nav-link:hover,
 .nav-link--active,
@@ -1103,7 +1117,12 @@ button {
 }
 .prose a {
   text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
+}
+.prose a:hover {
+  color: var(--accent-ink);
 }
 .prose ul,
 .prose ol {
@@ -1184,12 +1203,15 @@ button {
   line-height: 1.36;
   color: var(--ink-muted);
 }
+.qa__mark--q {
+  color: var(--accent-ink);
+}
 .qa__row .prose {
   padding-top: 0.15em;
 }
 .pull-quote {
   margin-top: 44px;
-  border-left: 2px solid var(--ink);
+  border-left: 2px solid var(--accent);
   padding: 8px 0 8px 32px;
   white-space: pre-line;
 }
