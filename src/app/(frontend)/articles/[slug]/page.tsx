@@ -21,11 +21,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { slug } = await params
   const a = await getArticle(decodeURIComponent(slug))
   if (!a) return {}
-  const cover = asMedia(a.cover)
   return {
     title: a.title,
     description: a.excerpt || undefined,
-    openGraph: { title: a.title, description: a.excerpt || undefined, images: cover?.url ? [cover.url] : undefined },
+    openGraph: { title: a.title, description: a.excerpt || undefined },
   }
 }
 

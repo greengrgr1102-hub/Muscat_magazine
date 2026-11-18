@@ -7,6 +7,10 @@ const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
 const nextConfig: NextConfig = {
+  // 공유 카드 이미지를 만들 때 쓰는 글꼴 파일을 배포 묶음에 포함
+  outputFileTracingIncludes: {
+    '/**': ['./src/assets/og/**/*'],
+  },
   images: {
     localPatterns: [
       {

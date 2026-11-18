@@ -14,11 +14,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { slug } = await params
   const a = await getArtist(decodeURIComponent(slug))
   if (!a) return {}
-  const photo = asMedia(a.photo)
   return {
     title: a.name,
     description: a.noteHeadline || undefined,
-    openGraph: { title: a.name, images: photo?.url ? [photo.url] : undefined },
+    openGraph: { title: a.name },
   }
 }
 
