@@ -34,6 +34,24 @@ export const SiteSettings: GlobalConfig = {
           ],
         },
         {
+          label: '검색 등록',
+          description: '구글·네이버에 사이트를 등록할 때 받는 확인 코드를 넣는 곳이에요.',
+          fields: [
+            {
+              name: 'googleVerification',
+              label: '구글 Search Console 확인 코드',
+              type: 'text',
+              admin: { description: '<meta name="google-site-verification" content="여기 값"> 에서 content 값만 붙여 넣으세요.' },
+            },
+            {
+              name: 'naverVerification',
+              label: '네이버 서치어드바이저 확인 코드',
+              type: 'text',
+              admin: { description: '<meta name="naver-site-verification" content="여기 값"> 에서 content 값만 붙여 넣으세요.' },
+            },
+          ],
+        },
+        {
           label: '풋터',
           fields: [
             {

@@ -971,6 +971,14 @@ export interface SiteSetting {
   instagramUrl?: string | null;
   youtubeUrl?: string | null;
   blogUrl?: string | null;
+  /**
+   * <meta name="google-site-verification" content="여기 값"> 에서 content 값만 붙여 넣으세요.
+   */
+  googleVerification?: string | null;
+  /**
+   * <meta name="naver-site-verification" content="여기 값"> 에서 content 값만 붙여 넣으세요.
+   */
+  naverVerification?: string | null;
   footerLine?: string | null;
   /**
    * 상호, 대표자, 사업자등록번호, 통신판매업 신고번호, 주소, 연락처, 호스팅 제공자. 비워 두면 풋터에 표시되지 않습니다.
@@ -1044,6 +1052,8 @@ export interface SiteSettingsSelect<T extends boolean = true> {
   instagramUrl?: T;
   youtubeUrl?: T;
   blogUrl?: T;
+  googleVerification?: T;
+  naverVerification?: T;
   footerLine?: T;
   businessInfo?: T;
   updatedAt?: T;
