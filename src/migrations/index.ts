@@ -8,6 +8,7 @@ import * as migration_20261118_114828_spotify_sync from './20261118_114828_spoti
 import * as migration_20261118_122819_search_verification from './20261118_122819_search_verification';
 import * as migration_20261118_150834_article_gallery from './20261118_150834_article_gallery';
 import * as migration_20261118_155506_stats from './20261118_155506_stats';
+import * as migration_20261118_162229_band_members from './20261118_162229_band_members';
 
 export const migrations = [
   {
@@ -58,6 +59,11 @@ export const migrations = [
   {
     up: migration_20261118_155506_stats.up,
     down: migration_20261118_155506_stats.down,
-    name: '20261118_155506_stats'
+    name: '20261118_155506_stats',
+  },
+  {
+    up: migration_20261118_162229_band_members.up,
+    down: migration_20261118_162229_band_members.down,
+    name: '20261118_162229_band_members'
   },
 ];

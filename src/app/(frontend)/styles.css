@@ -1209,6 +1209,10 @@ button {
 .qa__row .prose {
   padding-top: 0.15em;
 }
+/* 같은 질문에 다른 멤버가 이어서 답할 때 */
+.qa--cont {
+  margin-top: -24px;
+}
 /* 답변: 왼쪽에 작은 아티스트 사진, 그 아래 이름 */
 .qa:has(.qa__a) .qa__row {
   grid-template-columns: 64px 1fr;
@@ -2009,4 +2013,53 @@ a.track:hover .h-sm {
   .gallery {
     grid-template-columns: 1fr;
   }
+}
+
+/* 아티스트 페이지: 멤버 */
+.members {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.members__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 20px 12px;
+}
+.member {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+.member__face {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--tint);
+  margin-bottom: 6px;
+}
+.member__face--empty {
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--accent-ink);
+}
+.member__name {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.member__role {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.member--left .member__face {
+  filter: grayscale(1);
+  opacity: 0.7;
 }

@@ -5,6 +5,7 @@ import { RichText } from '@/components/RichText'
 import { ArrowLink, CardGrid, Chip, Img, Lines, ListenLinks, SectionHeader, articleHref, Button } from '@/components/ui'
 import { PickGrid } from '@/components/Picks'
 import { TYPE_LABEL, TYPE_ORDER, asGenres, asMedia, findArticles, findPicks, formatDate, getArtist } from '@/lib/data'
+import type { Artist } from '@/payload-types'
 
 type Params = Promise<{ slug: string }>
 type SP = Promise<{ type?: string }>
@@ -92,6 +93,7 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
               ))}
             </dl>
           ) : null}
+          <Members list={artist.members} />
           <ListenLinks links={artist.links} label="Listen" />
         </div>
       </section>
@@ -151,5 +153,58 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
         </section>
       ) : null}
     </>
+  )
+}
+
+type MemberRow = NonNullable<Artist['members']>[number]
+
+function Members({ list }: { list?: Artist['members'] }) {
+  const all = (list || []).filter((m): m is MemberRow => Boolean(m?.name))
+  if (!all.length) return null
+  const now = all.filter((m) => !m.left)
+  const former = all.filter((m) => m.left)
+  const Row = ({ m }: { m: MemberRow }) => {
+    const md = asMedia(m.photo)
+    const src = md?.sizes?.thumb?.url || md?.sizes?.card?.url || md?.url
+    return (
+      <li className={`member${m.left ? ' member--left' : ''}`}>
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={m.name} className="member__face" loading="lazy" />
+        ) : (
+          <span className="member__face member__face--empty" aria-hidden>
+            {m.name.slice(0, 1)}
+          </span>
+        )}
+        <span className="member__name">{m.name}</span>
+        {m.role || m.period ? (
+          <span className="member__role">{[m.role, m.period].filter(Boolean).join(' · ')}</span>
+        ) : null}
+      </li>
+    )
+  }
+  return (
+    <div className="members">
+      {now.length ? (
+        <div className="stack-20">
+          <p className="label">Members</p>
+          <ul className="members__grid">
+            {now.map((m) => (
+              <Row key={m.id || m.name} m={m} />
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {former.length ? (
+        <div className="stack-20">
+          <p className="label">Former Members</p>
+          <ul className="members__grid">
+            {former.map((m) => (
+              <Row key={m.id || m.name} m={m} />
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   )
 }

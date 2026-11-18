@@ -232,7 +232,14 @@ export interface Article {
          * 질문 앞에 회색으로 보이는 맥락 설명
          */
         background?: string | null;
-        question: string;
+        /**
+         * 같은 질문에 멤버 여러 명이 답했다면, 다음 문답을 하나 더 추가해서 질문은 비우고 답한 사람과 답만 넣으세요.
+         */
+        question?: string | null;
+        /**
+         * 아티스트 페이지에 등록한 멤버 이름을 그대로 적으면 그 멤버 얼굴이 나와요. 비워 두면 아티스트 대표 사진이 나와요.
+         */
+        speaker?: string | null;
         answer: {
           root: {
             type: string;
@@ -426,6 +433,25 @@ export interface Artist {
    */
   slug?: string | null;
   photo?: (number | null) | Media;
+  /**
+   * 멤버가 탈퇴해도 지우지 말고 「탈퇴한 멤버」에 체크해 주세요. 예전 인터뷰에서는 그 멤버 얼굴이 그대로 보이고, 아티스트 페이지에서는 전 멤버로 따로 표시돼요.
+   */
+  members?:
+    | {
+        name: string;
+        /**
+         * 예: 보컬, 기타
+         */
+        role?: string | null;
+        photo?: (number | null) | Media;
+        left?: boolean | null;
+        /**
+         * 예: 2015 – 2021
+         */
+        period?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   genres?: (number | Genre)[] | null;
   /**
    * 예: 겹겹이 쌓은 기타 노이즈 아래로 또렷한 멜로디가 지나가는 밴드.
@@ -724,6 +750,7 @@ export interface ArticlesSelect<T extends boolean = true> {
     | {
         background?: T;
         question?: T;
+        speaker?: T;
         answer?: T;
         pullQuote?: T;
         id?: T;
@@ -797,6 +824,16 @@ export interface ArtistsSelect<T extends boolean = true> {
   nameAlt?: T;
   slug?: T;
   photo?: T;
+  members?:
+    | T
+    | {
+        name?: T;
+        role?: T;
+        photo?: T;
+        left?: T;
+        period?: T;
+        id?: T;
+      };
   genres?: T;
   noteHeadline?: T;
   note?: T;

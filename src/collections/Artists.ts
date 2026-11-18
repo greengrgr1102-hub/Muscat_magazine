@@ -26,6 +26,40 @@ export const Artists: CollectionConfig = {
     slugField('name'),
     { name: 'photo', label: '대표 사진 (4:5)', type: 'upload', relationTo: 'media' },
     {
+      name: 'members',
+      label: '멤버 (밴드일 때)',
+      type: 'array',
+      labels: { singular: '멤버', plural: '멤버' },
+      admin: {
+        initCollapsed: true,
+        description:
+          '멤버가 탈퇴해도 지우지 말고 「탈퇴한 멤버」에 체크해 주세요. 예전 인터뷰에서는 그 멤버 얼굴이 그대로 보이고, 아티스트 페이지에서는 전 멤버로 따로 표시돼요.',
+        components: { RowLabel: '/components/admin/MemberRowLabel#MemberRowLabel' },
+      },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            { name: 'name', label: '이름', type: 'text', required: true, admin: { width: '50%' } },
+            { name: 'role', label: '포지션', type: 'text', admin: { width: '50%', description: '예: 보컬, 기타' } },
+          ],
+        },
+        { name: 'photo', label: '얼굴 사진 (정사각형이 좋아요)', type: 'upload', relationTo: 'media' },
+        {
+          type: 'row',
+          fields: [
+            { name: 'left', label: '탈퇴한 멤버', type: 'checkbox', admin: { width: '50%' } },
+            {
+              name: 'period',
+              label: '활동 기간 (선택)',
+              type: 'text',
+              admin: { width: '50%', description: '예: 2015 – 2021' },
+            },
+          ],
+        },
+      ],
+    },
+    {
       name: 'genres',
       label: '장르',
       type: 'relationship',

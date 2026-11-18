@@ -181,7 +181,23 @@ export const Articles: CollectionConfig = {
                   type: 'textarea',
                   admin: { description: '질문 앞에 회색으로 보이는 맥락 설명' },
                 },
-                { name: 'question', label: '질문', type: 'textarea', required: true },
+                {
+                  name: 'question',
+                  label: '질문',
+                  type: 'textarea',
+                  admin: {
+                    description: '같은 질문에 멤버 여러 명이 답했다면, 다음 문답을 하나 더 추가해서 질문은 비우고 답한 사람과 답만 넣으세요.',
+                  },
+                },
+                {
+                  name: 'speaker',
+                  label: '답한 사람 (선택)',
+                  type: 'text',
+                  admin: {
+                    description:
+                      '아티스트 페이지에 등록한 멤버 이름을 그대로 적으면 그 멤버 얼굴이 나와요. 비워 두면 아티스트 대표 사진이 나와요.',
+                  },
+                },
                 { name: 'answer', label: '답', type: 'richText', required: true },
                 {
                   name: 'pullQuote',

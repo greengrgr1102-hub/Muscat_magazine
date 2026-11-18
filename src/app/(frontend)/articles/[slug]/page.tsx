@@ -195,40 +195,63 @@ function ReviewBody({ article }: { article: Article }) {
   )
 }
 
+type Face = { name: string; img?: string | null }
+
+const norm = (x?: string | null) => (x || '').toLowerCase().replace(/\s+/g, '')
+const thumbOf = (m: unknown) => {
+  const md = asMedia(m as Parameters<typeof asMedia>[0])
+  return md?.sizes?.thumb?.url || md?.sizes?.card?.url || md?.url || null
+}
+
 function InterviewBody({ article }: { article: Article }) {
-  const speaker = asArtists(article.artists)[0]
-  const photo = speaker ? asMedia(speaker.photo) : null
-  const thumb = photo?.sizes?.thumb?.url || photo?.sizes?.card?.url || photo?.url
+  const artists = asArtists(article.artists)
+  const band = artists[0]
+  // 답한 사람 이름 → 얼굴. 탈퇴한 멤버도 기록이 남아 있으면 그대로 찾습니다.
+  const members = new Map<string, Face>()
+  for (const ar of artists) {
+    for (const m of ar.members || []) {
+      if (m?.name) members.set(norm(m.name), { name: m.name, img: thumbOf(m.photo) })
+    }
+  }
+  const faceFor = (speaker?: string | null): Face | null => {
+    if (speaker?.trim()) return members.get(norm(speaker)) || { name: speaker.trim() }
+    return band ? { name: band.name, img: thumbOf(band.photo) } : null
+  }
   return (
     <>
-      {(article.qa || []).map((q, i) => (
-        <div key={q.id || i} className="qa">
-          {q.background ? <p className="qa__bg">{q.background}</p> : null}
-          <div className="qa__row qa__q">
-            <span className="qa__mark qa__mark--q">Q.</span>
-            <p className="h-md">{q.question}</p>
+      {(article.qa || []).map((q, i) => {
+        const who = faceFor(q.speaker)
+        return (
+          <div key={q.id || i} className={`qa${q.question ? '' : ' qa--cont'}`}>
+            {q.background ? <p className="qa__bg">{q.background}</p> : null}
+            {q.question ? (
+              <div className="qa__row qa__q">
+                <span className="qa__mark qa__mark--q">Q.</span>
+                <p className="h-md">{q.question}</p>
+              </div>
+            ) : null}
+            <div className={`qa__row${who ? ' qa__a' : ''}`}>
+              {who ? (
+                <span className="qa__who">
+                  {who.img ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={who.img} alt={who.name} className="qa__face" loading="lazy" />
+                  ) : (
+                    <span className="qa__face qa__face--empty" aria-hidden>
+                      {who.name.slice(0, 1)}
+                    </span>
+                  )}
+                  <span className="qa__who-name">{who.name}</span>
+                </span>
+              ) : (
+                <span className="qa__mark">A.</span>
+              )}
+              <RichText data={q.answer} />
+            </div>
+            {q.pullQuote ? <blockquote className="pull-quote h-lg">{q.pullQuote}</blockquote> : null}
           </div>
-          <div className={`qa__row${speaker ? ' qa__a' : ''}`}>
-            {speaker ? (
-              <span className="qa__who">
-                {thumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={thumb} alt={speaker.name} className="qa__face" loading="lazy" />
-                ) : (
-                  <span className="qa__face qa__face--empty" aria-hidden>
-                    {speaker.name.slice(0, 1)}
-                  </span>
-                )}
-                <span className="qa__who-name">{speaker.name}</span>
-              </span>
-            ) : (
-              <span className="qa__mark">A.</span>
-            )}
-            <RichText data={q.answer} />
-          </div>
-          {q.pullQuote ? <blockquote className="pull-quote h-lg">{q.pullQuote}</blockquote> : null}
-        </div>
-      ))}
+        )
+      })}
     </>
   )
 }
