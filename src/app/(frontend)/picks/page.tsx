@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PickGrid } from '@/components/Picks'
-import { findPicks } from '@/lib/data'
+import { findPicks, getTag } from '@/lib/data'
 
 export const metadata: Metadata = {
   title: "Editor's Picks",
@@ -10,10 +10,12 @@ export const metadata: Metadata = {
 
 const PER_PAGE = 24
 
-export default async function PicksPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function PicksPage({ searchParams }: { searchParams: Promise<{ page?: string; tag?: string }> }) {
   const sp = await searchParams
   const page = Math.max(1, Number(sp.page) || 1)
-  const res = await findPicks({ limit: PER_PAGE * page })
+  const tag = sp.tag ? await getTag(sp.tag) : null
+  const res = await findPicks({ where: tag ? { tags: { in: [tag.id] } } : undefined, limit: PER_PAGE * page })
+  const more = `/picks?${new URLSearchParams({ ...(tag?.slug ? { tag: tag.slug } : {}), page: String(page + 1) })}`
 
   return (
     <>
@@ -28,6 +30,18 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
           재생 버튼을 누르면 이 자리에서 바로 들을 수 있어요.
         </p>
       </section>
+      {tag ? (
+        <section className="wrap">
+          <div className="filter-bar">
+            <div className="chips">
+              <Link className="chip" href="/picks">
+                전체
+              </Link>
+              <span className="chip chip--active">#{tag.name}</span>
+            </div>
+          </div>
+        </section>
+      ) : null}
       <section className="wrap section">
         {res.docs.length ? (
           <PickGrid picks={res.docs} />
@@ -36,7 +50,7 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
         )}
         {res.hasNextPage ? (
           <div className="pagination">
-            <Link className="btn btn--outline" href={`/picks?page=${page + 1}`} scroll={false}>
+            <Link className="btn btn--outline" href={more} scroll={false}>
               <span>더 보기</span>
             </Link>
             <p className="label">

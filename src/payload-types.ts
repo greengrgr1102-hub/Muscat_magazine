@@ -71,6 +71,7 @@ export interface Config {
     picks: Pick;
     artists: Artist;
     genres: Genre;
+    tags: Tag;
     media: Media;
     inquiries: Inquiry;
     subscribers: Subscriber;
@@ -86,6 +87,7 @@ export interface Config {
     picks: PicksSelect<false> | PicksSelect<true>;
     artists: ArtistsSelect<false> | ArtistsSelect<true>;
     genres: GenresSelect<false> | GenresSelect<true>;
+    tags: TagsSelect<false> | TagsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     inquiries: InquiriesSelect<false> | InquiriesSelect<true>;
     subscribers: SubscribersSelect<false> | SubscribersSelect<true>;
@@ -499,14 +501,34 @@ export interface Pick {
    */
   artist?: (number | null) | Artist;
   genres?: (number | Genre)[] | null;
-  moods?: ('dreamy' | 'upbeat' | 'calm' | 'melancholy' | 'raw')[] | null;
-  textures?: ('guitar' | 'synth' | 'acoustic' | 'groove')[] | null;
-  vocal?: ('front' | 'blended' | 'instrumental') | null;
-  region?: ('korea' | 'japan' | 'chinese' | 'sea' | 'west' | 'etc') | null;
+  /**
+   * 분위기, 질감, 듣기 좋은 순간 등 자유롭게. 목록에 없으면 오른쪽 + 버튼으로 바로 만들어요. 비슷한 곡 추천에 쓰여요.
+   */
+  tags?: (number | Tag)[] | null;
   /**
    * Spotify에서 자동으로 가져온 커버
    */
   coverUrl?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Editor's Picks에 붙이는 태그예요. 곡 편집 화면에서 바로 새 태그를 만들 수도 있어요.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tags".
+ */
+export interface Tag {
+  id: number;
+  /**
+   * 예: 몽환적인, 새벽에 듣기, 기타 노이즈
+   */
+  name: string;
+  group?: ('mood' | 'texture' | 'vocal' | 'region' | 'scene' | 'etc') | null;
+  /**
+   * 사이트 주소에 쓰입니다. 비워 두면 자동으로 만들어집니다. 예: shoegaze, album-title
+   */
+  slug?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -573,6 +595,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'genres';
         value: number | Genre;
+      } | null)
+    | ({
+        relationTo: 'tags';
+        value: number | Tag;
       } | null)
     | ({
         relationTo: 'media';
@@ -729,10 +755,7 @@ export interface PicksSelect<T extends boolean = true> {
   track?: T;
   artist?: T;
   genres?: T;
-  moods?: T;
-  textures?: T;
-  vocal?: T;
-  region?: T;
+  tags?: T;
   coverUrl?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -770,6 +793,17 @@ export interface GenresSelect<T extends boolean = true> {
   slug?: T;
   description?: T;
   order?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tags_select".
+ */
+export interface TagsSelect<T extends boolean = true> {
+  name?: T;
+  group?: T;
+  slug?: T;
   updatedAt?: T;
   createdAt?: T;
 }

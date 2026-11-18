@@ -144,3 +144,60 @@ export async function findPicks({ where, limit = 24, page = 1 }: { where?: Where
   const payload = await getClient()
   return payload.find({ collection: 'picks', where, limit, page, sort: '-pickedAt', depth: 1 })
 }
+
+export async function getPick(id: string) {
+  if (!/^\d+$/.test(id)) return null
+  const payload = await getClient()
+  try {
+    return await payload.findByID({ collection: 'picks', id: Number(id), depth: 1 })
+  } catch {
+    return null
+  }
+}
+
+export async function getTag(slug: string) {
+  const payload = await getClient()
+  const res = await payload.find({ collection: 'tags', where: { slug: { equals: slug } }, limit: 1 })
+  return res.docs[0] || null
+}
+
+const ids = (list: unknown) =>
+  (Array.isArray(list) ? list : []).map((x) => (typeof x === 'object' && x ? (x as { id: number }).id : (x as number)))
+
+/** 같은 취향 태그·장르·아티스트를 많이 공유할수록 위로 오는 '비슷한 곡'. */
+export async function similarPicks(pick: import('@/payload-types').Pick, limit = 6) {
+  const payload = await getClient()
+  const tagIds = ids(pick.tags)
+  const genreIds = ids(pick.genres)
+  const artistId = typeof pick.artist === 'object' && pick.artist ? pick.artist.id : pick.artist
+  const or: Where[] = []
+  if (tagIds.length) or.push({ tags: { in: tagIds } })
+  if (genreIds.length) or.push({ genres: { in: genreIds } })
+  if (artistId) or.push({ artist: { equals: artistId } })
+  const pool = or.length
+    ? (await payload.find({ collection: 'picks', where: { and: [{ id: { not_equals: pick.id } }, { or }] }, limit: 200, depth: 1 })).docs
+    : []
+  const score = (p: typeof pick) => {
+    const t = ids(p.tags).filter((x) => tagIds.includes(x)).length
+    const g = ids(p.genres).filter((x) => genreIds.includes(x)).length
+    const a = artistId && (typeof p.artist === 'object' && p.artist ? p.artist.id : p.artist) === artistId ? 1 : 0
+    return t * 3 + g * 2 + a
+  }
+  const ranked = pool
+    .map((p) => ({ p, s: score(p) }))
+    .filter((x) => x.s > 0)
+    .sort((a, b) => b.s - a.s || String(b.p.pickedAt).localeCompare(String(a.p.pickedAt)))
+    .map((x) => x.p)
+    .slice(0, limit)
+  if (ranked.length >= limit) return { docs: ranked, filled: false }
+  // 비슷한 곡이 모자라면 최근 추천곡으로 채웁니다.
+  const exclude = [pick.id, ...ranked.map((p) => p.id)]
+  const recent = await payload.find({
+    collection: 'picks',
+    where: { id: { not_in: exclude } },
+    sort: '-pickedAt',
+    limit: limit - ranked.length,
+    depth: 1,
+  })
+  return { docs: [...ranked, ...recent.docs], filled: ranked.length === 0 }
+}

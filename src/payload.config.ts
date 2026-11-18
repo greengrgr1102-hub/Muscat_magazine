@@ -13,6 +13,7 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Genres } from './collections/Genres'
 import { Picks } from './collections/Picks'
+import { Tags } from './collections/Tags'
 import { Artists } from './collections/Artists'
 import { Articles } from './collections/Articles'
 import { Inquiries, Subscribers } from './collections/Inquiries'
@@ -46,7 +47,7 @@ export default buildConfig({
     fallbackLanguage: 'ko',
     supportedLanguages: { ko, en },
   },
-  collections: [Articles, Picks, Artists, Genres, Media, Inquiries, Subscribers, Users],
+  collections: [Articles, Picks, Artists, Genres, Tags, Media, Inquiries, Subscribers, Users],
   globals: [SiteSettings, AboutPage],
   editor: lexicalEditor(),
   secret: SECRET,

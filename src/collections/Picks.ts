@@ -3,33 +3,6 @@ import type { CollectionConfig } from 'payload'
 // Editor's Picks — 에디터가 들은 곡 중 좋았던 곡을 하나씩 올리는 짧은 기록.
 // Spotify 링크만 붙이면 곡 제목·커버를 Spotify에서 가져와 채웁니다.
 
-export const PICK_MOODS = [
-  { label: '몽환적인', value: 'dreamy' },
-  { label: '신나는', value: 'upbeat' },
-  { label: '잔잔한', value: 'calm' },
-  { label: '쓸쓸한', value: 'melancholy' },
-  { label: '거친', value: 'raw' },
-]
-export const PICK_TEXTURES = [
-  { label: '기타·밴드 사운드', value: 'guitar' },
-  { label: '신스·전자음', value: 'synth' },
-  { label: '어쿠스틱', value: 'acoustic' },
-  { label: '리듬·그루브', value: 'groove' },
-]
-export const PICK_VOCALS = [
-  { label: '목소리가 앞에', value: 'front' },
-  { label: '소리에 묻힌 보컬', value: 'blended' },
-  { label: '연주곡', value: 'instrumental' },
-]
-export const PICK_REGIONS = [
-  { label: '한국', value: 'korea' },
-  { label: '일본', value: 'japan' },
-  { label: '중화권', value: 'chinese' },
-  { label: '동남아시아', value: 'sea' },
-  { label: '영미권', value: 'west' },
-  { label: '그 밖의 지역', value: 'etc' },
-]
-
 const SPOTIFY_RE = /open\.spotify\.com\/(?:intl-[a-z-]+\/)?(track|album|playlist)\/([A-Za-z0-9]+)/
 
 export function parseSpotify(url?: string | null): { kind: string; id: string } | null {
@@ -124,15 +97,14 @@ export const Picks: CollectionConfig = {
     },
     { name: 'genres', label: '장르', type: 'relationship', relationTo: 'genres', hasMany: true },
     {
-      type: 'collapsible',
-      label: '취향 태그 (취향 찾기 추천에 쓰여요)',
-      admin: { initCollapsed: false },
-      fields: [
-        { name: 'moods', label: '분위기', type: 'select', hasMany: true, options: PICK_MOODS },
-        { name: 'textures', label: '소리 질감', type: 'select', hasMany: true, options: PICK_TEXTURES },
-        { name: 'vocal', label: '보컬', type: 'select', options: PICK_VOCALS },
-        { name: 'region', label: '지역', type: 'select', options: PICK_REGIONS },
-      ],
+      name: 'tags',
+      label: '취향 태그',
+      type: 'relationship',
+      relationTo: 'tags',
+      hasMany: true,
+      admin: {
+        description: '분위기, 질감, 듣기 좋은 순간 등 자유롭게. 목록에 없으면 오른쪽 + 버튼으로 바로 만들어요. 비슷한 곡 추천에 쓰여요.',
+      },
     },
     {
       name: 'coverUrl',
