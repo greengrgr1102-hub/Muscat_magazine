@@ -14,7 +14,11 @@ const SITE_DESC = '에디터의 귀로 고른 음악을 소개하는 인디 음�
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings()
-  const naver = settings?.naverVerification?.trim()
+  // 확인 코드는 앞에 'google-site-verification=' 같은 글자가 붙어 있어도 값만 골라 써요.
+  const clean = (v?: string | null) => v?.trim().replace(/^.*verification[=:]\s*/i, '').replace(/["'<>]/g, '') || undefined
+  const naver = clean(settings?.naverVerification)
+  // 관리자 화면에 값이 없으면 처음 받은 구글 확인 코드를 기본으로 씁니다.
+  const google = clean(settings?.googleVerification) || 'ygGKovcB3KBkPdntKycyWAO1V5uEgx6ubl18dyvSHwg'
   return {
     metadataBase: new URL(
       process.env.NEXT_PUBLIC_SERVER_URL ||
@@ -38,7 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
       apple: '/apple-icon.png',
     },
     verification: {
-      google: settings?.googleVerification?.trim() || undefined,
+      google,
       other: naver ? { 'naver-site-verification': naver } : undefined,
     },
   }
