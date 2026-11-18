@@ -12,10 +12,28 @@ export function siteUrl() {
   return 'http://localhost:3000'
 }
 export const redirectUri = () => `${siteUrl()}/spotify/callback`
-export const spotifyConfigured = () => Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET)
+// 붙여넣을 때 섞여 들어간 공백·줄바꿈은 떼어냅니다.
+export const clientId = () => (process.env.SPOTIFY_CLIENT_ID || '').trim()
+const clientSecret = () => (process.env.SPOTIFY_CLIENT_SECRET || '').trim()
+const KEY = /^[0-9a-f]{32}$/i
+
+// 키가 없거나 형식이 이상하면 이유를 알려줍니다. 문제 없으면 null.
+export function spotifyKeyProblem(): string | null {
+  const id = clientId()
+  const secret = clientSecret()
+  if (!id || !secret) return 'Vercel에 SPOTIFY_CLIENT_ID와 SPOTIFY_CLIENT_SECRET이 아직 없어요.'
+  if (!KEY.test(id))
+    return id.startsWith('http')
+      ? 'SPOTIFY_CLIENT_ID에 주소(URL)가 들어가 있어요. Spotify 앱 화면의 Client ID(32자리)로 바꿔 주세요.'
+      : 'SPOTIFY_CLIENT_ID 형식이 이상해요. Spotify 앱 화면의 Client ID(영문·숫자 32자리)를 다시 붙여넣어 주세요.'
+  if (!KEY.test(secret)) return 'SPOTIFY_CLIENT_SECRET 형식이 이상해요. 「View client secret」으로 나온 32자리 값을 다시 붙여넣어 주세요.'
+  if (id.toLowerCase() === secret.toLowerCase()) return 'Client ID와 Client secret에 같은 값이 들어가 있어요. 두 값은 서로 달라요.'
+  return null
+}
+export const spotifyConfigured = () => spotifyKeyProblem() === null
 
 function basicAuth() {
-  return 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
+  return 'Basic ' + Buffer.from(`${clientId()}:${clientSecret()}`).toString('base64')
 }
 
 export async function exchangeCode(code: string) {

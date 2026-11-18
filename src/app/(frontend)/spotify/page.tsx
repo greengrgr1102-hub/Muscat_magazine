@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { getClient, formatDate } from '@/lib/data'
-import { redirectUri, spotifyConfigured } from '@/lib/spotify'
+import { redirectUri, spotifyKeyProblem } from '@/lib/spotify'
 import { PlaylistForm, SyncButton } from './SpotifyForms'
 
 export const metadata: Metadata = { title: 'Spotify 연동', robots: { index: false, follow: false } }
 
 const ERR: Record<string, string> = {
-  config: 'Vercel에 SPOTIFY_CLIENT_ID와 SPOTIFY_CLIENT_SECRET이 아직 없어요. 아래 1단계를 먼저 해 주세요.',
+  config: 'Spotify 앱 정보(키)가 없거나 잘못 들어가 있어요. 아래 1단계를 확인해 주세요.',
   denied: 'Spotify 연결이 취소됐어요. 다시 시도해 주세요.',
   token: 'Spotify 연결에 실패했어요. Spotify 앱 설정의 Redirect URI가 아래 주소와 똑같은지 확인해 주세요.',
 }
@@ -31,7 +31,8 @@ export default async function SpotifyPage({ searchParams }: { searchParams: Prom
   }
 
   const cfg = await payload.findGlobal({ slug: 'spotify-sync', overrideAccess: true })
-  const configured = spotifyConfigured()
+  const keyProblem = spotifyKeyProblem()
+  const configured = !keyProblem
   const connected = Boolean(cfg.refreshToken)
 
   return (
@@ -52,6 +53,8 @@ export default async function SpotifyPage({ searchParams }: { searchParams: Prom
         <p className="label">1단계 · Spotify 앱 정보 {configured ? '✓' : ''}</p>
         {configured ? (
           <p>Vercel에 Spotify 앱 정보가 들어가 있어요.</p>
+        ) : keyProblem && !keyProblem.includes('아직 없어요') ? (
+          <p style={{ color: '#B3261E' }}>{keyProblem} 고친 뒤에는 다시 배포해야 적용돼요.</p>
         ) : (
           <p className="muted">
             Spotify 개발자 대시보드에서 앱을 만들고, 받은 Client ID·Client Secret을 Vercel 환경 변수에 넣어 주세요. 앱의
