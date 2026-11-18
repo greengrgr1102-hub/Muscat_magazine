@@ -5,6 +5,7 @@ import '@fontsource/instrument-serif/400-italic.css'
 import './styles.css'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
+import { Analytics } from '@vercel/analytics/next'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <Header />
         <main id="main">{children}</main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   )
