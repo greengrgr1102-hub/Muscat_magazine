@@ -9,7 +9,12 @@ import { Footer } from '@/components/Footer'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : 'http://localhost:3000'),
+  ),
   title: { default: 'Muscat Magazine', template: '%s — Muscat Magazine' },
   description: '에디터의 귀로 고른 음악을 소개하는 인디 음악 매거진. 앨범 리뷰, 큐레이션, 인터뷰, 발매 소식.',
   openGraph: { siteName: 'Muscat Magazine', type: 'website', locale: 'ko_KR' },

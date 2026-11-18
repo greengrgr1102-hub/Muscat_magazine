@@ -7,6 +7,7 @@ import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
+import { createHash } from 'crypto'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
@@ -19,8 +20,17 @@ import { AboutPage, SiteSettings } from './globals/Settings'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+const DB_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || ''
+// Vercel이 자동으로 넣어 주는 운영 주소를 기본값으로 씁니다.
+const SERVER_URL =
+  process.env.NEXT_PUBLIC_SERVER_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '')
+// PAYLOAD_SECRET을 따로 넣지 않으면 DB 주소에서 만든 값을 씁니다. (직접 넣으면 그 값이 우선)
+const SECRET =
+  process.env.PAYLOAD_SECRET || (DB_URL ? createHash('sha256').update('muscat:' + DB_URL).digest('hex') : '')
+
 export default buildConfig({
-  serverURL: process.env.NEXT_PUBLIC_SERVER_URL || '',
+  serverURL: SERVER_URL,
   admin: {
     user: Users.slug,
     meta: { titleSuffix: ' — Muscat Magazine 관리자' },
@@ -35,13 +45,13 @@ export default buildConfig({
   collections: [Articles, Artists, Genres, Media, Inquiries, Subscribers, Users],
   globals: [SiteSettings, AboutPage],
   editor: lexicalEditor(),
-  secret: process.env.PAYLOAD_SECRET || '',
+  secret: SECRET,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || '',
+      connectionString: DB_URL,
     },
     migrationDir: path.resolve(dirname, 'migrations'),
   }),

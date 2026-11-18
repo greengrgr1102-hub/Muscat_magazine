@@ -43,9 +43,9 @@
 2. 배포 전에 **Storage** 탭에서 두 가지를 만들어 프로젝트에 연결합니다.
    - **Neon (Postgres)** → 연결하면 `DATABASE_URL` 등이 자동으로 들어갑니다.
    - **Blob** → 연결하면 `BLOB_READ_WRITE_TOKEN`이 자동으로 들어갑니다.
-3. **Settings → Environment Variables**에 직접 두 개를 추가합니다.
-   - `PAYLOAD_SECRET` : 아무 긴 무작위 문자열 (예: 비밀번호 생성기로 만든 40자 이상)
-   - `NEXT_PUBLIC_SERVER_URL` : 사이트 주소 (예: `https://muscat-magazine.vercel.app`, 도메인 연결 후엔 그 주소)
+3. (선택) **Settings → Environment Variables**에서 아래 값을 직접 정할 수 있습니다. 넣지 않으면 자동 값이 쓰입니다.
+   - `PAYLOAD_SECRET` : 관리자 로그인 암호화 값. 없으면 DB 주소에서 만든 값을 씁니다.
+   - `NEXT_PUBLIC_SERVER_URL` : 사이트 주소. 없으면 Vercel 운영 주소를 씁니다. 도메인을 연결하면 그 주소로 넣어 주세요.
 4. **Deploy**. 빌드할 때 데이터베이스 표가 자동으로 만들어집니다.
 5. 배포된 주소 뒤에 `/admin`을 붙여 들어가면 **첫 관리자 계정**을 만드는 화면이 나옵니다.
 6. 관리자 화면에서 장르 → 아티스트 → 아티클 순서로 내용을 넣습니다.
