@@ -2085,3 +2085,231 @@ figure {
   width: 100%;
   height: auto;
 }
+
+/* Editor's Picks: 전체 기록 (한 줄에 한 곡) */
+.plist-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--ink);
+}
+.plist-search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.plist-search input {
+  width: 240px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+}
+.plist-search input:focus {
+  outline: none;
+  border-color: var(--accent-ink);
+}
+.plist-filter {
+  margin-top: 14px;
+}
+.plist__group + .plist__group {
+  margin-top: 8px;
+}
+.plist__month {
+  padding: 28px 0 10px;
+  color: var(--accent-ink);
+}
+.plist__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.plist__row {
+  border-bottom: 1px solid var(--line);
+}
+.plist__line {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0;
+}
+.plist__cover {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  background: var(--tint);
+  cursor: pointer;
+  overflow: hidden;
+}
+.plist__cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.plist__play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.plist__cover:hover .plist__play,
+.plist__cover:focus-visible .plist__play,
+.plist__row--open .plist__play {
+  opacity: 1;
+}
+.plist__row--open .plist__play {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.plist__text {
+  display: flex;
+  align-items: baseline;
+  gap: 4px 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.plist__track {
+  font-size: 16px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.plist__track:hover {
+  color: var(--accent-ink);
+}
+.plist__artist {
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+.plist__comment {
+  flex-basis: 100%;
+  font-size: 13px;
+  color: var(--accent-ink);
+}
+.plist__comment::before {
+  content: '“ ';
+}
+.plist__date {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.plist__player {
+  display: block;
+  border: 0;
+  border-radius: 12px;
+  margin: 0 0 12px;
+}
+.plist-pages {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  margin-top: 40px;
+}
+.plist-pages > :last-child {
+  justify-self: end;
+}
+@media (max-width: 640px) {
+  .plist-search,
+  .plist-search input {
+    width: 100%;
+  }
+  .plist__line {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+  .plist__cover {
+    width: 44px;
+    height: 44px;
+  }
+  .plist__text {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .plist__track {
+    font-size: 15px;
+  }
+  .plist__artist {
+    font-size: 13px;
+  }
+}
+
+/* Editor's Picks 카드: 작게 (한 줄에 5~6장) */
+.epick-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 40px 24px;
+}
+.epick {
+  gap: 12px;
+}
+.epick__play {
+  right: 10px;
+  bottom: 10px;
+  width: 36px;
+  height: 36px;
+}
+.epick__play svg {
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+}
+.epick__body {
+  gap: 3px;
+}
+.epick__meta {
+  font-size: 12px;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.epick__track {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.epick__artist {
+  font-size: 14px;
+}
+.epick__comment {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.epick__tags {
+  font-size: 13px;
+  margin-top: 4px;
+}
+.epick__open {
+  margin-top: 6px;
+  font-size: 13px;
+}
+@media (max-width: 1024px) {
+  .epick-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .epick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 14px;
+  }
+}

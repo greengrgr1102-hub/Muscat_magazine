@@ -69,3 +69,16 @@ export function PickGrid({ picks }: { picks: Pick[] }) {
     </div>
   )
 }
+
+// 목록용 가벼운 데이터로 바꾸기
+export function toRow(p: Pick): import('./PickList').PickRow {
+  return {
+    id: p.id,
+    track: p.track,
+    artistName: p.artistName,
+    coverUrl: p.coverUrl,
+    pickedAt: p.pickedAt,
+    comment: p.comment,
+    embed: spotifyEmbed(p.spotifyUrl),
+  }
+}

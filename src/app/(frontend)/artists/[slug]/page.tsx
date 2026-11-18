@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { RichText } from '@/components/RichText'
 import { ArrowLink, Button, Caption, CardGrid, Chip, Img, Lines, ListenLinks, SectionHeader, articleHref } from '@/components/ui'
-import { PickGrid } from '@/components/Picks'
+import { toRow } from '@/components/Picks'
+import { PickList } from '@/components/PickList'
 import { TYPE_LABEL, TYPE_ORDER, asGenres, asMedia, findArticles, findPicks, formatDate, getArtist } from '@/lib/data'
 import type { Artist } from '@/payload-types'
 
@@ -32,7 +33,7 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
   const [interviews, all, picks] = await Promise.all([
     findArticles({ where: { and: [{ artists: { in: [artist.id] } }, { type: { equals: 'interview' } }] }, limit: 10 }),
     findArticles({ where: { artists: { in: [artist.id] } }, limit: 100 }),
-    findPicks({ where: { artist: { equals: artist.id } }, limit: 12 }),
+    findPicks({ where: { artist: { equals: artist.id } }, limit: 50 }),
   ])
   const nonInterview = all.docs.filter((a) => a.type !== 'interview')
   const shown = filter ? all.docs.filter((a) => a.type === filter) : nonInterview
@@ -151,7 +152,7 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
       {picks.docs.length ? (
         <section className="wrap section">
           <SectionHeader title="Editor's Picks" right={<span className="muted">{picks.totalDocs}</span>} />
-          <PickGrid picks={picks.docs} />
+          <PickList rows={picks.docs.map(toRow)} groupByMonth={false} />
         </section>
       ) : null}
     </>

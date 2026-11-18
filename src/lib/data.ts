@@ -145,6 +145,20 @@ export async function findPicks({ where, limit = 24, page = 1 }: { where?: Where
   return payload.find({ collection: 'picks', where, limit, page, sort: '-pickedAt', depth: 1 })
 }
 
+// 전체 기록 목록용: 필요한 칸만 가볍게
+export async function findPickRows({ where, limit = 100, page = 1 }: { where?: Where; limit?: number; page?: number } = {}) {
+  const payload = await getClient()
+  return payload.find({
+    collection: 'picks',
+    where,
+    limit,
+    page,
+    sort: '-pickedAt',
+    depth: 0,
+    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, comment: true, spotifyUrl: true },
+  })
+}
+
 export async function getPick(id: string) {
   if (!/^\d+$/.test(id)) return null
   const payload = await getClient()
