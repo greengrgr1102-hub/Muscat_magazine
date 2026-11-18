@@ -1,9 +1,20 @@
 'use client'
 import { useState } from 'react'
+import { sendTrack } from './Track'
 
 // 처음엔 커버만 보여 주고, 재생 버튼을 누르면 그 자리에 Spotify 플레이어를 불러옵니다.
 // (플레이어 여러 개를 한꺼번에 불러오면 페이지가 무거워져서요.)
-export function SpotifyPlayer({ embed, cover, title }: { embed: string | null; cover?: string | null; title: string }) {
+export function SpotifyPlayer({
+  embed,
+  cover,
+  title,
+  pickId,
+}: {
+  embed: string | null
+  cover?: string | null
+  title: string
+  pickId?: number
+}) {
   const [open, setOpen] = useState(false)
   if (open && embed) {
     return (
@@ -23,7 +34,10 @@ export function SpotifyPlayer({ embed, cover, title }: { embed: string | null; c
     <button
       type="button"
       className="epick__media"
-      onClick={() => setOpen(true)}
+      onClick={() => {
+        setOpen(true)
+        if (pickId) sendTrack({ kind: 'play', id: pickId })
+      }}
       disabled={!embed}
       aria-label={`${title} 듣기`}
     >

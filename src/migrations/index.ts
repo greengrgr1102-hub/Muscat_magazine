@@ -7,6 +7,7 @@ import * as migration_20261118_114020_picks_custom_tags from './20261118_114020_
 import * as migration_20261118_114828_spotify_sync from './20261118_114828_spotify_sync';
 import * as migration_20261118_122819_search_verification from './20261118_122819_search_verification';
 import * as migration_20261118_150834_article_gallery from './20261118_150834_article_gallery';
+import * as migration_20261118_155506_stats from './20261118_155506_stats';
 
 export const migrations = [
   {
@@ -52,6 +53,11 @@ export const migrations = [
   {
     up: migration_20261118_150834_article_gallery.up,
     down: migration_20261118_150834_article_gallery.down,
-    name: '20261118_150834_article_gallery'
+    name: '20261118_150834_article_gallery',
+  },
+  {
+    up: migration_20261118_155506_stats.up,
+    down: migration_20261118_155506_stats.down,
+    name: '20261118_155506_stats'
   },
 ];

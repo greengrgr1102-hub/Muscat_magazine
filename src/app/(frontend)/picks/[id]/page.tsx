@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PickGrid, TagLinks, asTags, spotifyEmbed } from '@/components/Picks'
 import { ArrowLink, SectionHeader } from '@/components/ui'
+import { ViewTracker } from '@/components/Track'
 import { asGenres, formatDate, getPick, similarPicks } from '@/lib/data'
 
 type Params = Promise<{ id: string }>
@@ -29,6 +30,7 @@ export default async function PickPage({ params }: { params: Params }) {
 
   return (
     <>
+      <ViewTracker kind="pick" id={pick.id} />
       <section className="wrap pick-detail">
         <ArrowLink href="/picks" back>
           Editor&apos;s Picks

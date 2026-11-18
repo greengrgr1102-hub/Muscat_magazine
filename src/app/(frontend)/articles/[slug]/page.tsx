@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { RichText } from '@/components/RichText'
+import { ViewTracker } from '@/components/Track'
 import { ArrowLink, CardGrid, Chip, Icon, Img, ListenLinks, SectionHeader, articleHref } from '@/components/ui'
 import type { Article, User } from '@/payload-types'
 import {
@@ -65,6 +66,7 @@ export default async function ArticlePage({ params }: { params: Params }) {
 
   return (
     <article>
+      <ViewTracker kind="article" id={article.id} />
       <header className="article-head wrap">
         <ArrowLink href="/articles" back>
           Articles

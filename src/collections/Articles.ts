@@ -1,5 +1,6 @@
 import type { CollectionConfig, Condition } from 'payload'
 import { listenLinksField, slugField } from './fields'
+import { totalFor } from '../lib/stats'
 
 export const ARTICLE_TYPES = [
   { label: 'Album Review (앨범 리뷰)', value: 'review' },
@@ -19,7 +20,7 @@ export const Articles: CollectionConfig = {
   admin: {
     group: '콘텐츠',
     useAsTitle: 'title',
-    defaultColumns: ['title', 'type', 'publishedAt', '_status'],
+    defaultColumns: ['title', 'type', 'publishedAt', 'views', '_status'],
     listSearchableFields: ['title', 'excerpt'],
   },
   defaultSort: '-publishedAt',
@@ -33,6 +34,26 @@ export const Articles: CollectionConfig = {
   },
   fields: [
     { name: 'title', label: '제목', type: 'text', required: true },
+    {
+      // 저장되지 않는 칸 — 관리자 화면에서 볼 때마다 조회수 기록을 더해서 보여줘요.
+      name: 'views',
+      label: '조회수',
+      type: 'number',
+      virtual: true,
+      admin: { position: 'sidebar', readOnly: true, description: '사이트에서 이 글이 열린 횟수 (전체 기간)' },
+      hooks: {
+        afterRead: [
+          async ({ req, originalDoc }) => {
+            if (!req.user || !originalDoc?.id) return undefined
+            try {
+              return await totalFor(req.payload, `article:${originalDoc.id}`)
+            } catch {
+              return 0
+            }
+          },
+        ],
+      },
+    },
     {
       name: 'type',
       label: '글 종류',

@@ -76,6 +76,7 @@ export interface Config {
     inquiries: Inquiry;
     subscribers: Subscriber;
     users: User;
+    stats: Stat;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -92,6 +93,7 @@ export interface Config {
     inquiries: InquiriesSelect<false> | InquiriesSelect<true>;
     subscribers: SubscribersSelect<false> | SubscribersSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    stats: StatsSelect<false> | StatsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -146,6 +148,10 @@ export interface UserAuthOperations {
 export interface Article {
   id: number;
   title: string;
+  /**
+   * 사이트에서 이 글이 열린 횟수 (전체 기간)
+   */
+  views?: number | null;
   type: 'review' | 'interview' | 'playlist' | 'release';
   /**
    * 사이트 주소에 쓰입니다. 비워 두면 자동으로 만들어집니다. 예: shoegaze, album-title
@@ -358,7 +364,6 @@ export interface Media {
    * 이미지를 설명하는 짧은 문장 (예: Album Title 앨범 커버)
    */
   alt: string;
-  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -565,6 +570,16 @@ export interface Subscriber {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stats".
+ */
+export interface Stat {
+  id: number;
+  day: string;
+  key: string;
+  count?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -622,6 +637,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'users';
         value: number | User;
+      } | null)
+    | ({
+        relationTo: 'stats';
+        value: number | Stat;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -671,6 +690,7 @@ export interface PayloadMigration {
  */
 export interface ArticlesSelect<T extends boolean = true> {
   title?: T;
+  views?: T;
   type?: T;
   slug?: T;
   publishedAt?: T;
@@ -821,7 +841,6 @@ export interface TagsSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
-  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -923,6 +942,15 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stats_select".
+ */
+export interface StatsSelect<T extends boolean = true> {
+  day?: T;
+  key?: T;
+  count?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

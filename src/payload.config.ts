@@ -17,6 +17,7 @@ import { Tags } from './collections/Tags'
 import { Artists } from './collections/Artists'
 import { Articles } from './collections/Articles'
 import { Inquiries, Subscribers } from './collections/Inquiries'
+import { Stats } from './collections/Stats'
 import { AboutPage, SiteSettings } from './globals/Settings'
 import { SpotifySync } from './globals/SpotifySync'
 
@@ -43,12 +44,15 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      beforeDashboard: ['/components/admin/StatsDashboard#StatsDashboard'],
+    },
   },
   i18n: {
     fallbackLanguage: 'ko',
     supportedLanguages: { ko, en },
   },
-  collections: [Articles, Picks, Artists, Genres, Tags, Media, Inquiries, Subscribers, Users],
+  collections: [Articles, Picks, Artists, Genres, Tags, Media, Inquiries, Subscribers, Users, Stats],
   globals: [SiteSettings, AboutPage, SpotifySync],
   editor: lexicalEditor(),
   secret: SECRET,

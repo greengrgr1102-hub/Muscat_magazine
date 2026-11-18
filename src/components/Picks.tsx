@@ -31,7 +31,7 @@ export function PickCard({ pick }: { pick: Pick }) {
   const genres = asGenres(pick.genres)
   return (
     <article className="epick">
-      <SpotifyPlayer embed={embed} cover={pick.coverUrl} title={`${pick.track || ''} — ${pick.artistName}`} />
+      <SpotifyPlayer embed={embed} cover={pick.coverUrl} title={`${pick.track || ''} — ${pick.artistName}`} pickId={pick.id} />
       <div className="epick__body">
         <p className="epick__meta small muted">
           <span>{formatDate(pick.pickedAt)}</span>
