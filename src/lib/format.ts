@@ -40,3 +40,13 @@ export const asArtists = (list: unknown): Artist[] =>
 export const asGenres = (list: unknown): Genre[] =>
   Array.isArray(list) ? (list.filter((g) => g && typeof g === 'object') as Genre[]) : []
 
+
+/** 배열을 섞은 새 배열을 돌려줍니다. 페이지를 열 때마다 순서가 달라집니다. */
+export function shuffle<T>(items: T[]): T[] {
+  const a = [...items]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { ArtistRow } from '@/components/ArtistRow'
 import { CardGrid, Chip, Icon, SectionHeader } from '@/components/ui'
-import { articleCountFor, getGenres, search } from '@/lib/data'
+import { articleCountFor, getGenres, search, shuffle } from '@/lib/data'
 
 export const metadata: Metadata = { title: 'Search' }
 
@@ -45,7 +45,7 @@ export default async function SearchPage({ searchParams }: { searchParams: SP })
           <div className="stack-12 search-genres">
             <p className="label">장르로 찾기</p>
             <div className="chips chips--wrap">
-              {genres.map((g) => (
+              {shuffle(genres).map((g) => (
                 <Chip key={g.id} href={`/genres/${g.slug}`}>
                   {g.name}
                 </Chip>

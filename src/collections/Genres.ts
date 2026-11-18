@@ -25,7 +25,7 @@ export const Genres: CollectionConfig = {
       label: '정렬 순서',
       type: 'number',
       defaultValue: 0,
-      admin: { position: 'sidebar', description: '작을수록 검색 화면에서 앞에 보입니다' },
+      admin: { position: 'sidebar', description: '아티클 목록의 장르 선택 순서입니다. 검색 화면의 장르는 열 때마다 무작위로 섞입니다.' },
     },
   ],
 }

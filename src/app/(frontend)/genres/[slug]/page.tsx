@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArtistRow } from '@/components/ArtistRow'
 import { ArrowLink, CardGrid, Chip, SectionHeader } from '@/components/ui'
-import { articleCountFor, artistsByGenre, findArticles, getGenre, getGenres } from '@/lib/data'
+import { articleCountFor, artistsByGenre, findArticles, getGenre, getGenres, shuffle } from '@/lib/data'
 
 type Params = Promise<{ slug: string }>
 type SP = Promise<{ page?: string }>
@@ -45,7 +45,7 @@ export default async function GenrePage({ params, searchParams }: { params: Para
         </div>
         {genre.description ? <p className="muted genre-desc">{genre.description}</p> : null}
         <div className="chips chips--scroll">
-          {genres.map((g) => (
+          {[genre, ...shuffle(genres.filter((g) => g.id !== genre.id))].map((g) => (
             <Chip key={g.id} href={`/genres/${g.slug}`} active={g.id === genre.id}>
               {g.name}
             </Chip>
