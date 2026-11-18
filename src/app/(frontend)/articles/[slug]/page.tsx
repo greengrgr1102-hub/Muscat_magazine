@@ -44,7 +44,8 @@ export default async function ArticlePage({ params }: { params: Params }) {
     ['Published', formatDate(article.publishedAt)],
   ]
   if (author?.name) metaInfo.push(['Editor', author.name])
-  if (artists.length)
+  const isInterview = article.type === 'interview'
+  if (artists.length && !isInterview)
     metaInfo.push([
       'Artists',
       <span key="a" className="inline-links">
@@ -94,6 +95,19 @@ export default async function ArticlePage({ params }: { params: Params }) {
           ) : null}
           <div className="article-body wrap grid12">
             <aside className="article-side col-3">
+              {isInterview && artists.length ? (
+                <div className={`interviewee${artists.length > 1 ? ' interviewee--multi' : ''}`}>
+                  {artists.map((ar) => (
+                    <Link key={ar.id} href={`/artists/${ar.slug}`} className="interviewee__item">
+                      {asMedia(ar.photo)?.url ? (
+                        <Img media={ar.photo} ratio="4 / 5" className="interviewee__img" sizes="(max-width: 768px) 50vw, 25vw" priority />
+                      ) : null}
+                      <span className="label">Interviewee</span>
+                      <span className="h-sm interviewee__name">{ar.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
               <dl className="meta-list">
                 {metaInfo.map(([k, v]) => (
                   <div key={k}>

@@ -1057,6 +1057,38 @@ button {
     padding-bottom: 56px;
   }
 }
+/* 인터뷰: 사이드에 아티스트 얼굴 + 이름 */
+.interviewee {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.interviewee--multi {
+  grid-template-columns: 1fr 1fr;
+}
+.interviewee__item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.interviewee__img {
+  margin-bottom: 8px;
+  transition: opacity 0.2s;
+}
+.interviewee__item:hover .interviewee__img {
+  opacity: 0.85;
+}
+.interviewee__item:hover .interviewee__name {
+  color: var(--accent-ink);
+}
+@media (max-width: 768px) {
+  .interviewee {
+    grid-template-columns: minmax(0, 200px);
+  }
+  .interviewee--multi {
+    grid-template-columns: repeat(2, minmax(0, 160px));
+  }
+}
 .meta-list > div {
   display: flex;
   flex-direction: column;
