@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { RichText } from '@/components/RichText'
-import { ArrowLink, CardGrid, Chip, Img, Lines, ListenLinks, SectionHeader, articleHref, Button } from '@/components/ui'
+import { ArrowLink, Button, Caption, CardGrid, Chip, Img, Lines, ListenLinks, SectionHeader, articleHref } from '@/components/ui'
 import { PickGrid } from '@/components/Picks'
 import { TYPE_LABEL, TYPE_ORDER, asGenres, asMedia, findArticles, findPicks, formatDate, getArtist } from '@/lib/data'
 import type { Artist } from '@/payload-types'
@@ -69,7 +69,10 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
 
       <section className="wrap section grid12 artist-intro">
         <div className="col-5">
-          <Img media={artist.photo} label="Artist photo 4:5" sizes="(max-width: 768px) 100vw, 40vw" priority />
+          <figure>
+            <Img media={artist.photo} label="Artist photo 4:5" sizes="(max-width: 768px) 100vw, 40vw" priority />
+            <Caption media={artist.photo} />
+          </figure>
         </div>
         <div className="col-6 col-start-7 artist-intro__text">
           {artist.noteHeadline || artist.note ? (

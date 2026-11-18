@@ -24,16 +24,31 @@ export const Artists: CollectionConfig = {
       ],
     },
     slugField('name'),
-    { name: 'photo', label: '대표 사진 (4:5)', type: 'upload', relationTo: 'media' },
+    {
+      type: 'row',
+      fields: [
+        { name: 'photo', label: '대표 사진 (4:5)', type: 'upload', relationTo: 'media', admin: { width: '50%' } },
+        {
+          name: 'face',
+          label: '작은 얼굴 사진 (선택)',
+          type: 'upload',
+          relationTo: 'media',
+          admin: {
+            width: '50%',
+            description: '인터뷰 답변 옆 동그라미에 쓰여요. 정사각형 얼굴 사진이 좋아요. 비우면 대표 사진을 잘라 써요.',
+          },
+        },
+      ],
+    },
     {
       name: 'members',
-      label: '멤버 (밴드일 때)',
+      label: '멤버 (밴드일 때만)',
       type: 'array',
       labels: { singular: '멤버', plural: '멤버' },
       admin: {
         initCollapsed: true,
         description:
-          '멤버가 탈퇴해도 지우지 말고 「탈퇴한 멤버」에 체크해 주세요. 예전 인터뷰에서는 그 멤버 얼굴이 그대로 보이고, 아티스트 페이지에서는 전 멤버로 따로 표시돼요.',
+          '솔로 아티스트는 비워 두세요 — 위의 사진과 이름이 그대로 쓰여요. 멤버가 탈퇴해도 지우지 말고 「탈퇴한 멤버」에 체크해 주세요. 예전 인터뷰에서는 그 멤버 얼굴이 그대로 보이고, 아티스트 페이지에서는 전 멤버로 따로 표시돼요.',
         components: { RowLabel: '/components/admin/MemberRowLabel#MemberRowLabel' },
       },
       fields: [

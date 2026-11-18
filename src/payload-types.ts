@@ -368,9 +368,13 @@ export interface User {
 export interface Media {
   id: number;
   /**
-   * 이미지를 설명하는 짧은 문장 (예: Album Title 앨범 커버)
+   * 이미지를 설명하는 짧은 문장 (예: Album Title 앨범 커버). 화면에는 안 보이고 검색·접근성용이에요
    */
   alt: string;
+  /**
+   * 사진 밑에 작게 보여요. 예: 2024년 롤링홀 공연 · 사진 홍길동
+   */
+  caption?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -434,7 +438,11 @@ export interface Artist {
   slug?: string | null;
   photo?: (number | null) | Media;
   /**
-   * 멤버가 탈퇴해도 지우지 말고 「탈퇴한 멤버」에 체크해 주세요. 예전 인터뷰에서는 그 멤버 얼굴이 그대로 보이고, 아티스트 페이지에서는 전 멤버로 따로 표시돼요.
+   * 인터뷰 답변 옆 동그라미에 쓰여요. 정사각형 얼굴 사진이 좋아요. 비우면 대표 사진을 잘라 써요.
+   */
+  face?: (number | null) | Media;
+  /**
+   * 솔로 아티스트는 비워 두세요 — 위의 사진과 이름이 그대로 쓰여요. 멤버가 탈퇴해도 지우지 말고 「탈퇴한 멤버」에 체크해 주세요. 예전 인터뷰에서는 그 멤버 얼굴이 그대로 보이고, 아티스트 페이지에서는 전 멤버로 따로 표시돼요.
    */
   members?:
     | {
@@ -824,6 +832,7 @@ export interface ArtistsSelect<T extends boolean = true> {
   nameAlt?: T;
   slug?: T;
   photo?: T;
+  face?: T;
   members?:
     | T
     | {
@@ -878,6 +887,7 @@ export interface TagsSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  caption?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

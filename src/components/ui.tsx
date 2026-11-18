@@ -269,3 +269,10 @@ export function Lines({ text }: { text?: string | null }) {
     </>
   )
 }
+
+// 사진 밑에 작게 붙는 설명
+export function Caption({ media }: { media?: MediaType | number | null }) {
+  const m = asMedia(media)
+  const text = (m as { caption?: string | null } | null)?.caption
+  return text ? <figcaption className="caption">{text}</figcaption> : null
+}

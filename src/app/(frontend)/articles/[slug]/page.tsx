@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { RichText } from '@/components/RichText'
 import { ViewTracker } from '@/components/Track'
-import { ArrowLink, CardGrid, Chip, Icon, Img, ListenLinks, SectionHeader, articleHref } from '@/components/ui'
+import { ArrowLink, Caption, CardGrid, Chip, Icon, Img, ListenLinks, SectionHeader, articleHref } from '@/components/ui'
 import type { Article, User } from '@/payload-types'
 import {
   TYPE_LABEL,
@@ -88,9 +88,10 @@ export default async function ArticlePage({ params }: { params: Params }) {
       ) : (
         <>
           {article.type !== 'release' || asMedia(article.cover) ? (
-            <div className="wrap">
+            <figure className="wrap">
               <Img media={article.cover} label="Cover image" ratio="16 / 9" tone="tint" sizes="100vw" priority />
-            </div>
+              <Caption media={article.cover} />
+            </figure>
           ) : null}
           <div className="article-body wrap grid12">
             <aside className="article-side col-3">
@@ -122,7 +123,7 @@ export default async function ArticlePage({ params }: { params: Params }) {
               ) : null}
               {article.type === 'interview' && artists[0] ? (
                 <Link href={`/artists/${artists[0].slug}`} className="artist-link">
-                  <Img media={artists[0].photo} ratio="1 / 1" className="artist-link__img" />
+                  <Img media={artists[0].face || artists[0].photo} ratio="1 / 1" className="artist-link__img" />
                   <span className="artist-link__name">
                     <span className="label">Artist</span>
                     <span className="h-sm">{artists[0].name}</span>
@@ -215,7 +216,7 @@ function InterviewBody({ article }: { article: Article }) {
   }
   const faceFor = (speaker?: string | null): Face | null => {
     if (speaker?.trim()) return members.get(norm(speaker)) || { name: speaker.trim() }
-    return band ? { name: band.name, img: thumbOf(band.photo) } : null
+    return band ? { name: band.name, img: thumbOf(band.face || band.photo) } : null
   }
   return (
     <>
@@ -307,7 +308,10 @@ function PlaylistBody({ article }: { article: Article }) {
   return (
     <div className="wrap playlist grid12">
       <div className="col-5 playlist__cover">
-        <Img media={article.cover} ratio="1 / 1" tone="tint" label="Playlist cover 1:1" sizes="(max-width: 768px) 100vw, 40vw" priority />
+        <figure>
+          <Img media={article.cover} ratio="1 / 1" tone="tint" label="Playlist cover 1:1" sizes="(max-width: 768px) 100vw, 40vw" priority />
+          <Caption media={article.cover} />
+        </figure>
         <ListenLinks links={article.listen} label="전체 듣기" large />
       </div>
       <div className="col-6 col-start-7 playlist__content">
@@ -345,7 +349,7 @@ function Gallery({ items }: { items: Article['gallery'] }) {
       {photos.map((m) => (
         <figure key={m.id} className="gallery__item">
           <Img media={m} ratio={m.width && m.height ? `${m.width} / ${m.height}` : '4 / 3'} sizes="(max-width: 900px) 100vw, 50vw" />
-          {m.alt ? <figcaption className="small muted">{m.alt}</figcaption> : null}
+          <Caption media={m} />
         </figure>
       ))}
     </div>
