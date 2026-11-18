@@ -21,12 +21,6 @@ export const SiteSettings: GlobalConfig = {
               defaultValue:
                 '머스캣 매거진은 에디터의 귀로 고른 음악을 소개합니다.\n사운드가 신선한 앨범을 리뷰하고, 지금 들어야 할 곡을\n고르고, 그 음악을 만든 사람을 만납니다.',
             },
-            {
-              name: 'ctaText',
-              label: '하단 팔로우 문구',
-              type: 'textarea',
-              defaultValue: '새 음악은 인스타그램에서\n가장 먼저 만나요.',
-            },
           ],
         },
         {

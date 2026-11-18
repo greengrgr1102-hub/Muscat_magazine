@@ -258,7 +258,12 @@ export function Lines({ text }: { text?: string | null }) {
       {parts.map((p, i) => (
         <span key={i}>
           {p}
-          {i < parts.length - 1 ? <br /> : null}
+          {i < parts.length - 1 ? (
+            <>
+              {' '}
+              <br />
+            </>
+          ) : null}
         </span>
       ))}
     </>

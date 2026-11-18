@@ -866,7 +866,6 @@ export interface SiteSetting {
   heroLine1?: string | null;
   heroLine2?: string | null;
   heroIntro?: string | null;
-  ctaText?: string | null;
   email?: string | null;
   instagramHandle?: string | null;
   instagramUrl?: string | null;
@@ -921,7 +920,6 @@ export interface SiteSettingsSelect<T extends boolean = true> {
   heroLine1?: T;
   heroLine2?: T;
   heroIntro?: T;
-  ctaText?: T;
   email?: T;
   instagramHandle?: T;
   instagramUrl?: T;
