@@ -68,6 +68,8 @@ export default buildConfig({
       enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
       collections: { media: true },
       token: process.env.BLOB_READ_WRITE_TOKEN || '',
+      // 사진을 브라우저에서 Blob 저장소로 바로 올려요. Vercel 서버를 거치지 않아 4.5MB 제한에 걸리지 않습니다.
+      clientUploads: true,
     }),
   ],
 })
