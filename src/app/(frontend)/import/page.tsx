@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { getClient } from '@/lib/data'
+import { GenreFiller } from './GenreFiller'
 import { Importer } from './Importer'
 
 export const metadata: Metadata = { title: '가져오기', robots: { index: false, follow: false } }
@@ -20,6 +21,9 @@ export default async function ImportPage() {
             건너뛰니 여러 번 실행해도 괜찮아요.
           </p>
           <Importer />
+          <h2 className="h-lg" style={{ marginTop: 48 }}>Editor&apos;s Picks 장르 채우기</h2>
+          <p className="muted">Claude가 만든 장르 목록을 붙여넣고 누르면, 장르가 비어 있는 곡에만 채워요.</p>
+          <GenreFiller />
         </>
       ) : (
         <>

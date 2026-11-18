@@ -98,3 +98,34 @@ export async function importArticle(a: ImportArticle, artistIds: Record<string, 
     return { slug: a.slug, status: 'error', message: e instanceof Error ? e.message.slice(0, 200) : '알 수 없는 오류' }
   }
 }
+
+// ---- Editor's Picks 장르 채우기 ----
+// [{ id: 곡 번호, genres: [장르 주소(slug), …] }] 를 받아, 장르가 비어 있는 곡에만 채워요.
+export type PickGenre = { id: number; genres: string[] }
+
+export async function applyPickGenres(list: PickGenre[]): Promise<{ updated: number; skipped: number }> {
+  const { payload } = await requireUser()
+  const all = await payload.find({ collection: 'genres', pagination: false, depth: 0, overrideAccess: true })
+  const bySlug = new Map(all.docs.map((g) => [g.slug as string, g.id]))
+  let updated = 0
+  let skipped = 0
+  for (const item of list.slice(0, 400)) {
+    const ids = item.genres.map((s) => bySlug.get(s)).filter((x): x is number => typeof x === 'number')
+    if (!ids.length || !Number.isInteger(item.id)) {
+      skipped++
+      continue
+    }
+    try {
+      const pick = await payload.findByID({ collection: 'picks', id: item.id, depth: 0, overrideAccess: true })
+      if (pick.genres?.length) {
+        skipped++
+        continue
+      }
+      await payload.update({ collection: 'picks', id: item.id, overrideAccess: true, data: { genres: ids } })
+      updated++
+    } catch {
+      skipped++
+    }
+  }
+  return { updated, skipped }
+}

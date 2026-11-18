@@ -2,7 +2,7 @@
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { getClient } from '@/lib/data'
-import { playlistId, syncPlaylist } from '@/lib/spotify'
+import { playlistId, renameToKorean, syncPlaylist } from '@/lib/spotify'
 
 async function requireUser() {
   const payload = await getClient()
@@ -30,4 +30,11 @@ export async function syncNow() {
   if ('error' in r) return { error: r.error }
   if ('skipped' in r) return { error: r.skipped === 'no-playlist' ? '먼저 플레이리스트 링크를 저장해 주세요.' : 'Spotify 연결이 필요해요.' }
   return { ok: r.message }
+}
+
+export async function renameNow() {
+  const payload = await requireUser()
+  const r = await renameToKorean(payload)
+  revalidatePath('/picks')
+  return r.error ? { error: r.error } : { ok: r.ok }
 }

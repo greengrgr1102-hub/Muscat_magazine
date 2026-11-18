@@ -24,5 +24,8 @@ export const SpotifySync: GlobalConfig = {
     { name: 'refreshToken', type: 'text', admin: { hidden: true } },
     // 지난번에 끝까지 확인한 플레이리스트 곡 수 — 다음엔 그 뒤쪽(새로 추가된 곡)만 읽어요.
     { name: 'scannedCount', type: 'number', admin: { hidden: true } },
+    // 한국어 이름 맞추기: 어디까지 했는지와 지금까지 바꾼 곡 수
+    { name: 'renameOffset', type: 'number', admin: { hidden: true } },
+    { name: 'renameChanged', type: 'number', admin: { hidden: true } },
   ],
 }

@@ -4,7 +4,7 @@ import { after } from 'next/server'
 import type { Where } from 'payload'
 import { PickGrid, toRow } from '@/components/Picks'
 import { PickList } from '@/components/PickList'
-import { findPickRows, findPicks, getClient, getTag } from '@/lib/data'
+import { findPickRows, findPickRowsRandom, findPicks, getClient, getTag } from '@/lib/data'
 import { syncPlaylist } from '@/lib/spotify'
 import type { Pick } from '@/payload-types'
 
@@ -19,7 +19,7 @@ const hasComment: Where = { and: [{ comment: { exists: true } }, { comment: { no
 export default async function PicksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; tag?: string; q?: string }>
+  searchParams: Promise<{ page?: string; tag?: string; q?: string; sort?: string; seed?: string }>
 }) {
   const sp = await searchParams
   // 페이지를 연 뒤에, 한 시간 넘게 지났으면 Spotify 플레이리스트에서 새 곡을 확인해요.
@@ -35,14 +35,21 @@ export default async function PicksPage({
   if (q) filters.push({ or: [{ track: { like: q } }, { artistName: { like: q } }] })
   const where: Where | undefined = filters.length ? { and: filters } : undefined
   const plain = !q && !tag && page === 1
+  // 기본은 랜덤 순서. 검색할 때나 '최신순'을 고르면 최근 곡부터.
+  const latest = sp.sort === 'new' || Boolean(q)
+  const seed = Number(sp.seed) || Math.floor(Math.random() * 1_000_000) + 1
 
   const [list, featured] = await Promise.all([
-    findPickRows({ where, page, limit: PER_PAGE }),
-    plain ? findPicks({ where: hasComment, limit: 6 }) : Promise.resolve(null),
+    latest ? findPickRows({ where, page, limit: PER_PAGE }) : findPickRowsRandom({ where, seed, page, limit: PER_PAGE }),
+    plain ? findPickRowsRandom({ where: hasComment, seed, limit: 6 }) : Promise.resolve(null),
   ])
+  const featuredFull = featured?.docs.length
+    ? await findPicks({ where: { id: { in: featured.docs.map((d) => d.id) } }, limit: 6 })
+    : null
   const rows = list.docs.map((d) => toRow(d as Pick))
+  const keep = { ...(tag?.slug ? { tag: tag.slug } : {}), ...(q ? { q } : {}) }
   const href = (p: number) =>
-    `/picks?${new URLSearchParams({ ...(tag?.slug ? { tag: tag.slug } : {}), ...(q ? { q } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`
+    `/picks?${new URLSearchParams({ ...keep, ...(latest && !q ? { sort: 'new' } : {}), ...(!latest ? { seed: String(seed) } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`
   const from = (page - 1) * PER_PAGE + 1
   const to = from + list.docs.length - 1
 
@@ -60,12 +67,12 @@ export default async function PicksPage({
         </p>
       </section>
 
-      {featured?.docs.length ? (
+      {featuredFull?.docs.length ? (
         <section className="wrap section">
           <div className="section-header">
             <h2 className="h-lg">한 줄 남긴 곡</h2>
           </div>
-          <PickGrid picks={featured.docs} />
+          <PickGrid picks={featuredFull.docs} />
         </section>
       ) : null}
 
@@ -80,6 +87,24 @@ export default async function PicksPage({
             </button>
           </form>
         </div>
+        {!q ? (
+          <p className="small plist-order">
+            {latest ? (
+              <>
+                <Link href={`/picks?${new URLSearchParams(keep)}#log`}>랜덤</Link>
+                <span aria-current="true">최신순</span>
+              </>
+            ) : (
+              <>
+                <span aria-current="true">랜덤</span>
+                <Link href={`/picks?${new URLSearchParams({ ...keep, sort: 'new' })}#log`}>최신순</Link>
+                <Link href={`/picks?${new URLSearchParams(keep)}#log`} className="plist-order__shuffle">
+                  다시 섞기 ↻
+                </Link>
+              </>
+            )}
+          </p>
+        ) : null}
         {q || tag ? (
           <p className="small muted plist-filter">
             {list.totalDocs.toLocaleString()}곡 ·{' '}
@@ -90,7 +115,7 @@ export default async function PicksPage({
         ) : null}
 
         {rows.length ? (
-          <PickList rows={rows} />
+          <PickList rows={rows} groupByMonth={latest} />
         ) : (
           <p className="muted">{q || tag ? '찾는 곡이 없어요.' : '첫 번째 곡을 준비하고 있어요.'}</p>
         )}

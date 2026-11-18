@@ -84,7 +84,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 // Spotify가 "너무 자주 물어본다(429)"고 하면 알려준 시간만큼 기다렸다가 한 번 더 시도해요.
 async function getJSON<T>(url: string, token: string, deadline: number): Promise<{ status: number; body?: T }> {
   for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    // 한국어 이름이 있는 곡·아티스트는 한국어로 받아요 (Spotify 앱을 한국어로 볼 때와 같은 이름).
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, 'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.5' } })
     if (res.status === 429) {
       const wait = (Number(res.headers.get('retry-after')) || 5) * 1000
       if (Date.now() + wait > deadline) throw new SpotifyBusy(`Spotify가 잠깐 쉬어 가재요. ${Math.ceil(wait / 1000)}초쯤 뒤에 다시 가져와 주세요.`)
@@ -221,4 +222,93 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
     return { error: message }
   }
   return { added, message }
+}
+
+
+const HANGUL = /[\uac00-\ud7a3]/
+
+/**
+ * 이미 가져온 곡의 이름을 Spotify의 한국어 이름으로 바꿔요.
+ * 플레이리스트를 처음부터 끝까지 다시 읽되, 한 번에 40초씩 나눠서 진행하고 어디까지 했는지 기억해요.
+ * 한국어 이름이 따로 없는 곡(영어·일본어 곡 등)은 그대로 둬요.
+ */
+export async function renameToKorean(payload: Payload) {
+  const cfg = await payload.findGlobal({ slug: 'spotify-sync', overrideAccess: true })
+  if (!spotifyConfigured() || !cfg.refreshToken) return { error: 'Spotify 연결이 필요해요.' }
+  const pid = playlistId(cfg.playlistUrl)
+  if (!pid) return { error: '먼저 플레이리스트 링크를 저장해 주세요.' }
+  const started = Date.now()
+  const deadline = started + 40_000
+  let offset = typeof cfg.renameOffset === 'number' ? cfg.renameOffset : 0
+  let changed = typeof cfg.renameChanged === 'number' ? cfg.renameChanged : 0
+  try {
+    const tok = await refreshAccess(cfg.refreshToken)
+    const all = await payload.find({
+      collection: 'picks',
+      pagination: false,
+      depth: 0,
+      overrideAccess: true,
+      select: { spotifyUrl: true, track: true, artistName: true },
+    })
+    const byId = new Map<string, { id: number; track?: string | null; artistName: string }>()
+    for (const d of all.docs as { id: number; spotifyUrl: string; track?: string | null; artistName: string }[]) {
+      const sid = parseSpotify(d.spotifyUrl)?.id
+      if (sid) byId.set(sid, d)
+    }
+    let total = 0
+    let finished = false
+    for (const path of ['items', 'tracks']) {
+      const base = `https://api.spotify.com/v1/playlists/${pid}/${path}`
+      const first = await getJSON<ItemsPage>(`${base}?limit=1`, tok.access_token, deadline)
+      if (!first.body) {
+        if (path === 'tracks') throw new Error(`플레이리스트를 읽지 못했어요 (${first.status}).`)
+        continue
+      }
+      total = first.body.total ?? 0
+      while (offset < total && Date.now() < deadline - 3000) {
+        const page = await getJSON<ItemsPage>(`${base}?limit=50&offset=${offset}`, tok.access_token, deadline)
+        if (!page.body) throw new Error(`플레이리스트를 읽지 못했어요 (${page.status}).`)
+        const items = page.body.items || []
+        for (const it of items) {
+          const t = it.item || it.track
+          if (!t?.id) continue
+          const mine = byId.get(t.id)
+          if (!mine) continue
+          const names = (t.artists || []).map((a) => a.name).join(', ')
+          const data: { track?: string; artistName?: string } = {}
+          // 새 이름에 한글이 있고, 지금 이름에는 없을 때만 바꿔요.
+          if (t.name && HANGUL.test(t.name) && !HANGUL.test(mine.track || '') && t.name !== mine.track) data.track = t.name
+          if (names && HANGUL.test(names) && !HANGUL.test(mine.artistName) && names !== mine.artistName) data.artistName = names
+          if (data.track || data.artistName) {
+            await payload.update({ collection: 'picks', id: mine.id, overrideAccess: true, data })
+            changed++
+          }
+        }
+        offset += items.length || 50
+        if (!items.length) break
+      }
+      finished = offset >= total
+      break
+    }
+    const message = finished
+      ? `한국어 이름 맞추기를 마쳤어요. 모두 ${changed}곡의 이름을 한국어로 바꿨어요.`
+      : `${Math.min(offset, total).toLocaleString()} / ${total.toLocaleString()}곡 확인 · 지금까지 ${changed}곡을 한국어로 바꿨어요. 한 번 더 누르면 이어서 해요.`
+    await payload.updateGlobal({
+      slug: 'spotify-sync',
+      overrideAccess: true,
+      data: {
+        renameOffset: finished ? null : offset,
+        renameChanged: finished ? null : changed,
+        ...(tok.refresh_token ? { refreshToken: tok.refresh_token } : {}),
+      },
+    })
+    return { ok: message, finished }
+  } catch (e) {
+    await payload.updateGlobal({
+      slug: 'spotify-sync',
+      overrideAccess: true,
+      data: { renameOffset: offset, renameChanged: changed },
+    })
+    return { error: e instanceof Error ? e.message : '이름을 맞추는 중 문제가 생겼어요.' }
+  }
 }

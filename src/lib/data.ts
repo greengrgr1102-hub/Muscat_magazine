@@ -159,6 +159,47 @@ export async function findPickRows({ where, limit = 100, page = 1 }: { where?: W
   })
 }
 
+// 정해진 숫자(seed)로 늘 같은 순서로 섞기 — 페이지를 넘겨도 순서가 유지돼요.
+function seeded(seed: number) {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/** 랜덤 순서로 한 페이지 가져오기 (seed가 같으면 같은 순서) */
+export async function findPickRowsRandom({ where, seed, page = 1, limit = 100 }: { where?: Where; seed: number; page?: number; limit?: number }) {
+  const payload = await getClient()
+  const ids = (
+    await payload.find({ collection: 'picks', where, pagination: false, depth: 0, sort: 'id', select: { spotifyUrl: true } })
+  ).docs.map((d) => d.id as number)
+  const rnd = seeded(seed)
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1))
+    ;[ids[i], ids[j]] = [ids[j], ids[i]]
+  }
+  const slice = ids.slice((page - 1) * limit, page * limit)
+  const docs = slice.length
+    ? (
+        await payload.find({
+          collection: 'picks',
+          where: { id: { in: slice } },
+          limit: slice.length,
+          depth: 0,
+          select: { track: true, artistName: true, coverUrl: true, pickedAt: true, comment: true, spotifyUrl: true },
+        })
+      ).docs
+    : []
+  const order = new Map(slice.map((id, i) => [id, i]))
+  docs.sort((a, b) => (order.get(a.id as number) ?? 0) - (order.get(b.id as number) ?? 0))
+  const totalPages = Math.max(1, Math.ceil(ids.length / limit))
+  return { docs, totalDocs: ids.length, totalPages, hasPrevPage: page > 1, hasNextPage: page < totalPages }
+}
+
 export async function getPick(id: string) {
   if (!/^\d+$/.test(id)) return null
   const payload = await getClient()
