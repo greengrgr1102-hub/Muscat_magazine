@@ -41,7 +41,7 @@ export function RenameButton() {
   return (
     <div className="stack-12">
       <button className="btn btn--outline" disabled={pending} onClick={() => start(async () => setRes(await renameNow()))}>
-        <span>{pending ? '맞추는 중… (최대 40초)' : '곡 이름을 한국어로 맞추기'}</span>
+        <span>{pending ? '맞추는 중… (최대 40초)' : '곡 정보 새로 고치기'}</span>
       </button>
       {res?.ok ? <p className="small" style={{ color: 'var(--accent-ink)' }}>{res.ok}</p> : null}
       {res?.error ? <p className="small" style={{ color: '#B3261E' }}>{res.error}</p> : null}

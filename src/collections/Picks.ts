@@ -112,5 +112,17 @@ export const Picks: CollectionConfig = {
       type: 'text',
       admin: { readOnly: true, description: 'Spotify에서 자동으로 가져온 커버', position: 'sidebar' },
     },
+    {
+      name: 'album',
+      label: '앨범',
+      type: 'text',
+      admin: { position: 'sidebar', description: 'Spotify에서 자동으로 가져와요' },
+    },
+    {
+      name: 'releaseDate',
+      label: '발매일',
+      type: 'text',
+      admin: { position: 'sidebar', description: '예: 2019-07 또는 2019-07-12 (Spotify에서 자동)' },
+    },
   ],
 }

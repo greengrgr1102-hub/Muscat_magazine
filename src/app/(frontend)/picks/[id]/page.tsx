@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { PickGrid, TagLinks, asTags, spotifyEmbed } from '@/components/Picks'
 import { ArrowLink, SectionHeader } from '@/components/ui'
 import { ViewTracker } from '@/components/Track'
+import { SpotifyEmbed } from '@/components/SpotifyEmbed'
 import { asGenres, formatDate, getPick, similarPicks } from '@/lib/data'
 
 type Params = Promise<{ id: string }>
@@ -37,16 +38,7 @@ export default async function PickPage({ params }: { params: Params }) {
         </ArrowLink>
         <div className="pick-detail__grid">
           <div className="pick-detail__player">
-            {embed ? (
-              <iframe
-                src={embed}
-                title={`Spotify 플레이어: ${pick.track || ''}`}
-                width="100%"
-                height="100%"
-                loading="lazy"
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              />
-            ) : null}
+            {embed ? <SpotifyEmbed embed={embed} title={`${pick.track || ''} — ${pick.artistName}`} height={352} /> : null}
           </div>
           <div className="pick-detail__info">
             <p className="label">Editor&apos;s Pick · {formatDate(pick.pickedAt)}</p>
@@ -55,14 +47,33 @@ export default async function PickPage({ params }: { params: Params }) {
               {artist ? <Link href={`/artists/${artist.slug}`}>{pick.artistName}</Link> : pick.artistName}
             </p>
             {pick.comment ? <p className="pick-detail__comment">{pick.comment}</p> : null}
-            {genres.length ? (
-              <div className="chips">
-                {genres.map((g) => (
-                  <Link key={g.id} className="chip" href={`/genres/${g.slug}`}>
-                    {g.name}
-                  </Link>
-                ))}
-              </div>
+            {pick.album || pick.releaseDate || genres.length ? (
+              <dl className="pick-detail__facts">
+                {pick.album ? (
+                  <div>
+                    <dt className="label">Album</dt>
+                    <dd>{pick.album}</dd>
+                  </div>
+                ) : null}
+                {pick.releaseDate ? (
+                  <div>
+                    <dt className="label">Released</dt>
+                    <dd>{releaseLabel(pick.releaseDate)}</dd>
+                  </div>
+                ) : null}
+                {genres.length ? (
+                  <div>
+                    <dt className="label">Genre</dt>
+                    <dd className="pick-detail__genres">
+                      {genres.map((g) => (
+                        <Link key={g.id} href={`/genres/${g.slug}`}>
+                          {g.name}
+                        </Link>
+                      ))}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
             ) : null}
             <TagLinks tags={tags} />
             <a className="arrow-link" href={pick.spotifyUrl} target="_blank" rel="noreferrer">
@@ -86,4 +97,10 @@ export default async function PickPage({ params }: { params: Params }) {
       ) : null}
     </>
   )
+}
+
+// 2019-07-12 → 2019년 7월, 2019 → 2019년
+function releaseLabel(d: string) {
+  const [y, m] = d.split('-')
+  return m ? `${y}년 ${Number(m)}월` : `${y}년`
 }

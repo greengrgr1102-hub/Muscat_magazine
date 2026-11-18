@@ -87,10 +87,10 @@ export default async function SpotifyPage({ searchParams }: { searchParams: Prom
       </div>
 
       <div className="stack-12">
-        <p className="label">곡 이름 한국어로 맞추기</p>
+        <p className="label">곡 정보 새로 고치기</p>
         <p className="muted small">
-          Spotify가 한국 곡을 영어 이름으로 준 경우(IU → 아이유 등)가 있어요. 누르면 이미 가져온 곡의 이름을 Spotify의 한국어
-          이름으로 바꿔요. 곡이 많으면 몇 번에 나눠서 진행돼요.
+          이미 가져온 곡의 이름을 Spotify의 한국어 이름으로 맞추고(IU → 아이유 등), 앨범 이름과 발매일을 채워요. 곡이 많으면 몇
+          번에 나눠서 진행돼요.
           {typeof cfg.renameOffset === 'number' ? ` 지금 ${cfg.renameOffset.toLocaleString()}곡까지 확인했어요.` : ''}
         </p>
         <RenameButton />

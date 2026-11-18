@@ -12,6 +12,7 @@ import * as migration_20261118_162229_band_members from './20261118_162229_band_
 import * as migration_20261118_164347_captions_face from './20261118_164347_captions_face';
 import * as migration_20261118_180732_spotify_scanned from './20261118_180732_spotify_scanned';
 import * as migration_20261118_181558_spotify_rename from './20261118_181558_spotify_rename';
+import * as migration_20261118_183226_pick_album from './20261118_183226_pick_album';
 
 export const migrations = [
   {
@@ -82,6 +83,11 @@ export const migrations = [
   {
     up: migration_20261118_181558_spotify_rename.up,
     down: migration_20261118_181558_spotify_rename.down,
-    name: '20261118_181558_spotify_rename'
+    name: '20261118_181558_spotify_rename',
+  },
+  {
+    up: migration_20261118_183226_pick_album.up,
+    down: migration_20261118_183226_pick_album.down,
+    name: '20261118_183226_pick_album'
   },
 ];

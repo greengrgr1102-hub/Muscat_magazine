@@ -375,6 +375,7 @@ export interface Media {
    * 사진 밑에 작게 보여요. 예: 2024년 롤링홀 공연 · 사진 홍길동
    */
   caption?: string | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -555,6 +556,14 @@ export interface Pick {
    * Spotify에서 자동으로 가져온 커버
    */
   coverUrl?: string | null;
+  /**
+   * Spotify에서 자동으로 가져와요
+   */
+  album?: string | null;
+  /**
+   * 예: 2019-07 또는 2019-07-12 (Spotify에서 자동)
+   */
+  releaseDate?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -820,6 +829,8 @@ export interface PicksSelect<T extends boolean = true> {
   genres?: T;
   tags?: T;
   coverUrl?: T;
+  album?: T;
+  releaseDate?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -888,6 +899,7 @@ export interface TagsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

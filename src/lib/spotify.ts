@@ -73,7 +73,7 @@ type SpTrack = {
   name?: string
   type?: string
   artists?: { name: string }[]
-  album?: { images?: { url: string }[] }
+  album?: { name?: string; release_date?: string; release_date_precision?: string; images?: { url: string }[] }
   external_urls?: { spotify?: string }
 }
 type SpItem = { added_at?: string; item?: SpTrack; track?: SpTrack }
@@ -190,6 +190,8 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
           track: t.name,
           artistName: names.join(', ') || 'Unknown',
           coverUrl: t.album?.images?.[0]?.url,
+          album: t.album?.name,
+          releaseDate: releaseOf(t),
           pickedAt: it.added_at || new Date().toISOString(),
           artist: match?.id,
         },
@@ -227,6 +229,14 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
 
 const HANGUL = /[\uac00-\ud7a3]/
 
+// 발매일: 일 단위까지 있으면 '2019-07-12', 월까지면 '2019-07', 연도만 있으면 '2019'
+function releaseOf(t: SpTrack) {
+  const d = t.album?.release_date
+  if (!d) return undefined
+  const p = t.album?.release_date_precision
+  return p === 'year' ? d.slice(0, 4) : p === 'month' ? d.slice(0, 7) : d
+}
+
 /**
  * 이미 가져온 곡의 이름을 Spotify의 한국어 이름으로 바꿔요.
  * 플레이리스트를 처음부터 끝까지 다시 읽되, 한 번에 40초씩 나눠서 진행하고 어디까지 했는지 기억해요.
@@ -248,10 +258,11 @@ export async function renameToKorean(payload: Payload) {
       pagination: false,
       depth: 0,
       overrideAccess: true,
-      select: { spotifyUrl: true, track: true, artistName: true },
+      select: { spotifyUrl: true, track: true, artistName: true, album: true, releaseDate: true },
     })
-    const byId = new Map<string, { id: number; track?: string | null; artistName: string }>()
-    for (const d of all.docs as { id: number; spotifyUrl: string; track?: string | null; artistName: string }[]) {
+    type Mine = { id: number; spotifyUrl: string; track?: string | null; artistName: string; album?: string | null; releaseDate?: string | null }
+    const byId = new Map<string, Mine>()
+    for (const d of all.docs as Mine[]) {
       const sid = parseSpotify(d.spotifyUrl)?.id
       if (sid) byId.set(sid, d)
     }
@@ -275,13 +286,17 @@ export async function renameToKorean(payload: Payload) {
           const mine = byId.get(t.id)
           if (!mine) continue
           const names = (t.artists || []).map((a) => a.name).join(', ')
-          const data: { track?: string; artistName?: string } = {}
+          const data: { track?: string; artistName?: string; album?: string; releaseDate?: string } = {}
           // 새 이름에 한글이 있고, 지금 이름에는 없을 때만 바꿔요.
           if (t.name && HANGUL.test(t.name) && !HANGUL.test(mine.track || '') && t.name !== mine.track) data.track = t.name
           if (names && HANGUL.test(names) && !HANGUL.test(mine.artistName) && names !== mine.artistName) data.artistName = names
-          if (data.track || data.artistName) {
+          const albumName = t.album?.name
+          const rel = releaseOf(t)
+          if (albumName && albumName !== mine.album) data.album = albumName
+          if (rel && rel !== mine.releaseDate) data.releaseDate = rel
+          if (data.track || data.artistName || data.album || data.releaseDate) {
             await payload.update({ collection: 'picks', id: mine.id, overrideAccess: true, data })
-            changed++
+            if (data.track || data.artistName) changed++
           }
         }
         offset += items.length || 50
@@ -291,8 +306,8 @@ export async function renameToKorean(payload: Payload) {
       break
     }
     const message = finished
-      ? `한국어 이름 맞추기를 마쳤어요. 모두 ${changed}곡의 이름을 한국어로 바꿨어요.`
-      : `${Math.min(offset, total).toLocaleString()} / ${total.toLocaleString()}곡 확인 · 지금까지 ${changed}곡을 한국어로 바꿨어요. 한 번 더 누르면 이어서 해요.`
+      ? `곡 정보 새로 고치기를 마쳤어요. (한국어 이름으로 바꾼 곡 ${changed}곡, 앨범·발매일도 채웠어요)`
+      : `${Math.min(offset, total).toLocaleString()} / ${total.toLocaleString()}곡 확인했어요. 한 번 더 누르면 이어서 해요.`
     await payload.updateGlobal({
       slug: 'spotify-sync',
       overrideAccess: true,

@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useState } from 'react'
+import { SpotifyEmbed } from './SpotifyEmbed'
 import { sendTrack } from './Track'
 
 export type PickRow = {
@@ -85,15 +86,7 @@ export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; group
                     <span className="plist__date">{dayOf(r.pickedAt)}</span>
                   </div>
                   {isOpen && r.embed ? (
-                    <iframe
-                      className="plist__player"
-                      src={r.embed}
-                      title={`Spotify 플레이어: ${title}`}
-                      width="100%"
-                      height="80"
-                      loading="lazy"
-                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    />
+                    <SpotifyEmbed className="plist__player" embed={r.embed} title={title} height={80} autoPlay />
                   ) : null}
                 </li>
               )

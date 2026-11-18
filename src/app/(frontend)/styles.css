@@ -1952,9 +1952,7 @@ a.track:hover .h-sm {
   align-items: start;
 }
 .pick-detail__player {
-  aspect-ratio: 1 / 1;
-  max-height: 560px;
-  background: var(--surface);
+  min-height: 352px;
 }
 .pick-detail__player iframe {
   display: block;
@@ -1991,8 +1989,7 @@ a.track:hover .h-sm {
     gap: 32px;
   }
   .pick-detail__player {
-    aspect-ratio: auto;
-    height: 352px;
+    min-height: 352px;
   }
 }
 
@@ -2337,4 +2334,44 @@ figure {
 }
 .plist:not(:has(.plist__month)) {
   margin-top: 12px;
+}
+
+/* Spotify 플레이어 */
+.spotify-embed iframe {
+  display: block;
+  border: 0;
+  border-radius: 12px;
+}
+.epick__media--player {
+  aspect-ratio: auto;
+  background: transparent;
+}
+.pick-detail__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0 24px;
+  margin: 4px 0 0;
+  border-top: 1px solid var(--line);
+}
+.pick-detail__facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.pick-detail__facts dd {
+  margin: 0;
+  font-size: 15px;
+}
+.pick-detail__genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.pick-detail__genres a {
+  color: var(--accent-ink);
+}
+.pick-detail__genres a:hover {
+  text-decoration: underline;
 }
