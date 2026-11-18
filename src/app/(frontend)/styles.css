@@ -1751,3 +1751,118 @@ a.track:hover .h-sm {
     flex-shrink: 0;
   }
 }
+
+/* ---------- Editor's Picks ---------- */
+.epick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 64px var(--gutter);
+}
+@media (max-width: 1024px) {
+  .epick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .epick-grid {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+}
+.epick {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.epick__media {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 0;
+  background: var(--tint);
+  overflow: hidden;
+  cursor: pointer;
+}
+.epick__media:disabled {
+  cursor: default;
+}
+.epick__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+.epick__media:hover img {
+  transform: scale(1.03);
+}
+.epick__media--player {
+  background: var(--surface);
+  cursor: default;
+}
+.epick__media--player iframe {
+  display: block;
+  border: 0;
+  width: 100%;
+  height: 100%;
+}
+.epick__play {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--ink);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s ease;
+}
+.epick__play svg {
+  margin-left: 3px;
+}
+.epick__media:hover .epick__play {
+  transform: scale(1.08);
+}
+.epick__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.epick__meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.epick__meta a:hover {
+  color: var(--accent-ink);
+}
+.epick__track {
+  font-size: clamp(20px, 1.8vw, 24px);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.epick__artist {
+  font-size: 16px;
+  color: var(--ink-muted);
+}
+.epick__artist a:hover {
+  color: var(--accent-ink);
+}
+.epick__comment {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.epick__open {
+  margin-top: 12px;
+  color: var(--ink-muted);
+}
+.epick__open:hover {
+  color: var(--accent-ink);
+}

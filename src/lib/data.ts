@@ -138,3 +138,9 @@ export async function nextArticle(article: Article) {
   })
   return res.docs[0] ?? null
 }
+
+/* ---------- Editor's Picks ---------- */
+export async function findPicks({ where, limit = 24, page = 1 }: { where?: Where; limit?: number; page?: number } = {}) {
+  const payload = await getClient()
+  return payload.find({ collection: 'picks', where, limit, page, sort: '-pickedAt', depth: 1 })
+}

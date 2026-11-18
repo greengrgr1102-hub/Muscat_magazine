@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { RichText } from '@/components/RichText'
 import { ArrowLink, CardGrid, Chip, Img, Lines, ListenLinks, SectionHeader, articleHref, Button } from '@/components/ui'
-import { TYPE_LABEL, TYPE_ORDER, asGenres, asMedia, findArticles, formatDate, getArtist } from '@/lib/data'
+import { PickGrid } from '@/components/Picks'
+import { TYPE_LABEL, TYPE_ORDER, asGenres, asMedia, findArticles, findPicks, formatDate, getArtist } from '@/lib/data'
 
 type Params = Promise<{ slug: string }>
 type SP = Promise<{ type?: string }>
@@ -28,9 +29,10 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
 
   const genres = asGenres(artist.genres)
   const filter = TYPE_ORDER.includes(sp.type as never) ? sp.type : undefined
-  const [interviews, all] = await Promise.all([
+  const [interviews, all, picks] = await Promise.all([
     findArticles({ where: { and: [{ artists: { in: [artist.id] } }, { type: { equals: 'interview' } }] }, limit: 10 }),
     findArticles({ where: { artists: { in: [artist.id] } }, limit: 100 }),
+    findPicks({ where: { artist: { equals: artist.id } }, limit: 12 }),
   ])
   const nonInterview = all.docs.filter((a) => a.type !== 'interview')
   const shown = filter ? all.docs.filter((a) => a.type === filter) : nonInterview
@@ -139,6 +141,13 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
             }
           />
           <CardGrid articles={shown} />
+        </section>
+      ) : null}
+
+      {picks.docs.length ? (
+        <section className="wrap section">
+          <SectionHeader title="Editor's Picks" right={<span className="muted">{picks.totalDocs}</span>} />
+          <PickGrid picks={picks.docs} />
         </section>
       ) : null}
     </>

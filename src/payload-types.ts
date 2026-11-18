@@ -68,6 +68,7 @@ export interface Config {
   blocks: {};
   collections: {
     articles: Article;
+    picks: Pick;
     artists: Artist;
     genres: Genre;
     media: Media;
@@ -82,6 +83,7 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
+    picks: PicksSelect<false> | PicksSelect<true>;
     artists: ArtistsSelect<false> | ArtistsSelect<true>;
     genres: GenresSelect<false> | GenresSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -471,6 +473,44 @@ export interface Genre {
   createdAt: string;
 }
 /**
+ * Spotify 곡 링크와 한 줄 코멘트만 넣으면 됩니다. 곡 제목과 커버는 저장할 때 자동으로 채워져요.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "picks".
+ */
+export interface Pick {
+  id: number;
+  /**
+   * Spotify 앱에서 공유 → 링크 복사 (곡·앨범·플레이리스트)
+   */
+  spotifyUrl: string;
+  artistName: string;
+  /**
+   * 왜 좋았는지 한두 문장으로
+   */
+  comment: string;
+  pickedAt: string;
+  /**
+   * 비워 두면 Spotify에서 가져와요
+   */
+  track?: string | null;
+  /**
+   * 사이트에 아티스트 페이지가 있으면 고르세요. 그 페이지에도 이 곡이 보여요.
+   */
+  artist?: (number | null) | Artist;
+  genres?: (number | Genre)[] | null;
+  moods?: ('dreamy' | 'upbeat' | 'calm' | 'melancholy' | 'raw')[] | null;
+  textures?: ('guitar' | 'synth' | 'acoustic' | 'groove')[] | null;
+  vocal?: ('front' | 'blended' | 'instrumental') | null;
+  region?: ('korea' | 'japan' | 'chinese' | 'sea' | 'west' | 'etc') | null;
+  /**
+   * Spotify에서 자동으로 가져온 커버
+   */
+  coverUrl?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "inquiries".
  */
@@ -521,6 +561,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'articles';
         value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'picks';
+        value: number | Pick;
       } | null)
     | ({
         relationTo: 'artists';
@@ -672,6 +716,26 @@ export interface ArticlesSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "picks_select".
+ */
+export interface PicksSelect<T extends boolean = true> {
+  spotifyUrl?: T;
+  artistName?: T;
+  comment?: T;
+  pickedAt?: T;
+  track?: T;
+  artist?: T;
+  genres?: T;
+  moods?: T;
+  textures?: T;
+  vocal?: T;
+  region?: T;
+  coverUrl?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -2,6 +2,7 @@ import * as migration_20261117_164211_initial from './20261117_164211_initial';
 import * as migration_20261118_043747_simplify_home from './20261118_043747_simplify_home';
 import * as migration_20261118_053500_seed_genres from './20261118_053500_seed_genres';
 import * as migration_20261118_110532_blob_object_key from './20261118_110532_blob_object_key';
+import * as migration_20261118_112029_editor_picks from './20261118_112029_editor_picks';
 
 export const migrations = [
   {
@@ -22,6 +23,11 @@ export const migrations = [
   {
     up: migration_20261118_110532_blob_object_key.up,
     down: migration_20261118_110532_blob_object_key.down,
-    name: '20261118_110532_blob_object_key'
+    name: '20261118_110532_blob_object_key',
+  },
+  {
+    up: migration_20261118_112029_editor_picks.up,
+    down: migration_20261118_112029_editor_picks.down,
+    name: '20261118_112029_editor_picks'
   },
 ];
