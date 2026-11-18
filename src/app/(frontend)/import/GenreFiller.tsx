@@ -2,6 +2,35 @@
 import { useState } from 'react'
 import { applyPickGenres, type PickGenre } from './actions'
 
+// 두 가지 형식을 받아요.
+// 1) JSON: [{ "id": 12, "genres": ["dream-pop"] }, …]
+// 2) 짧은 형식(줄마다): dream-pop:12,15-20,31
+function parse(text: string): PickGenre[] {
+  const t = text.trim()
+  if (t.startsWith('[') || t.startsWith('{')) {
+    const json = JSON.parse(t)
+    const list = Array.isArray(json) ? json : json.pickGenres
+    if (!Array.isArray(list)) throw new Error()
+    return list
+  }
+  const map = new Map<number, string[]>()
+  for (const line of t.split(/\n+/)) {
+    const [slug, ranges] = line.split(':')
+    if (!slug?.trim() || !ranges) continue
+    for (const part of ranges.split(',')) {
+      const [a, b] = part.split('-').map((x) => Number(x.trim()))
+      if (!Number.isInteger(a)) continue
+      const end = Number.isInteger(b) ? b : a
+      for (let id = a; id <= end && id - a < 5000; id++) {
+        const g = map.get(id) || []
+        if (!g.includes(slug.trim())) g.push(slug.trim())
+        map.set(id, g)
+      }
+    }
+  }
+  return [...map.entries()].map(([id, genres]) => ({ id, genres: genres.slice(0, 3) }))
+}
+
 // 엑셀(좋아하는 노래 모음)에서 찾은 장르를 Editor's Picks에 채워 넣어요. 300곡씩 나눠서 보내요.
 export function GenreFiller() {
   const [text, setText] = useState('')
@@ -14,9 +43,8 @@ export function GenreFiller() {
     setMsg('')
     let list: PickGenre[]
     try {
-      const json = JSON.parse(text)
-      list = Array.isArray(json) ? json : json.pickGenres
-      if (!Array.isArray(list)) throw new Error()
+      list = parse(text)
+      if (!list.length) throw new Error()
     } catch {
       setErr('장르 채우기용 내용이 아니에요. Claude가 만든 내용을 그대로 붙여넣어 주세요.')
       return
