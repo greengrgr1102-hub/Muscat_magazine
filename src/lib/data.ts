@@ -463,3 +463,124 @@ export async function findAlbumPicks(key: string) {
   })
   return res.docs.length ? res.docs : null
 }
+
+/* ───────── 앨범 거미줄 ───────── */
+
+export type WebAlbumSong = {
+  id: number
+  track: string | null
+  artistName: string
+  coverUrl: string | null
+  spotifyUrl: string
+  youtubeId: string | null
+}
+export type WebAlbum = { key: string; album: string | null; artist: string; cover: string | null; genres: string[]; songs: WebAlbumSong[] }
+
+// 앨범 묶는 방법은 findPickAlbums와 같아요 (앨범 이름 + 첫 아티스트, 모르면 커버).
+const albumCte = sql`
+  with c as (
+    select right(cover_url, 24) as ck, max(album) as alb,
+           mode() within group (order by split_part(artist_name, ', ', 1)) as a1
+    from picks where cover_url like 'https://%/image/%'
+    group by right(cover_url, 24)
+  ), t2 as (
+    select p.id, c.ck, lower(c.a1) as a1,
+           case when c.alb is not null then 'n:' || lower(c.alb) || '|' || lower(c.a1) else 'c:' || c.ck end as gk
+    from picks p join c on right(p.cover_url, 24) = c.ck
+    where p.cover_url like 'https://%/image/%'
+  )`
+
+/**
+ * 앨범 하나와 비슷한 앨범들.
+ * 앨범에 담긴 곡들의 장르·태그를 모아서, 같은 장르·태그를 가진 곡이 있는 다른 앨범을 찾아요.
+ * 겹치는 태그는 3점, 장르는 2점. 한 아티스트는 한 앨범까지만.
+ */
+export async function similarAlbums(key: string, limit = 8): Promise<{ center: WebAlbum; neighbors: WebAlbum[]; random: boolean } | null> {
+  if (!/^[a-z0-9]{24}$/i.test(key)) return null
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const me = (await db.drizzle.execute(sql`${albumCte} select gk, a1 from t2 where ck = ${key} limit 1`)).rows[0]
+  if (!me) return null
+  const gk = String(me.gk)
+  const a1 = String(me.a1 || '')
+  const ranked = (
+    await db.drizzle.execute(sql`${albumCte},
+      mine as (select id from t2 where gk = ${gk}),
+      g0 as (select distinct genres_id as g from picks_rels where path = 'genres' and genres_id is not null and parent_id in (select id from mine)),
+      gs as (
+        select g from g0
+        union
+        -- 장르가 하나도 없으면 같은 아티스트의 다른 곡 장르를 빌려 써요
+        select distinct r.genres_id from picks_rels r join t2 on t2.id = r.parent_id
+        where r.path = 'genres' and r.genres_id is not null and t2.a1 = ${a1} and not exists (select 1 from g0)
+      ),
+      ts as (select distinct tags_id as t from picks_rels where path = 'tags' and tags_id is not null and parent_id in (select id from mine))
+      select t2.gk, min(t2.ck) as key, max(t2.a1) as a1,
+             (count(distinct r.tags_id) filter (where r.path = 'tags') * 3 + count(distinct r.genres_id) filter (where r.path = 'genres') * 2)::int as s
+      from t2 join picks_rels r on r.parent_id = t2.id
+      where t2.gk <> ${gk}
+        and ((r.path = 'genres' and r.genres_id in (select g from gs)) or (r.path = 'tags' and r.tags_id in (select t from ts)))
+      group by t2.gk
+      order by s desc, random()
+      limit 80`)
+  ).rows
+  const chosen: { gk: string; key: string }[] = []
+  const perArtist = new Map<string, number>()
+  for (const r of ranked) {
+    const a = String(r.a1 || '')
+    if ((perArtist.get(a) || 0) >= 1) continue
+    perArtist.set(a, 1)
+    chosen.push({ gk: String(r.gk), key: String(r.key) })
+    if (chosen.length >= limit) break
+  }
+  let random = false
+  if (chosen.length < limit) {
+    // 모자라면 아무 앨범이나 채워요
+    const skip = [gk, ...chosen.map((c) => c.gk)]
+    const extra = (
+      await db.drizzle.execute(sql`${albumCte}
+        select gk, min(ck) as key from t2 where gk not in (${sql.join(skip.map((g) => sql`${g}`), sql`, `)})
+        group by gk order by random() limit ${limit - chosen.length}`)
+    ).rows
+    if (extra.length) random = true
+    for (const r of extra) chosen.push({ gk: String(r.gk), key: String(r.key) })
+  }
+
+  const all = [{ gk, key }, ...chosen]
+  const list = sql.join(all.map((a) => sql`${a.gk}`), sql`, `)
+  const [songRows, genreRows] = await Promise.all([
+    db.drizzle.execute(sql`${albumCte}
+      select t2.gk, p.id, p.track, p.artist_name, p.cover_url, p.spotify_url, p.youtube_id, p.album
+      from t2 join picks p on p.id = t2.id where t2.gk in (${list}) order by p.created_at`),
+    db.drizzle.execute(sql`${albumCte}
+      select t2.gk, g.name, count(*)::int as n
+      from t2 join picks_rels r on r.parent_id = t2.id and r.path = 'genres' join genres g on g.id = r.genres_id
+      where t2.gk in (${list}) group by t2.gk, g.name order by n desc`),
+  ])
+  const build = ({ gk: g, key: k }: { gk: string; key: string }): WebAlbum | null => {
+    const rows = songRows.rows.filter((r) => r.gk === g)
+    if (!rows.length) return null
+    const count = new Map<string, number>()
+    for (const r of rows) count.set(String(r.artist_name), (count.get(String(r.artist_name)) || 0) + 1)
+    const artist = [...count.entries()].sort((x, y) => y[1] - x[1])[0][0]
+    const album = (rows.find((r) => r.album)?.album as string) || null
+    return {
+      key: k,
+      album: album || `「${rows[0].track || '곡'}」 수록 앨범`,
+      artist,
+      cover: (rows[0].cover_url as string) || null,
+      genres: genreRows.rows.filter((r) => r.gk === g).slice(0, 3).map((r) => String(r.name)),
+      songs: rows.map((r) => ({
+        id: Number(r.id),
+        track: (r.track as string) || null,
+        artistName: String(r.artist_name),
+        coverUrl: (r.cover_url as string) || null,
+        spotifyUrl: String(r.spotify_url),
+        youtubeId: (r.youtube_id as string) || null,
+      })),
+    }
+  }
+  const center = build(all[0])
+  if (!center) return null
+  return { center, neighbors: chosen.map(build).filter(Boolean) as WebAlbum[], random }
+}

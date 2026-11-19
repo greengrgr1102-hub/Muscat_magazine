@@ -62,6 +62,17 @@ export default async function PickAlbumPage({ params }: Props) {
           <div className="palb-hero__actions">
             <PlayAllButton songs={rows} label={title} />
             <AddAllButton songs={rows} />
+            <Link href={`/web/album/${key}`} className="add-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                <circle cx="12" cy="12" r="2.5" />
+                <circle cx="4" cy="6" r="1.8" />
+                <circle cx="20" cy="6" r="1.8" />
+                <circle cx="5" cy="19" r="1.8" />
+                <circle cx="19" cy="18" r="1.8" />
+                <path d="M10 11 5.5 7M14 11l4.5-4M10.2 13.6 6.3 17.7M13.9 13.5l3.8 3.4" />
+              </svg>
+              <span>거미줄로 보기</span>
+            </Link>
           </div>
         </div>
       </section>

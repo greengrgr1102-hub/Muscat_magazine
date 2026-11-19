@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AddButton } from '@/components/AddButton'
+import { AddAllButton, AddButton } from '@/components/AddButton'
 import { SongPlayer } from '@/components/SongPlayer'
 import { sendTrack } from '@/components/Track'
 import { myPlaylist } from '@/lib/myPlaylist'
@@ -12,22 +12,28 @@ type WebSong = {
   artistName: string
   coverUrl?: string | null
   embed: string | null
-  genres: string[]
+  youtubeId?: string | null
 }
-type Node = WebSong & { x: number; y: number; parent: number | null; expanded: boolean }
+// 거미줄 칸 하나: 곡이면 songs에 그 곡 하나, 앨범이면 에디터가 담은 수록곡들
+type WebItem = { id: string; title: string; sub: string; coverUrl?: string | null; genres: string[]; href: string; songs: WebSong[] }
+type Node = WebItem & { x: number; y: number; parent: string | null; expanded: boolean }
 
 const small = (u?: string | null) => (u ? u.replace('ab67616d0000b273', 'ab67616d00001e02') : null)
 const MAX_NODES = 90
 const R = 190 // 가운데 곡에서 비슷한 곡까지 거리
 
-export function SpiderWeb({ startId }: { startId: number }) {
-  const [nodes, setNodes] = useState<Map<number, Node>>(new Map())
-  const [edges, setEdges] = useState<[number, number][]>([])
-  const [focus, setFocus] = useState<number>(startId)
-  const [loading, setLoading] = useState<number | null>(null)
-  const [played, setPlayed] = useState<number | null>(null)
+export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 'song' | 'album' }) {
+  const isAlbum = kind === 'album'
+  const word = isAlbum ? '앨범' : '곡'
+  const [nodes, setNodes] = useState<Map<string, Node>>(new Map())
+  const [edges, setEdges] = useState<[string, string][]>([])
+  const [focus, setFocus] = useState<string>(startId)
+  const [loading, setLoading] = useState<string | null>(null)
+  const [played, setPlayed] = useState<string | null>(null)
+  // 앨범에서 지금 듣는 수록곡 순서
+  const [songIdx, setSongIdx] = useState(0)
   const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [trail, setTrail] = useState<number[]>([startId])
+  const [trail, setTrail] = useState<string[]>([startId])
   const nodesRef = useRef(nodes)
   nodesRef.current = nodes
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean; k: number } | null>(null)
@@ -50,17 +56,17 @@ export function SpiderWeb({ startId }: { startId: number }) {
   }, [])
 
   // 곡 하나를 펼치기: 비슷한 곡을 불러와서 그 곡 둘레(지나온 방향의 반대쪽)에 놓아요.
-  const busy = useRef(new Set<number>())
-  const expand = useCallback(async (id: number) => {
+  const busy = useRef(new Set<string>())
+  const expand = useCallback(async (id: string) => {
     const have = nodesRef.current.get(id)
     // 이미 펼쳤거나 펼치는 중이면 다시 하지 않아요 (빠르게 두 번 눌러도 한 번만)
     if (have?.expanded || busy.current.has(id)) return
     busy.current.add(id)
     setLoading(id)
     try {
-      const res = await fetch(`/web/data?id=${id}`)
+      const res = await fetch(isAlbum ? `/web/data?album=${id}` : `/web/data?id=${id}`)
       if (!res.ok) return
-      const data = (await res.json()) as { center: WebSong; neighbors: WebSong[] }
+      const data = (await res.json()) as { center: WebItem; neighbors: WebItem[] }
       setNodes((prev) => {
         const next = new Map(prev)
         const c: Node = next.get(id) || { ...data.center, x: 0, y: 0, parent: null, expanded: false }
@@ -89,10 +95,10 @@ export function SpiderWeb({ startId }: { startId: number }) {
         return next
       })
       setEdges((prev) => {
-        const seen = new Set(prev.map(([a, b]) => `${Math.min(a, b)}-${Math.max(a, b)}`))
-        const add: [number, number][] = []
+        const seen = new Set(prev.map(([a, b]) => (a < b ? `${a}|${b}` : `${b}|${a}`)))
+        const add: [string, string][] = []
         for (const n of data.neighbors) {
-          const k = `${Math.min(id, n.id)}-${Math.max(id, n.id)}`
+          const k = id < n.id ? `${id}|${n.id}` : `${n.id}|${id}`
           if (!seen.has(k)) {
             seen.add(k)
             add.push([id, n.id])
@@ -103,7 +109,7 @@ export function SpiderWeb({ startId }: { startId: number }) {
     } finally {
       setLoading(null)
     }
-  }, [])
+  }, [isAlbum])
 
   useEffect(() => {
     expand(startId)
@@ -115,13 +121,15 @@ export function SpiderWeb({ startId }: { startId: number }) {
     if (f) setPan({ x: -f.x, y: -f.y })
   }, [f?.x, f?.y]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const choose = (id: number) => {
+  const choose = (id: string, idx = 0) => {
     if (drag.current?.moved) return
     setFocus(id)
     setPlayed(id)
+    setSongIdx(idx)
     setTrail((t) => (t[t.length - 1] === id ? t : [...t, id]))
     myPlaylist.stop()
-    sendTrack({ kind: 'play', id })
+    const song = nodesRef.current.get(id)?.songs[idx]
+    if (song) sendTrack({ kind: 'play', id: song.id })
     expand(id)
   }
 
@@ -129,6 +137,7 @@ export function SpiderWeb({ startId }: { startId: number }) {
   const trailSet = new Set(trail)
   const visibleEdges = edges.filter(([a, b]) => nodes.has(a) && nodes.has(b))
   const playing = played !== null ? nodes.get(played) : null
+  const current = f && played === f.id ? f.songs[Math.min(songIdx, f.songs.length - 1)] : null
 
   return (
     <div className="web">
@@ -150,7 +159,7 @@ export function SpiderWeb({ startId }: { startId: number }) {
         onPointerUp={() => setTimeout(() => (drag.current = null), 0)}
         onPointerLeave={() => (drag.current = null)}
       >
-        <svg ref={svgRef} className="web__svg" viewBox={`${-vb.w / 2} ${-vb.h / 2} ${vb.w} ${vb.h}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label="비슷한 곡 거미줄">
+        <svg ref={svgRef} className="web__svg" viewBox={`${-vb.w / 2} ${-vb.h / 2} ${vb.w} ${vb.h}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={`비슷한 ${word} 거미줄`}>
           <defs>
             <clipPath id="web-clip-s">
               <circle r="34" />
@@ -189,7 +198,7 @@ export function SpiderWeb({ startId }: { startId: number }) {
                   onClick={() => choose(n.id)}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${n.track} — ${n.artistName}`}
+                  aria-label={`${n.title} — ${n.sub}`}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') choose(n.id)
                   }}
@@ -201,10 +210,10 @@ export function SpiderWeb({ startId }: { startId: number }) {
                     <circle r={r} className="web__blank" />
                   )}
                   <text y={r + 20} className="web__title">
-                    {(n.track || '').length > 18 ? `${(n.track || '').slice(0, 17)}…` : n.track}
+                    {n.title.length > 18 ? `${n.title.slice(0, 17)}…` : n.title}
                   </text>
                   <text y={r + 36} className="web__artist">
-                    {n.artistName.length > 20 ? `${n.artistName.slice(0, 19)}…` : n.artistName}
+                    {n.sub.length > 20 ? `${n.sub.slice(0, 19)}…` : n.sub}
                   </text>
                 </g>
               )
@@ -217,33 +226,61 @@ export function SpiderWeb({ startId }: { startId: number }) {
       <aside className="web__panel">
         {f ? (
           <>
-            <p className="label">{played === f.id ? '지금 듣는 곡' : '가운데 곡'}</p>
-            <h2 className="h-md">{f.track}</h2>
-            <p className="muted">{f.artistName}</p>
+            <p className="label">{played === f.id ? `지금 듣는 ${word}` : `가운데 ${word}`}</p>
+            <h2 className="h-md">{f.title}</h2>
+            <p className="muted">{f.sub}</p>
             {f.genres.length ? <p className="small web__genres">{f.genres.join(' · ')}</p> : null}
-            {playing && playing.id === f.id && f.embed ? (
-              <SongPlayer key={f.id} pickId={f.id} embed={f.embed} title={`${f.track} — ${f.artistName}`} autoPlay />
+            {playing && playing.id === f.id && current?.embed ? (
+              <SongPlayer
+                key={`${f.id}-${songIdx}`}
+                pickId={current.id}
+                embed={current.embed}
+                youtubeId={current.youtubeId}
+                title={`${current.track} — ${current.artistName}`}
+                autoPlay
+                onEnded={isAlbum && songIdx + 1 < f.songs.length ? () => choose(f.id, songIdx + 1) : undefined}
+              />
             ) : (
-              <button type="button" className="btn btn--filled" onClick={() => choose(f.id)} disabled={!f.embed}>
+              <button type="button" className="btn btn--filled" onClick={() => choose(f.id)} disabled={!f.songs[0]?.embed}>
                 <span>▶ 듣기</span>
               </button>
             )}
+            {isAlbum && f.songs.length ? (
+              <ol className="web__tracks">
+                {f.songs.map((s, i) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => choose(f.id, i)}
+                      className={played === f.id && i === songIdx ? 'is-on' : ''}
+                      disabled={!s.embed}
+                    >
+                      {s.track || '곡'}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
             <div className="web__panel-actions">
-              <AddButton song={f} />
-              <Link href={`/picks/${f.id}`} className="arrow-link">
-                <span>곡 페이지</span>
+              {isAlbum ? (
+                f.songs.length > 1 ? <AddAllButton songs={f.songs} label="수록곡 담기" /> : f.songs[0] ? <AddButton song={f.songs[0]} /> : null
+              ) : f.songs[0] ? (
+                <AddButton song={f.songs[0]} />
+              ) : null}
+              <Link href={f.href} className="arrow-link">
+                <span>{word} 페이지</span>
               </Link>
             </div>
             {trail.length > 1 ? (
               <div className="web__trail">
-                <p className="label">지나온 곡</p>
+                <p className="label">지나온 {word}</p>
                 <ol>
                   {trail.map((id) => {
                     const t = nodes.get(id)
                     return t ? (
                       <li key={id}>
                         <button type="button" onClick={() => choose(id)} className={id === focus ? 'is-on' : ''}>
-                          {t.track}
+                          {t.title}
                         </button>
                       </li>
                     ) : null

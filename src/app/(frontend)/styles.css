@@ -2848,6 +2848,39 @@ body.has-plbar--player {
 .web__trail button.is-on {
   color: var(--accent-ink);
 }
+.web__tracks {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.web__tracks button {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.web__tracks button:disabled {
+  color: var(--ink-muted);
+  cursor: default;
+}
+.web__tracks button:hover:not(:disabled),
+.web__tracks button.is-on {
+  color: var(--accent-ink);
+}
+.web__tracks button.is-on::after {
+  content: ' ♪';
+}
+.web-page__switch {
+  margin-top: 8px;
+}
 @media (max-width: 900px) {
   .web {
     grid-template-columns: 1fr;
