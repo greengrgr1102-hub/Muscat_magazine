@@ -310,6 +310,8 @@ export const Articles: CollectionConfig = {
               admin: {
                 description:
                   '여러 장을 한 번에 올릴 수 있어요. "새로 만들기"에서 사진을 여러 장 끌어다 놓으면 한꺼번에 올라가요. 글 맨 아래에 사진 모음으로 보여요. 끌어서 순서를 바꿀 수 있어요.',
+                // 인터뷰에서는 사진 모음을 쓰지 않아요 (사진은 본문 사이에)
+                condition: (data) => data?.type !== 'interview',
               },
             },
           ],

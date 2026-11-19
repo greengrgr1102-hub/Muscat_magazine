@@ -110,7 +110,8 @@ export default async function ArticlePage({ params }: { params: Params }) {
               {article.type === 'interview' ? <InterviewBody article={article} /> : null}
               {article.type === 'release' ? <ReleaseBody article={article} /> : null}
               <RichText data={article.body} />
-              <Gallery items={article.gallery} />
+              {/* 인터뷰는 사진 모음 없이 (본문 사이 사진만) */}
+              {article.type !== 'interview' ? <Gallery items={article.gallery} /> : null}
               <ListenLinks links={article.listen} label="Listen" />
               {article.tags?.length ? (
                 <div className="chips">
