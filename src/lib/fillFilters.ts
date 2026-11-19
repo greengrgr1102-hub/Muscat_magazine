@@ -2,6 +2,7 @@ import 'server-only'
 import type { Payload } from 'payload'
 import { sql } from '@payloadcms/db-postgres'
 import { parseSpotify } from '../collections/Picks'
+import { romanize } from './romanize'
 import { metaOf } from './spotify'
 
 // 곡·앨범 필터(앨범 형태, 나라)에 쓸 정보를 자동으로 채워요.
@@ -212,6 +213,50 @@ export async function fillEnglishNames(payload: Payload, deadline: number) {
   return { changed, busy, left }
 }
 
+/** Spotify 영어 이름도 없는 곡은 로마자 발음으로 (スーパースターになったら → Supasuta ni nattara). 사이트 안에서만 계산해서 빨라요. */
+export async function romanizeNames(payload: Payload, deadline: number) {
+  const db = dbOf(payload)
+  const re = sql.raw(`'[${FOREIGN_SRC}]'`)
+  const rows = (
+    await db.drizzle.execute(sql`
+      select id, track, artist_name, album, country
+      from picks
+      where en_checked_at is not null and (track ~ ${re} or artist_name ~ ${re} or album ~ ${re})
+      order by id
+      limit 800`)
+  ).rows
+  let changed = 0
+  for (const r of rows) {
+    if (Date.now() > deadline - 3000) break
+    const chinese = ['CN', 'TW', 'HK'].includes(String(r.country || ''))
+    try {
+      const fix = async (v: unknown, kind: 'title' | 'name') => {
+        const s = (v as string) || null
+        if (!s || !hasForeign(s)) return null
+        const out = await romanize(s, { kind, chinese })
+        return out && out !== s ? out : null
+      }
+      const track = await fix(r.track, 'title')
+      const album = await fix(r.album, 'title')
+      const artists = String(r.artist_name).split(', ')
+      const fixed = await Promise.all(artists.map(async (a) => (await fix(a, 'name')) ?? a))
+      const artist = fixed.join(', ') !== r.artist_name ? fixed.join(', ') : null
+      if (!track && !album && !artist) continue
+      await db.drizzle.execute(sql`
+        update picks set
+          track = coalesce(${track}::varchar, track),
+          album = coalesce(${album}::varchar, album),
+          artist_name = coalesce(${artist}::varchar, artist_name),
+          label = coalesce(${track}::varchar, track, 'Untitled') || ' — ' || coalesce(${artist}::varchar, artist_name)
+        where id = ${Number(r.id)}`)
+      changed++
+    } catch {
+      // 다음에 다시
+    }
+  }
+  return { changed, scanned: rows.length }
+}
+
 /* ───────── 나라 ───────── */
 
 // 아티스트 페이지 「활동 지역」에 적힌 말 → 나라 코드
@@ -387,10 +432,12 @@ export async function fillFilters(payload: Payload, budgetMs = 45_000) {
     return { en, types }
   }
   const [{ en, types }, countries] = await Promise.all([spotifySide(), countriesP])
+  const roman = Date.now() < deadline - 5000 ? await romanizeNames(payload, deadline) : { changed: 0, scanned: 0 }
   const parts = [
+    `영어 이름이 없는 ${roman.changed}곡은 로마자 발음으로`,
     `외국어 이름 ${en.changed}곡을 한국어·영어로 바꿈${en.left ? ` (남은 곡 ${en.left}곡)` : ''}`,
     `앨범 형태 ${types.done}개 채움${types.left ? ` (남은 앨범 ${types.left}개${types.busy ? ', Spotify가 잠깐 쉬어 가재서 멈춤' : ''})` : ''}`,
     `나라: ${countries.quick}곡은 이름·아티스트 정보로, 아티스트 ${countries.found}명은 MusicBrainz로 채움${countries.left ? ` (남은 아티스트 ${countries.left}명)` : ''}`,
   ]
-  return { en, types, countries, message: parts.join(' · ') }
+  return { en, roman, types, countries, message: parts.join(' · ') }
 }
