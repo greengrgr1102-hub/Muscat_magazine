@@ -187,10 +187,19 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
       pagination: false,
       depth: 0,
       overrideAccess: true,
-      select: { spotifyUrl: true },
+      select: { spotifyUrl: true, track: true, artistName: true, album: true },
     })
     const have = new Set(
       existing.docs.map((d) => parseSpotify((d as { spotifyUrl?: string }).spotifyUrl || '')?.id).filter(Boolean) as string[],
+    )
+    // 같은 곡이 앨범의 다른 판(재발매·리마스터 등)으로 또 올라와 있으면 하나만 남겨요: 같은 아티스트 + 같은 제목 + 같은 앨범
+    const sameKey = (track?: string | null, artist?: string | null, album?: string | null) =>
+      [track, (artist || '').split(',')[0], album].map((x) => norm(x || '')).join('|')
+    const haveSame = new Set(
+      existing.docs.map((d) => {
+        const x = d as { track?: string | null; artistName?: string | null; album?: string | null }
+        return sameKey(x.track, x.artistName, x.album)
+      }),
     )
     const todo = items
       .map((it) => ({ it, t: it.item || it.track }))
@@ -204,6 +213,9 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
       const { it, t } = todo[i]
       if (!t?.id || have.has(t.id)) continue
       have.add(t.id)
+      const key = sameKey(t.name, (t.artists || [])[0]?.name, t.album?.name)
+      if (t.album?.name && haveSame.has(key)) continue
+      haveSame.add(key)
       const names = (t.artists || []).map((a) => a.name)
       const match = artists.find((a) =>
         names.some((n) => norm(n) === norm(a.name) || (a.nameAlt && norm(a.nameAlt).includes(norm(n)))),
