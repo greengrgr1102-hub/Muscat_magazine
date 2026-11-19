@@ -399,7 +399,7 @@ export async function findPickAlbums({ page = 1, limit = 48, sort = 'most', q = 
   const offset = (Math.max(1, page) - 1) * limit
   const [rows, total] = await Promise.all([
     db.drizzle.execute(sql`
-      select right(cover_url, 24) as key, max(cover_url) as cover, max(album) as album, mode() within group (order by split_part(artist_name, ', ', 1)) as artist,
+      select right(cover_url, 24) as key, max(cover_url) as cover, max(album) as album, mode() within group (order by artist_name) as artist,
              max(release_date) as release, count(*)::int as n, (array_agg(track order by id))[1] as first_track
       from picks
       where cover_url like 'https://i.scdn.co/image/%' ${filter}

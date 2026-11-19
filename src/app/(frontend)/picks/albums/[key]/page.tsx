@@ -11,11 +11,12 @@ import { Icon } from '@/components/ui'
 
 type Props = { params: Promise<{ key: string }> }
 
-// 피처링이 붙은 곡이 섞여 있어도 앨범 아티스트는 가장 많이 나온 첫 번째 이름으로
+// 피처링이 붙은 곡이 섞여 있어도 앨범 아티스트는 가장 많이 나온 이름으로
+// (쉼표로 자르면 "Tyler, The Creator" 같은 이름이 잘려서, 곡에 적힌 이름 그대로 셈)
 const artistOf = (docs: Pick[]) => {
   const count = new Map<string, number>()
   for (const d of docs) {
-    const a = (d.artistName || '').split(', ')[0]
+    const a = d.artistName || ''
     if (a) count.set(a, (count.get(a) || 0) + 1)
   }
   return [...count.entries()].sort((x, y) => y[1] - x[1])[0]?.[0] || docs[0].artistName
