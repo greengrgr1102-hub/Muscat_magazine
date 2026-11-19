@@ -5,6 +5,7 @@ import { myPlaylist, useMyPlaylist } from '@/lib/myPlaylist'
 import { AddButton } from './AddButton'
 import { SpotifyEmbed } from './SpotifyEmbed'
 import { sendTrack } from './Track'
+import { releaseShort } from '@/lib/format'
 
 export type PickRow = {
   id: number
@@ -12,6 +13,7 @@ export type PickRow = {
   artistName: string
   coverUrl?: string | null
   pickedAt?: string | null
+  releaseDate?: string | null
   comment?: string | null
   embed: string | null
 }
@@ -23,11 +25,6 @@ const monthOf = (d?: string | null) => {
   if (!d) return '날짜 없음'
   const k = new Date(new Date(d).getTime() + 9 * 3600_000)
   return `${k.getUTCFullYear()}년 ${k.getUTCMonth() + 1}월`
-}
-const dayOf = (d?: string | null) => {
-  if (!d) return ''
-  const k = new Date(new Date(d).getTime() + 9 * 3600_000)
-  return `${String(k.getUTCMonth() + 1).padStart(2, '0')}.${String(k.getUTCDate()).padStart(2, '0')}`
 }
 
 // 한 줄에 한 곡씩: 작은 커버(누르면 바로 아래에서 재생) · 곡 · 아티스트 · 날짜
@@ -93,7 +90,9 @@ export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; group
                       <span className="plist__artist">{r.artistName}</span>
                       {r.comment ? <span className="plist__comment">{r.comment}</span> : null}
                     </div>
-                    <span className="plist__date">{dayOf(r.pickedAt)}</span>
+                    <span className="plist__date" title={r.releaseDate ? '발매' : undefined}>
+                      {releaseShort(r.releaseDate)}
+                    </span>
                     <AddButton song={r} compact />
                   </div>
                   {isOpen && r.embed ? (

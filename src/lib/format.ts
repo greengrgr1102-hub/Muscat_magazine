@@ -50,3 +50,10 @@ export function shuffle<T>(items: T[]): T[] {
   }
   return a
 }
+
+/** 발매일 짧게: '2019-07-12' → '2019.07', '2019' → '2019' */
+export function releaseShort(d?: string | null) {
+  if (!d) return ''
+  const [y, m] = d.split('-')
+  return m ? `${y}.${m}` : y
+}

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { Pick, Tag } from '@/payload-types'
-import { asGenres, formatDate } from '@/lib/format'
+import { asGenres, releaseShort } from '@/lib/format'
 import { SpotifyPlayer } from './SpotifyPlayer'
 import { AddButton } from './AddButton'
 
@@ -35,7 +35,7 @@ export function PickCard({ pick }: { pick: Pick }) {
       <SpotifyPlayer embed={embed} cover={pick.coverUrl} title={`${pick.track || ''} — ${pick.artistName}`} pickId={pick.id} />
       <div className="epick__body">
         <p className="epick__meta small muted">
-          <span>{formatDate(pick.pickedAt)}</span>
+          {pick.releaseDate ? <span>{releaseShort(pick.releaseDate)}</span> : null}
           {genres.slice(0, 2).map((g) => (
             <Link key={g.id} href={`/genres/${g.slug}`}>
               {g.name}
@@ -82,6 +82,7 @@ export function toRow(p: Pick): import('./PickList').PickRow {
     artistName: p.artistName,
     coverUrl: p.coverUrl,
     pickedAt: p.pickedAt,
+    releaseDate: p.releaseDate,
     comment: p.comment,
     embed: spotifyEmbed(p.spotifyUrl),
   }

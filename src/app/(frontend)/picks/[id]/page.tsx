@@ -6,7 +6,7 @@ import { ArrowLink, SectionHeader } from '@/components/ui'
 import { ViewTracker } from '@/components/Track'
 import { SpotifyEmbed } from '@/components/SpotifyEmbed'
 import { AddButton } from '@/components/AddButton'
-import { asGenres, formatDate, getPick, similarPicks } from '@/lib/data'
+import { asGenres, getPick, similarPicks } from '@/lib/data'
 
 type Params = Promise<{ id: string }>
 
@@ -42,24 +42,20 @@ export default async function PickPage({ params }: { params: Params }) {
             {embed ? <SpotifyEmbed embed={embed} title={`${pick.track || ''} — ${pick.artistName}`} height={352} /> : null}
           </div>
           <div className="pick-detail__info">
-            <p className="label">Editor&apos;s Pick · {formatDate(pick.pickedAt)}</p>
+            <p className="label">
+              Editor&apos;s Pick{pick.releaseDate ? ` · ${releaseLabel(pick.releaseDate)} 발매` : ''}
+            </p>
             <h1 className="h-xl">{pick.track || 'Untitled'}</h1>
             <p className="pick-detail__artist">
               {artist ? <Link href={`/artists/${artist.slug}`}>{pick.artistName}</Link> : pick.artistName}
             </p>
             {pick.comment ? <p className="pick-detail__comment">{pick.comment}</p> : null}
-            {pick.album || pick.releaseDate || genres.length ? (
+            {pick.album || genres.length ? (
               <dl className="pick-detail__facts">
                 {pick.album ? (
                   <div>
                     <dt className="label">Album</dt>
                     <dd>{pick.album}</dd>
-                  </div>
-                ) : null}
-                {pick.releaseDate ? (
-                  <div>
-                    <dt className="label">Released</dt>
-                    <dd>{releaseLabel(pick.releaseDate)}</dd>
                   </div>
                 ) : null}
                 {genres.length ? (
