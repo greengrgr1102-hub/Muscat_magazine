@@ -73,6 +73,49 @@ export default async function AboutPage() {
         </section>
       ) : null}
 
+      {about.editors?.length ? (
+        <section className="wrap section">
+          <SectionHeader title="Editors" right={<span className="muted">머스캣을 만드는 사람</span>} />
+          <div className={`editors${about.editors.length === 1 ? ' editors--one' : ''}`}>
+            {about.editors.map((e, i) => (
+              <article key={e.id || i} className="editor">
+                <Img media={e.photo} ratio="4 / 5" label="Editor" sizes="(max-width: 768px) 100vw, 33vw" />
+                <div className="editor__body">
+                  <p className="label">{e.role || 'Editor'}</p>
+                  <h3 className="h-lg">{e.name}</h3>
+                  {e.bio ? (
+                    <p className="editor__bio">
+                      <Lines text={e.bio} />
+                    </p>
+                  ) : null}
+                  {e.listening ? (
+                    <p className="small editor__listening">
+                      <span className="label">요즘 듣는 것</span> {e.listening}
+                    </p>
+                  ) : null}
+                  <div className="editor__links">
+                    <Link href="/picks" className="arrow-link">
+                      <span>에디터가 들은 곡</span>
+                      <Icon name="right" />
+                    </Link>
+                    <Link href="/playlists" className="arrow-link">
+                      <span>에디터 플리</span>
+                      <Icon name="right" />
+                    </Link>
+                    {(e.links || []).map((l, j) => (
+                      <a key={l.id || j} href={l.url} target="_blank" rel="noreferrer" className="arrow-link">
+                        <span>{l.label}</span>
+                        <Icon name="upright" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="wrap about-cta">
         <div className="stack-16">
           <p className="label">Contact</p>

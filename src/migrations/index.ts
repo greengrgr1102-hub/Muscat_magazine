@@ -15,6 +15,7 @@ import * as migration_20261118_181558_spotify_rename from './20261118_181558_spo
 import * as migration_20261118_183226_pick_album from './20261118_183226_pick_album';
 import * as migration_20261118_183834_spotify_pause from './20261118_183834_spotify_pause';
 import * as migration_20261119_055910_editor_playlists from './20261119_055910_editor_playlists';
+import * as migration_20261119_063538_about_editors from './20261119_063538_about_editors';
 
 export const migrations = [
   {
@@ -100,6 +101,11 @@ export const migrations = [
   {
     up: migration_20261119_055910_editor_playlists.up,
     down: migration_20261119_055910_editor_playlists.down,
-    name: '20261119_055910_editor_playlists'
+    name: '20261119_055910_editor_playlists',
+  },
+  {
+    up: migration_20261119_063538_about_editors.up,
+    down: migration_20261119_063538_about_editors.down,
+    name: '20261119_063538_about_editors'
   },
 ];

@@ -126,5 +126,44 @@ export const AboutPage: GlobalConfig = {
         { name: 'description', label: '설명', type: 'textarea' },
       ],
     },
+    {
+      name: 'editors',
+      label: '에디터 소개',
+      type: 'array',
+      labels: { singular: '에디터', plural: '에디터' },
+      admin: { description: 'About 페이지 아래쪽 "Editors"에 나와요. 여러 명이면 순서대로 추가하세요.' },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            { name: 'name', label: '이름', type: 'text', required: true, admin: { width: '50%' } },
+            { name: 'role', label: '역할', type: 'text', admin: { width: '50%', description: '예: 발행인·에디터' } },
+          ],
+        },
+        { name: 'photo', label: '사진 (4:5)', type: 'upload', relationTo: 'media' },
+        { name: 'bio', label: '소개', type: 'textarea', admin: { description: '어떤 음악을 듣고, 왜 이 매거진을 하는지 짧게' } },
+        {
+          name: 'listening',
+          label: '요즘 자주 듣는 것 (선택)',
+          type: 'text',
+          admin: { description: '예: 일본 시티팝, 대만 드림팝' },
+        },
+        {
+          name: 'links',
+          label: '링크',
+          type: 'array',
+          admin: { initCollapsed: true },
+          fields: [
+            {
+              type: 'row',
+              fields: [
+                { name: 'label', label: '이름', type: 'text', required: true, admin: { width: '40%', description: '예: Instagram' } },
+                { name: 'url', label: '주소', type: 'text', required: true, admin: { width: '60%' } },
+              ],
+            },
+          ],
+        },
+      ],
+    },
   ],
 }

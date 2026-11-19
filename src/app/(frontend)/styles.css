@@ -3199,3 +3199,53 @@ body.has-plbar--player {
   background: var(--surface, #fff);
   resize: none;
 }
+
+/* ---------- About: 에디터 소개 ---------- */
+.editors {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 48px 32px;
+}
+.editors--one {
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  align-items: end;
+}
+.editors--one .editor {
+  display: contents;
+}
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.editor__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.editor__bio {
+  font-size: clamp(16px, 1.3vw, 18px);
+  line-height: 1.8;
+  word-break: keep-all;
+  max-width: 640px;
+}
+.editor__listening {
+  color: var(--accent-ink);
+}
+.editor__listening .label {
+  margin-right: 8px;
+}
+.editor__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-top: 8px;
+}
+@media (max-width: 768px) {
+  .editors--one {
+    grid-template-columns: 1fr;
+  }
+  .editors--one .editor {
+    display: flex;
+  }
+}

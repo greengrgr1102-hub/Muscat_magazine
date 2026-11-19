@@ -377,6 +377,7 @@ export interface Media {
    * 사진 밑에 작게 보여요. 예: 2024년 롤링홀 공연 · 사진 홍길동
    */
   caption?: string | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -949,6 +950,7 @@ export interface TagsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1160,6 +1162,38 @@ export interface AboutPage {
         id?: string | null;
       }[]
     | null;
+  /**
+   * About 페이지 아래쪽 "Editors"에 나와요. 여러 명이면 순서대로 추가하세요.
+   */
+  editors?:
+    | {
+        name: string;
+        /**
+         * 예: 발행인·에디터
+         */
+        role?: string | null;
+        photo?: (number | null) | Media;
+        /**
+         * 어떤 음악을 듣고, 왜 이 매거진을 하는지 짧게
+         */
+        bio?: string | null;
+        /**
+         * 예: 일본 시티팝, 대만 드림팝
+         */
+        listening?: string | null;
+        links?:
+          | {
+              /**
+               * 예: Instagram
+               */
+              label: string;
+              url: string;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1234,6 +1268,23 @@ export interface AboutPageSelect<T extends boolean = true> {
     | {
         title?: T;
         description?: T;
+        id?: T;
+      };
+  editors?:
+    | T
+    | {
+        name?: T;
+        role?: T;
+        photo?: T;
+        bio?: T;
+        listening?: T;
+        links?:
+          | T
+          | {
+              label?: T;
+              url?: T;
+              id?: T;
+            };
         id?: T;
       };
   updatedAt?: T;
