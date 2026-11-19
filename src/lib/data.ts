@@ -394,21 +394,33 @@ export async function findPickAlbums({ page = 1, limit = 48, sort = 'most', q = 
   const payload = await getClient()
   const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
   const like = q.trim() ? `%${q.trim()}%` : null
-  const filter = like ? sql`and (album ilike ${like} or artist_name ilike ${like} or track ilike ${like})` : sql``
+  const filter = like ? sql`where (alb ilike ${like} or artist_name ilike ${like} or track ilike ${like})` : sql``
   const order = sort === 'new' ? sql`max(release_date) desc nulls last, count(*) desc` : sql`count(*) desc, max(release_date) desc nulls last`
   const offset = (Math.max(1, page) - 1) * limit
-  const [rows, total] = await Promise.all([
-    db.drizzle.execute(sql`
-      select right(cover_url, 24) as key, max(cover_url) as cover, max(album) as album, mode() within group (order by artist_name) as artist,
-             max(release_date) as release, count(*)::int as n, (array_agg(track order by id))[1] as first_track
-      from picks
-      where cover_url like 'https://i.scdn.co/image/%' ${filter}
+  // 같은 앨범이 커버 이미지 주소만 다르게 여러 번 올라와 있을 때가 있어서(재발매·디럭스 등),
+  // 앨범 이름을 알면 「앨범 이름 + 첫 번째 아티스트」로, 모르면 커버로 묶어요.
+  const base = sql`
+    with c as (
+      select right(cover_url, 24) as ck, max(album) as alb,
+             mode() within group (order by split_part(artist_name, ', ', 1)) as a1
+      from picks where cover_url like 'https://%/image/%'
       group by right(cover_url, 24)
+    ), t2 as (
+      select p.id, p.cover_url, p.artist_name, p.release_date, p.track, c.ck, c.alb,
+             case when c.alb is not null then 'n:' || lower(c.alb) || '|' || lower(c.a1) else 'c:' || c.ck end as gk
+      from picks p join c on right(p.cover_url, 24) = c.ck
+      where p.cover_url like 'https://%/image/%'
+    )`
+  const [rows, total] = await Promise.all([
+    db.drizzle.execute(sql`${base}
+      select min(ck) as key, (array_agg(cover_url order by ck))[1] as cover, max(alb) as album,
+             mode() within group (order by artist_name) as artist, max(release_date) as release,
+             count(*)::int as n, (array_agg(track order by id))[1] as first_track
+      from t2 ${filter}
+      group by gk
       order by ${order}
       limit ${limit} offset ${offset}`),
-    db.drizzle.execute(sql`
-      select count(distinct right(cover_url, 24))::int as c from picks
-      where cover_url like 'https://i.scdn.co/image/%' ${filter}`),
+    db.drizzle.execute(sql`${base} select count(distinct gk)::int as c from t2 ${filter}`),
   ])
   const totalDocs = Number(total.rows[0]?.c || 0)
   const albums: PickAlbum[] = rows.rows.map((r) => ({
@@ -427,9 +439,23 @@ export async function findPickAlbums({ page = 1, limit = 48, sort = 'most', q = 
 export async function findAlbumPicks(key: string) {
   if (!/^[a-z0-9]{24}$/i.test(key)) return null
   const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  // 이 커버의 곡 + 같은 앨범 이름·같은 아티스트로 묶인 다른 커버의 곡까지
+  const ids = (
+    await db.drizzle.execute(sql`
+      with c as (
+        select right(cover_url, 24) as ck, lower(max(album)) as alb,
+               lower(mode() within group (order by split_part(artist_name, ', ', 1))) as a1
+        from picks where cover_url like 'https://%/image/%'
+        group by right(cover_url, 24)
+      ), g as (select alb, a1 from c where ck = ${key}),
+      keys as (select c.ck from c, g where c.ck = ${key} or (g.alb is not null and c.alb = g.alb and c.a1 = g.a1))
+      select p.id from picks p join keys k on right(p.cover_url, 24) = k.ck where p.cover_url like 'https://%/image/%'`)
+  ).rows.map((r) => Number(r.id))
+  if (!ids.length) return null
   const res = await payload.find({
     collection: 'picks',
-    where: { coverUrl: { like: key } },
+    where: { id: { in: ids } },
     pagination: false,
     sort: 'createdAt',
     depth: 0,

@@ -423,7 +423,7 @@ export async function fillAlbumNames(payload: Payload, budgetMs = 45_000) {
     await db.drizzle.execute(sql`
       select right(cover_url, 24) as key, min(spotify_url) as url
       from picks
-      where cover_url like 'https://i.scdn.co/image/%'
+      where cover_url like 'https://%/image/%'
       group by right(cover_url, 24)
       having max(album) is null
       limit 1500`)
