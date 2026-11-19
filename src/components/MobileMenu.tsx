@@ -8,6 +8,7 @@ import { Icon } from './ui'
 const ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/articles', label: 'Articles' },
+  { href: '/essential', label: 'Essential' },
   { href: '/picks', label: "Editor's Picks" },
   { href: '/playlists', label: 'Playlists' },
   { href: '/about', label: 'About' },

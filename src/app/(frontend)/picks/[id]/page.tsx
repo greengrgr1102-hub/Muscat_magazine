@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { EssentialBadge } from '@/components/EssentialBadge'
 import { notFound } from 'next/navigation'
 import { PickGrid, TagLinks, toRow, asTags, spotifyEmbed } from '@/components/Picks'
 import { ArrowLink, SectionHeader } from '@/components/ui'
@@ -42,8 +43,9 @@ export default async function PickPage({ params }: { params: Params }) {
             {embed ? <SpotifyEmbed embed={embed} title={`${pick.track || ''} — ${pick.artistName}`} height={352} /> : null}
           </div>
           <div className="pick-detail__info">
-            <p className="label">
-              Editor&apos;s Pick{pick.releaseDate ? ` · ${releaseLabel(pick.releaseDate)} 발매` : ''}
+            <p className="label pick-detail__label">
+              {pick.essential ? <EssentialBadge size="md" link /> : null}
+              <span>Editor&apos;s Pick{pick.releaseDate ? ` · ${releaseLabel(pick.releaseDate)} 발매` : ''}</span>
             </p>
             <h1 className="h-xl">{pick.track || 'Untitled'}</h1>
             <p className="pick-detail__artist">

@@ -3,6 +3,7 @@ import type { Pick, Tag } from '@/payload-types'
 import { asGenres, releaseShort } from '@/lib/format'
 import { SpotifyPlayer } from './SpotifyPlayer'
 import { AddButton } from './AddButton'
+import { EssentialBadge } from './EssentialBadge'
 
 export function spotifyEmbed(url: string) {
   const m = url.match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(track|album|playlist)\/([A-Za-z0-9]+)/)
@@ -35,6 +36,7 @@ export function PickCard({ pick }: { pick: Pick }) {
       <SpotifyPlayer embed={embed} cover={pick.coverUrl} title={`${pick.track || ''} — ${pick.artistName}`} pickId={pick.id} />
       <div className="epick__body">
         <p className="epick__meta small muted">
+          {pick.essential ? <EssentialBadge /> : null}
           {pick.releaseDate ? <span>{releaseShort(pick.releaseDate)}</span> : null}
           {genres.slice(0, 2).map((g) => (
             <Link key={g.id} href={`/genres/${g.slug}`}>
@@ -84,6 +86,7 @@ export function toRow(p: Pick): import('./PickList').PickRow {
     pickedAt: p.pickedAt,
     releaseDate: p.releaseDate,
     comment: p.comment,
+    essential: p.essential,
     embed: spotifyEmbed(p.spotifyUrl),
   }
 }

@@ -17,6 +17,7 @@ import * as migration_20261118_183834_spotify_pause from './20261118_183834_spot
 import * as migration_20261119_055910_editor_playlists from './20261119_055910_editor_playlists';
 import * as migration_20261119_063538_about_editors from './20261119_063538_about_editors';
 import * as migration_20261119_064500_about_content from './20261119_064500_about_content';
+import * as migration_20261119_072641_essential from './20261119_072641_essential';
 
 export const migrations = [
   {
@@ -107,11 +108,16 @@ export const migrations = [
   {
     up: migration_20261119_063538_about_editors.up,
     down: migration_20261119_063538_about_editors.down,
-    name: '20261119_063538_about_editors'
+    name: '20261119_063538_about_editors',
   },
   {
     up: migration_20261119_064500_about_content.up,
     down: migration_20261119_064500_about_content.down,
     name: '20261119_064500_about_content',
+  },
+  {
+    up: migration_20261119_072641_essential.up,
+    down: migration_20261119_072641_essential.down,
+    name: '20261119_072641_essential'
   },
 ];

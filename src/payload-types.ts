@@ -203,6 +203,14 @@ export interface Article {
         albumTitle: string;
         artistName?: string | null;
         cover?: (number | null) | Media;
+        /**
+         * 체크하면 리뷰에 Essential 표시가 붙고 /essential 페이지에 모여요.
+         */
+        essential?: boolean | null;
+        /**
+         * Essential 페이지 카드에 보일 짧은 이유
+         */
+        essentialLine?: string | null;
         body?: {
           root: {
             type: string;
@@ -377,6 +385,7 @@ export interface Media {
    * 사진 밑에 작게 보여요. 예: 2024년 롤링홀 공연 · 사진 홍길동
    */
   caption?: string | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -535,6 +544,10 @@ export interface Pick {
    */
   spotifyUrl: string;
   artistName: string;
+  /**
+   * 체크하면 목록·곡 페이지에 Essential 표시가 붙고 /essential 페이지에 모여요.
+   */
+  essential?: boolean | null;
   /**
    * 왜 좋았는지 한두 문장으로 (비워 둬도 돼요)
    */
@@ -787,6 +800,8 @@ export interface ArticlesSelect<T extends boolean = true> {
         albumTitle?: T;
         artistName?: T;
         cover?: T;
+        essential?: T;
+        essentialLine?: T;
         body?: T;
         listen?:
           | T
@@ -857,6 +872,7 @@ export interface ArticlesSelect<T extends boolean = true> {
 export interface PicksSelect<T extends boolean = true> {
   spotifyUrl?: T;
   artistName?: T;
+  essential?: T;
   comment?: T;
   pickedAt?: T;
   track?: T;
@@ -949,6 +965,7 @@ export interface TagsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

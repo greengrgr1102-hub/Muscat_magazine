@@ -24,6 +24,7 @@ export async function Footer() {
             <p className="label">Sitemap</p>
             <Link href="/">Home</Link>
             <Link href="/articles">Articles</Link>
+            <Link href="/essential">Essential</Link>
             <Link href="/picks">Editor&apos;s Picks</Link>
             <Link href="/playlists">Playlists</Link>
             <Link href="/about">About</Link>

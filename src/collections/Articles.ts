@@ -162,6 +162,28 @@ export const Articles: CollectionConfig = {
                   ],
                 },
                 { name: 'cover', label: '앨범 커버 (1:1)', type: 'upload', relationTo: 'media' },
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'essential',
+                      label: 'Essential — 꼭 들어야 할 앨범',
+                      type: 'checkbox',
+                      defaultValue: false,
+                      admin: { width: '40%', description: '체크하면 리뷰에 Essential 표시가 붙고 /essential 페이지에 모여요.' },
+                    },
+                    {
+                      name: 'essentialLine',
+                      label: 'Essential 한 줄 (선택)',
+                      type: 'text',
+                      admin: {
+                        width: '60%',
+                        description: 'Essential 페이지 카드에 보일 짧은 이유',
+                        condition: (_, sib) => Boolean(sib?.essential),
+                      },
+                    },
+                  ],
+                },
                 { name: 'body', label: '리뷰', type: 'richText' },
                 listenLinksField(),
               ],

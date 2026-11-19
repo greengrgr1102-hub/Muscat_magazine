@@ -183,7 +183,7 @@ export async function findPickRows({ where, limit = 100, page = 1 }: { where?: W
     page,
     sort: '-pickedAt',
     depth: 0,
-    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true },
+    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, essential: true },
   })
 }
 
@@ -218,7 +218,7 @@ export async function findPickRowsRandom({ where, seed, page = 1, limit = 100 }:
           where: { id: { in: slice } },
           limit: slice.length,
           depth: 0,
-          select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true },
+          select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, essential: true },
         })
       ).docs
     : []
@@ -327,4 +327,59 @@ export async function similarPicks(pick: import('@/payload-types').Pick, limit =
   const order = new Map(chosen.map((id, i) => [id, i]))
   docs.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
   return { docs, filled }
+}
+
+// ---------- Essential ----------
+export type EssentialAlbum = {
+  key: string
+  albumTitle: string
+  artistName?: string | null
+  cover: unknown
+  line?: string | null
+  href: string
+  articleTitle: string
+  publishedAt?: string | null
+}
+
+/** 앨범 리뷰에서 Essential로 체크한 앨범만 모으기 (최근 리뷰부터) */
+export async function findEssentialAlbums(): Promise<EssentialAlbum[]> {
+  const payload = await getClient()
+  const res = await payload.find({
+    collection: 'articles',
+    where: { and: [published, { type: { equals: 'review' } }, { 'albums.essential': { equals: true } }] },
+    pagination: false,
+    sort: '-publishedAt',
+    depth: 1,
+    select: { title: true, slug: true, publishedAt: true, albums: true },
+  })
+  const out: EssentialAlbum[] = []
+  for (const a of res.docs) {
+    ;(a.albums || []).forEach((al, i) => {
+      if (!al?.essential) return
+      out.push({
+        key: `${a.id}-${al.id || i}`,
+        albumTitle: al.albumTitle,
+        artistName: al.artistName,
+        cover: al.cover,
+        line: al.essentialLine,
+        href: `/articles/${a.slug}#album-${i + 1}`,
+        articleTitle: a.title,
+        publishedAt: a.publishedAt,
+      })
+    })
+  }
+  return out
+}
+
+/** Essential로 체크한 곡 (최근 발매부터) */
+export async function findEssentialPicks() {
+  const payload = await getClient()
+  return payload.find({
+    collection: 'picks',
+    where: { essential: { equals: true } },
+    pagination: false,
+    sort: '-releaseDate',
+    depth: 0,
+    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, essential: true },
+  })
 }

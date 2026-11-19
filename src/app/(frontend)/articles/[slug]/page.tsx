@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { EssentialBadge } from '@/components/EssentialBadge'
 import { notFound } from 'next/navigation'
 import { RichText } from '@/components/RichText'
 import { ViewTracker } from '@/components/Track'
@@ -164,8 +165,11 @@ function ReviewBody({ article }: { article: Article }) {
   return (
     <>
       {(article.albums || []).map((al, i) => (
-        <section key={al.id || i} className="album-block">
-          <p className="label">{String(i + 1).padStart(2, '0')}</p>
+        <section key={al.id || i} id={`album-${i + 1}`} className={`album-block${al.essential ? ' album-block--essential' : ''}`}>
+          <p className="label album-block__num">
+            <span>{String(i + 1).padStart(2, '0')}</span>
+            {al.essential ? <EssentialBadge size="md" link /> : null}
+          </p>
           <h2 className="h-md">
             {al.albumTitle}
             {al.artistName ? ` — ${al.artistName}` : ''}
