@@ -57,6 +57,23 @@ export async function getGenres() {
   return res.docs
 }
 
+// 공개된 글에 실제로 붙어 있는 장르만 (장르 고르기 목록이 너무 길어지지 않게)
+export async function getArticleGenres() {
+  const payload = await getClient()
+  const [all, used] = await Promise.all([
+    getGenres(),
+    payload.find({
+      collection: 'articles',
+      where: { _status: { equals: 'published' } },
+      pagination: false,
+      depth: 0,
+      select: { genres: true },
+    }),
+  ])
+  const ids = new Set(used.docs.flatMap((a) => ((a as { genres?: (number | { id: number })[] }).genres || []).map((g) => (typeof g === 'object' ? g.id : g))))
+  return ids.size ? all.filter((g) => ids.has(g.id)) : all
+}
+
 export const getSettings = cache(async () => {
   const payload = await getClient()
   return payload.findGlobal({ slug: 'site-settings' })

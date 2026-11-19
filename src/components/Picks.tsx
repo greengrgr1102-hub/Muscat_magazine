@@ -29,7 +29,7 @@ export function TagLinks({ tags, className = '' }: { tags: Tag[]; className?: st
 export function PickCard({ pick }: { pick: Pick }) {
   const embed = spotifyEmbed(pick.spotifyUrl)
   const artist = typeof pick.artist === 'object' && pick.artist ? pick.artist : null
-  const genres = asGenres(pick.genres)
+  const genres = asGenres(pick.genres).filter((g, i, a) => a.findIndex((x) => x.id === g.id) === i)
   return (
     <article className="epick">
       <SpotifyPlayer embed={embed} cover={pick.coverUrl} title={`${pick.track || ''} — ${pick.artistName}`} pickId={pick.id} />

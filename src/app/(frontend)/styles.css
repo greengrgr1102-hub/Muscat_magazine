@@ -3116,3 +3116,86 @@ body.has-plbar--player {
 .taste-banner-wrap {
   padding-bottom: 40px;
 }
+
+/* ---------- 모바일 손보기 ---------- */
+/* 메뉴: 화면 전체를 덮고, 항목이 많으면 메뉴 안에서만 스크롤 */
+.mmenu {
+  z-index: 100;
+  height: 100dvh;
+}
+.mmenu__nav {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 768px) {
+  .mmenu__title {
+    font-size: 38px;
+  }
+  .mmenu__item {
+    padding: 12px 0;
+  }
+}
+/* 장르 고르기: 두세 칸으로, 길면 그 안에서 스크롤 */
+.dropdown__menu {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  min-width: 480px;
+}
+.dropdown__menu a:first-child {
+  grid-column: 1 / -1;
+  font-weight: 600;
+}
+@media (max-width: 768px) {
+  .dropdown__menu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+    width: calc(100vw - 2 * var(--pad));
+  }
+}
+/* 곡 카드: 긴 제목(일본어 등)이 옆으로 삐져나오지 않게 */
+.epick,
+.epick__body,
+.epick__head {
+  min-width: 0;
+}
+.epick__track,
+.epick__artist,
+.epick__comment,
+.pick-detail__info h1,
+.taste__info h1,
+.web__panel h2 {
+  overflow-wrap: anywhere;
+}
+/* 복사 창 */
+.copy-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.copy-sheet__box {
+  width: min(560px, 100%);
+  background: var(--bg);
+  border-radius: 16px 16px 0 0;
+  padding: 20px var(--pad) 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.copy-sheet__box textarea {
+  width: 100%;
+  min-height: 120px;
+  max-height: 40vh;
+  font: inherit;
+  font-size: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  resize: none;
+}

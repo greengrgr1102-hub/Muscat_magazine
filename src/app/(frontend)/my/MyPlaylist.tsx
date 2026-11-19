@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { copyText } from '@/lib/copy'
 import { myPlaylist, shareUrl, useMyPlaylist } from '@/lib/myPlaylist'
 
 const small = (u?: string | null) => (u ? u.replace('ab67616d0000b273', 'ab67616d00004851') : null)
@@ -11,17 +12,18 @@ export function MyPlaylist() {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(name)
   const [copied, setCopied] = useState('')
+  // 복사가 막힌 브라우저(카톡 등)에서는 직접 복사할 수 있는 창을 띄워요
+  const [sheet, setSheet] = useState<{ text: string; title: string } | null>(null)
   useEffect(() => setMounted(true), [])
   useEffect(() => setDraft(name), [name])
 
   const copy = async (text: string, what: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
+    if (await copyText(text)) {
       setCopied(what)
-    } catch {
-      window.prompt('아래 내용을 복사해 주세요', text)
+      setTimeout(() => setCopied(''), 2000)
+    } else {
+      setSheet({ text, title: what === 'link' ? '공유 링크' : '곡 목록' })
     }
-    setTimeout(() => setCopied(''), 2000)
   }
   const nowId = player ? player.queue[player.index]?.id : null
 
@@ -132,6 +134,33 @@ export function MyPlaylist() {
           </div>
         ) : null}
       </section>
+
+      {sheet ? (
+        <div className="copy-sheet" role="dialog" aria-modal="true" aria-label={`${sheet.title} 복사`} onClick={() => setSheet(null)}>
+          <div className="copy-sheet__box" onClick={(e) => e.stopPropagation()}>
+            <p className="label">{sheet.title}</p>
+            <p className="small muted">이 브라우저에서는 자동 복사가 막혀 있어요. 아래 글을 길게 눌러 「전체 선택 → 복사」해 주세요.</p>
+            <textarea readOnly value={sheet.text} onFocus={(e) => e.currentTarget.select()} autoFocus />
+            <div className="my-actions">
+              {typeof navigator !== 'undefined' && 'share' in navigator ? (
+                <button
+                  className="btn btn--filled"
+                  onClick={() =>
+                    navigator
+                      .share(sheet.text.startsWith('http') ? { title: name, url: sheet.text } : { title: name, text: sheet.text })
+                      .catch(() => null)
+                  }
+                >
+                  <span>공유하기</span>
+                </button>
+              ) : null}
+              <button className="btn btn--outline" onClick={() => setSheet(null)}>
+                <span>닫기</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   )
 }

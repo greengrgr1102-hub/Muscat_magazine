@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { Where } from 'payload'
 import { CardGrid, Chip } from '@/components/ui'
-import { TYPE_LABEL, TYPE_ORDER, findArticles, getGenres } from '@/lib/data'
+import { TYPE_LABEL, TYPE_ORDER, findArticles, getArticleGenres } from '@/lib/data'
 
 export const metadata: Metadata = { title: 'Articles' }
 
@@ -13,7 +13,7 @@ type SP = Promise<{ type?: string; genre?: string; page?: string; sort?: string 
 export default async function ArticlesPage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams
   const type = TYPE_ORDER.includes(sp.type as never) ? sp.type : undefined
-  const genres = await getGenres()
+  const genres = await getArticleGenres()
   const genre = genres.find((g) => g.slug === sp.genre)
   const page = Math.max(1, Number(sp.page) || 1)
   const sort = sp.sort === 'old' ? 'publishedAt' : '-publishedAt'

@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from './ui'
 
 const ITEMS = [
@@ -34,7 +35,8 @@ export function MobileMenu({ instagramUrl }: { instagramUrl?: string }) {
       <button className="icon-btn" aria-label="메뉴 열기" aria-expanded={open} onClick={() => setOpen(true)}>
         <Icon name="menu" size={22} />
       </button>
-      {open ? (
+      {open && typeof document !== 'undefined'
+        ? createPortal(
         <div className="mmenu" role="dialog" aria-modal="true" aria-label="메뉴">
           <div className="mmenu__top">
             <Link href="/" className="logo" onClick={() => setOpen(false)}>
@@ -80,7 +82,10 @@ export function MobileMenu({ instagramUrl }: { instagramUrl?: string }) {
             ) : null}
           </div>
         </div>
-      ) : null}
+      ,
+            document.body,
+          )
+        : null}
     </>
   )
 }
