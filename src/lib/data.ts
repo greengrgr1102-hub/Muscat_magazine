@@ -183,7 +183,7 @@ export async function findPickRows({ where, limit = 100, page = 1 }: { where?: W
     page,
     sort: '-pickedAt',
     depth: 0,
-    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, essential: true },
+    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true },
   })
 }
 
@@ -218,7 +218,7 @@ export async function findPickRowsRandom({ where, seed, page = 1, limit = 100 }:
           where: { id: { in: slice } },
           limit: slice.length,
           depth: 0,
-          select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, essential: true },
+          select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true },
         })
       ).docs
     : []
@@ -369,17 +369,4 @@ export async function findEssentialAlbums(): Promise<EssentialAlbum[]> {
     })
   }
   return out
-}
-
-/** Essential로 체크한 곡 (최근 발매부터) */
-export async function findEssentialPicks() {
-  const payload = await getClient()
-  return payload.find({
-    collection: 'picks',
-    where: { essential: { equals: true } },
-    pagination: false,
-    sort: '-releaseDate',
-    depth: 0,
-    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, essential: true },
-  })
 }

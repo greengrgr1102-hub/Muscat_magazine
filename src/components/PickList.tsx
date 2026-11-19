@@ -6,7 +6,6 @@ import { AddButton } from './AddButton'
 import { SpotifyEmbed } from './SpotifyEmbed'
 import { sendTrack } from './Track'
 import { releaseShort } from '@/lib/format'
-import { EssentialBadge } from './EssentialBadge'
 
 export type PickRow = {
   id: number
@@ -16,7 +15,6 @@ export type PickRow = {
   pickedAt?: string | null
   releaseDate?: string | null
   comment?: string | null
-  essential?: boolean | null
   embed: string | null
 }
 
@@ -90,7 +88,6 @@ export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; group
                         {r.track || 'Untitled'}
                       </Link>
                       <span className="plist__artist">{r.artistName}</span>
-                      {r.essential ? <EssentialBadge /> : null}
                       {r.comment ? <span className="plist__comment">{r.comment}</span> : null}
                     </div>
                     <span className="plist__date" title={r.releaseDate ? '발매' : undefined}>

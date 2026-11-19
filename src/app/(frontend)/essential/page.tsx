@@ -1,38 +1,33 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import type { Media, Pick } from '@/payload-types'
-import { Img, SectionHeader } from '@/components/ui'
-import { PickList } from '@/components/PickList'
-import { toRow } from '@/components/Picks'
-import { AddAllButton, PlayAllButton } from '@/components/AddButton'
+import type { Media } from '@/payload-types'
+import { Img } from '@/components/ui'
 import { EssentialBadge } from '@/components/EssentialBadge'
-import { findEssentialAlbums, findEssentialPicks } from '@/lib/data'
+import { findEssentialAlbums } from '@/lib/data'
 
 export const metadata: Metadata = {
   title: 'Essential',
-  description: '머스캣 매거진 에디터가 「꼭 들어야 할 것」으로 고른 앨범과 곡.',
+  description: '머스캣 매거진 에디터가 「꼭 들어야 할 것」으로 고른 앨범.',
 }
 
 export default async function EssentialPage() {
-  const [albums, picks] = await Promise.all([findEssentialAlbums(), findEssentialPicks()])
-  const rows = picks.docs.map((d) => toRow(d as Pick))
+  const albums = await findEssentialAlbums()
 
   return (
     <>
       <section className="page-title wrap">
         <h1 className="page-title__h">
           <span className="display-lg">Essential</span>
-          <sup className="label">{albums.length + rows.length}</sup>
+          <sup className="label">{albums.length}</sup>
         </h1>
         <p className="muted page-title__desc">
-          에디터가 「꼭 들어야 할 것」으로 고른 앨범과 곡이에요.
+          에디터가 「꼭 들어야 할 것」으로 고른 앨범이에요.
           <br />
-          점수 대신, 이것만은 놓치지 않았으면 하는 것들을 모았습니다.
+          점수 대신, 이것만은 놓치지 않았으면 하는 앨범을 모았습니다.
         </p>
       </section>
 
       <section className="wrap section ess-section">
-        <SectionHeader title="Essential 앨범" right={<span className="small muted">앨범 리뷰에서 골랐어요</span>} />
         {albums.length ? (
           <ul className="ess-albums">
             {albums.map((a) => (
@@ -52,21 +47,6 @@ export default async function EssentialPage() {
           </ul>
         ) : (
           <p className="muted">앨범 리뷰에서 「Essential」에 체크하면 여기에 모여요.</p>
-        )}
-      </section>
-
-      <section className="wrap section ess-section">
-        <SectionHeader title="Essential 곡" right={<span className="small muted">Editor&apos;s Picks에서 골랐어요</span>} />
-        {rows.length ? (
-          <div className="ess-actions">
-            <PlayAllButton songs={rows} label="Essential" />
-            <AddAllButton songs={rows} />
-          </div>
-        ) : null}
-        {rows.length ? (
-          <PickList rows={rows} groupByMonth={false} />
-        ) : (
-          <p className="muted">Editor&apos;s Picks 곡에서 「Essential」에 체크하면 여기에 모여요.</p>
         )}
       </section>
     </>

@@ -16,7 +16,7 @@ export function EssentialBadge({ size = 'sm', link = false }: { size?: 'sm' | 'm
       {inner}
     </Link>
   ) : (
-    <span className={cls} title="Essential — 꼭 들어야 할 곡">
+    <span className={cls} title="Essential — 꼭 들어야 할 앨범">
       {inner}
     </span>
   )

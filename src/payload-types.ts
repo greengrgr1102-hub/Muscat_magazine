@@ -545,10 +545,6 @@ export interface Pick {
   spotifyUrl: string;
   artistName: string;
   /**
-   * 체크하면 목록·곡 페이지에 Essential 표시가 붙고 /essential 페이지에 모여요.
-   */
-  essential?: boolean | null;
-  /**
    * 왜 좋았는지 한두 문장으로 (비워 둬도 돼요)
    */
   comment?: string | null;
@@ -872,7 +868,6 @@ export interface ArticlesSelect<T extends boolean = true> {
 export interface PicksSelect<T extends boolean = true> {
   spotifyUrl?: T;
   artistName?: T;
-  essential?: T;
   comment?: T;
   pickedAt?: T;
   track?: T;

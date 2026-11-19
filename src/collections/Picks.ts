@@ -63,14 +63,6 @@ export const Picks: CollectionConfig = {
       required: true,
     },
     {
-      name: 'essential',
-      label: 'Essential — 꼭 들어야 할 곡',
-      type: 'checkbox',
-      defaultValue: false,
-      index: true,
-      admin: { description: '체크하면 목록·곡 페이지에 Essential 표시가 붙고 /essential 페이지에 모여요.' },
-    },
-    {
       name: 'comment',
       label: '에디터 한 줄',
       type: 'textarea',
