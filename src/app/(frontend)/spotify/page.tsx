@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { currentAdmin } from '@/lib/admin'
 import { formatDate } from '@/lib/data'
 import { redirectUri, spotifyKeyProblem } from '@/lib/spotify'
-import { AlbumNamesButton, PlaylistForm, RenameButton, SyncButton } from './SpotifyForms'
+import { AlbumNamesButton, FilterInfoButton, PlaylistForm, RenameButton, SyncButton } from './SpotifyForms'
 
 export const metadata: Metadata = { title: 'Spotify 연동', robots: { index: false, follow: false } }
 
@@ -103,6 +103,16 @@ export default async function SpotifyPage({ searchParams }: { searchParams: Prom
           더 눌러 주세요. 새벽 예약 실행 때도 자동으로 이어서 해요.
         </p>
         <AlbumNamesButton />
+      </div>
+
+      <div className="stack-12">
+        <p className="label">앨범 형태·나라 채우기</p>
+        <p className="muted small">
+          곡·앨범 필터(정규/EP/싱글, 나라)에 쓰는 정보를 채워요. 앨범 형태는 Spotify 앨범 페이지에서, 나라는 아티스트 이름(한글·일본어),
+          아티스트 페이지의 활동 지역, MusicBrainz(공개 음악 데이터베이스) 순서로 찾아요. 틀린 건 곡 편집 화면 오른쪽에서 고치면 같은 아티스트
+          곡에 퍼져요. 한 번에 다 안 되면 몇 번 더 눌러 주세요.
+        </p>
+        <FilterInfoButton />
       </div>
     </section>
   )

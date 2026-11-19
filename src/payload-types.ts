@@ -387,7 +387,6 @@ export interface Media {
    * 사진 밑에 작게 보여요. 예: 2024년 롤링홀 공연 · 사진 홍길동
    */
   caption?: string | null;
-  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -570,7 +569,7 @@ export interface Pick {
   coverUrl?: string | null;
   label?: string | null;
   /**
-   * 비워 두면 처음 재생될 때 자동으로 찾아요. 엉뚱한 영상이면 YouTube 링크를 붙여 넣어 바꿔 주세요.
+   * 비워 두면 처음 재생될 때 공식 영상(아티스트 - Topic 채널, 아티스트 채널)만 자동으로 찾아요. 엉뚱한 영상이면 YouTube 링크를 붙여 넣어 바꿔 주세요.
    */
   youtubeId?: string | null;
   youtubeMissAt?: string | null;
@@ -582,6 +581,16 @@ export interface Pick {
    * 예: 2019-07 또는 2019-07-12 (Spotify에서 자동)
    */
   releaseDate?: string | null;
+  /**
+   * Spotify 앨범 페이지에서 자동으로 가져와요
+   */
+  releaseType?: ('album' | 'ep' | 'single' | 'compilation') | null;
+  /**
+   * 아티스트 나라 두 글자 코드 (KR 한국, JP 일본, US 미국, GB 영국, TW 대만…). 비워 두면 자동으로 찾아요.
+   */
+  country?: string | null;
+  typeCheckedAt?: string | null;
+  countryCheckedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -887,6 +896,10 @@ export interface PicksSelect<T extends boolean = true> {
   youtubeMissAt?: T;
   album?: T;
   releaseDate?: T;
+  releaseType?: T;
+  country?: T;
+  typeCheckedAt?: T;
+  countryCheckedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -969,7 +982,6 @@ export interface TagsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
-  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

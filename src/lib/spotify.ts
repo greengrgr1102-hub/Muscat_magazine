@@ -389,7 +389,7 @@ const decodeHtml = (s: string) =>
     .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
 
-function metaOf(html: string, prop: string) {
+export function metaOf(html: string, prop: string) {
   const re = new RegExp(`<meta[^>]+(?:property|name)="${prop}"[^>]+content="([^"]*)"`, 'i')
   const m = html.match(re) || html.match(new RegExp(`<meta[^>]+content="([^"]*)"[^>]+(?:property|name)="${prop}"`, 'i'))
   return m ? decodeHtml(m[1]) : null

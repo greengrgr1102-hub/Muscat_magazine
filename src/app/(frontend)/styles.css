@@ -2928,6 +2928,43 @@ body.has-plbar--player {
   }
 }
 
+/* ---------- 곡·앨범 필터 ---------- */
+.pfilters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 16px;
+}
+.pfilters__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pfilters__label {
+  flex: none;
+  width: 36px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.pfilters__chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pfilters__chips::-webkit-scrollbar {
+  display: none;
+}
+.pfilters__chips .chip {
+  flex: none;
+}
+.pfilters__reset {
+  align-self: flex-start;
+  margin-left: 48px;
+  color: var(--ink-muted);
+  text-decoration: underline;
+}
+
 /* ---------- 에디터 플리 ---------- */
 .pl-cards {
   display: grid;

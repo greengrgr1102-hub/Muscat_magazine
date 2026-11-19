@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { sql } from '@payloadcms/db-postgres'
 
 // Editor's Picks — 에디터가 들은 곡 중 좋았던 곡을 하나씩 올리는 짧은 기록.
 // Spotify 링크만 붙이면 곡 제목·커버를 Spotify에서 가져와 채웁니다.
@@ -51,6 +52,30 @@ export const Picks: CollectionConfig = {
           // Spotify에 닿지 않으면 직접 적은 값 그대로 저장합니다.
         }
         return data
+      },
+    ],
+    afterChange: [
+      // 관리자가 나라·앨범 형태를 고치면 같은 아티스트(나라) / 같은 앨범 커버(형태)의 다른 곡에도 같이 넣어요.
+      async ({ doc, previousDoc, operation, req }) => {
+        if (operation !== 'update' || !req.user) return doc
+        const db = req.payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<unknown> } }
+        try {
+          if (doc.country && doc.country !== previousDoc?.country) {
+            const first = String(doc.artistName || '').split(', ')[0]
+            await db.drizzle.execute(sql`
+              update picks set country = ${doc.country}, country_checked_at = now()
+              where id <> ${doc.id} and split_part(artist_name, ', ', 1) = ${first}`)
+          }
+          const key = String(doc.coverUrl || '').match(/\/image\/([a-z0-9]{24,})$/i)?.[1]?.slice(-24)
+          if (doc.releaseType && doc.releaseType !== previousDoc?.releaseType && key) {
+            await db.drizzle.execute(sql`
+              update picks set release_type = ${doc.releaseType}::enum_picks_release_type, type_checked_at = now()
+              where id <> ${doc.id} and right(cover_url, 24) = ${key}`)
+          }
+        } catch {
+          // 퍼뜨리기에 실패해도 이 곡 저장은 그대로
+        }
+        return doc
       },
     ],
   },
@@ -160,5 +185,32 @@ export const Picks: CollectionConfig = {
       type: 'text',
       admin: { position: 'sidebar', description: '예: 2019-07 또는 2019-07-12 (Spotify에서 자동)' },
     },
+    {
+      name: 'releaseType',
+      label: '앨범 형태',
+      type: 'select',
+      index: true,
+      options: [
+        { label: '정규', value: 'album' },
+        { label: 'EP', value: 'ep' },
+        { label: '싱글', value: 'single' },
+        { label: '모음집', value: 'compilation' },
+      ],
+      admin: { position: 'sidebar', description: 'Spotify 앨범 페이지에서 자동으로 가져와요' },
+    },
+    {
+      name: 'country',
+      label: '나라',
+      type: 'text',
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description: '아티스트 나라 두 글자 코드 (KR 한국, JP 일본, US 미국, GB 영국, TW 대만…). 비워 두면 자동으로 찾아요.',
+      },
+      hooks: { beforeChange: [({ value }) => (typeof value === 'string' && value.trim() ? value.trim().toUpperCase().slice(0, 2) : value || null)] },
+    },
+    // 자동 채우기를 한 번 해 봤는지 (못 찾았으면 한동안 다시 안 찾아요)
+    { name: 'typeCheckedAt', type: 'date', admin: { hidden: true } },
+    { name: 'countryCheckedAt', type: 'date', admin: { hidden: true } },
   ],
 }

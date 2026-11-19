@@ -175,14 +175,19 @@ export async function findPicks({ where, limit = 24, page = 1 }: { where?: Where
 }
 
 // 전체 기록 목록용: 필요한 칸만 가볍게
-export async function findPickRows({ where, limit = 100, page = 1 }: { where?: Where; limit?: number; page?: number } = {}) {
+export async function findPickRows({
+  where,
+  limit = 100,
+  page = 1,
+  sort = '-pickedAt',
+}: { where?: Where; limit?: number; page?: number; sort?: string } = {}) {
   const payload = await getClient()
   return payload.find({
     collection: 'picks',
     where,
     limit,
     page,
-    sort: '-pickedAt',
+    sort,
     depth: 0,
     select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, youtubeId: true },
   })
@@ -390,12 +395,25 @@ export type PickAlbum = {
   firstTrack: string | null
 }
 
-export async function findPickAlbums({ page = 1, limit = 48, sort = 'most', q = '' }: { page?: number; limit?: number; sort?: 'most' | 'new'; q?: string }) {
+export async function findPickAlbums({
+  page = 1,
+  limit = 48,
+  sort = 'most',
+  q = '',
+  f = {},
+}: { page?: number; limit?: number; sort?: 'most' | 'new' | 'old'; q?: string; f?: PickFilter }) {
   const payload = await getClient()
   const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
   const like = q.trim() ? `%${q.trim()}%` : null
-  const filter = like ? sql`where (alb ilike ${like} or artist_name ilike ${like} or track ilike ${like})` : sql``
-  const order = sort === 'new' ? sql`max(release_date) desc nulls last, count(*) desc` : sql`count(*) desc, max(release_date) desc nulls last`
+  const conds = [...(like ? [sql`(alb ilike ${like} or artist_name ilike ${like} or track ilike ${like})`] : []), ...pickFilterSql(f)]
+  if (sort === 'new' || sort === 'old') conds.push(sql`release_date is not null`)
+  const filter = conds.length ? sql`where ${sql.join(conds, sql` and `)}` : sql``
+  const order =
+    sort === 'new'
+      ? sql`max(release_date) desc nulls last, count(*) desc`
+      : sort === 'old'
+        ? sql`min(release_date) asc nulls last, count(*) desc`
+        : sql`count(*) desc, max(release_date) desc nulls last`
   const offset = (Math.max(1, page) - 1) * limit
   // 같은 앨범이 커버 이미지 주소만 다르게 여러 번 올라와 있을 때가 있어서(재발매·디럭스 등),
   // 앨범 이름을 알면 「앨범 이름 + 첫 번째 아티스트」로, 모르면 커버로 묶어요.
@@ -406,7 +424,7 @@ export async function findPickAlbums({ page = 1, limit = 48, sort = 'most', q = 
       from picks where cover_url like 'https://%/image/%'
       group by right(cover_url, 24)
     ), t2 as (
-      select p.id, p.cover_url, p.artist_name, p.release_date, p.track, c.ck, c.alb,
+      select p.id, p.cover_url, p.artist_name, p.release_date, p.track, p.country, p.release_type, c.ck, c.alb,
              case when c.alb is not null then 'n:' || lower(c.alb) || '|' || lower(c.a1) else 'c:' || c.ck end as gk
       from picks p join c on right(p.cover_url, 24) = c.ck
       where p.cover_url like 'https://%/image/%'
@@ -583,4 +601,75 @@ export async function similarAlbums(key: string, limit = 8): Promise<{ center: W
   const center = build(all[0])
   if (!center) return null
   return { center, neighbors: chosen.map(build).filter(Boolean) as WebAlbum[], random }
+}
+
+/* ───────── 곡·앨범 필터 (시기 · 나라 · 앨범 형태) ───────── */
+
+export type PickFilter = { era?: string; c?: string; type?: string }
+export const ERA_OPTIONS = [
+  { v: 'recent', label: '최근 1년' },
+  { v: '2020s', label: '2020년대' },
+  { v: '2010s', label: '2010년대' },
+  { v: '2000s', label: '2000년대' },
+  { v: 'old', label: '그 이전' },
+] as const
+export const COUNTRY_OPTIONS = [
+  { v: 'KR', label: '한국' },
+  { v: 'JP', label: '일본' },
+  { v: 'US', label: '미국' },
+  { v: 'GB', label: '영국' },
+  { v: 'etc', label: '그 밖' },
+] as const
+export const TYPE_OPTIONS = [
+  { v: 'album', label: '정규' },
+  { v: 'ep', label: 'EP' },
+  { v: 'single', label: '싱글' },
+] as const
+const BIG = ['KR', 'JP', 'US', 'GB']
+
+/** 주소에서 받은 값 중 아는 값만 남겨요 */
+export function cleanFilter(sp: Record<string, string | undefined>): PickFilter {
+  const f: PickFilter = {}
+  if (ERA_OPTIONS.some((o) => o.v === sp.era)) f.era = sp.era
+  if (COUNTRY_OPTIONS.some((o) => o.v === sp.c)) f.c = sp.c
+  if (TYPE_OPTIONS.some((o) => o.v === sp.type)) f.type = sp.type
+  return f
+}
+
+function eraRange(era?: string): [string | null, string | null] | null {
+  if (!era) return null
+  if (era === 'recent') {
+    const d = new Date(Date.now() - 365 * 86400_000)
+    return [d.toISOString().slice(0, 10), null]
+  }
+  if (era === '2020s') return ['2020', '2030']
+  if (era === '2010s') return ['2010', '2020']
+  if (era === '2000s') return ['2000', '2010']
+  if (era === 'old') return ['1000', '2000']
+  return null
+}
+
+/** 곡 목록용 조건 (발매일은 "2019", "2019-07", "2019-07-12" 모두 글자 순서로 비교돼요) */
+export function pickFilterWhere(f: PickFilter): Where[] {
+  const out: Where[] = []
+  const r = eraRange(f.era)
+  if (r) {
+    if (r[0]) out.push({ releaseDate: { greater_than_equal: r[0] } })
+    if (r[1]) out.push({ releaseDate: { less_than: r[1] } })
+  }
+  if (f.c === 'etc') out.push({ and: [{ country: { exists: true } }, { country: { not_in: BIG } }] })
+  else if (f.c) out.push({ country: { equals: f.c } })
+  if (f.type) out.push({ releaseType: { equals: f.type } })
+  return out
+}
+
+function pickFilterSql(f: PickFilter) {
+  const conds = []
+  const r = eraRange(f.era)
+  if (r?.[0]) conds.push(sql`release_date >= ${r[0]}`)
+  if (r?.[1]) conds.push(sql`release_date < ${r[1]}`)
+  if (f.c === 'etc') conds.push(sql`country is not null and country not in ('KR','JP','US','GB')`)
+  else if (f.c) conds.push(sql`country = ${f.c}`)
+  if (f.type) conds.push(sql`release_type = ${f.type}::enum_picks_release_type`)
+  return conds
 }

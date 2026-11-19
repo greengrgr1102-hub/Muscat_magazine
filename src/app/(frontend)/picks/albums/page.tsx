@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ListenTabs } from '@/components/ListenTabs'
-import { findPickAlbums } from '@/lib/data'
+import { PickFilters } from '@/components/PickFilters'
+import { cleanFilter, findPickAlbums } from '@/lib/data'
 
 export const metadata: Metadata = {
   title: "Albums — Editor's Picks",
@@ -13,15 +14,19 @@ const year = (d: string | null) => (d ? String(d).slice(0, 4) : null)
 
 export default async function PickAlbumsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams
-  const sort = sp.sort === 'new' ? 'new' : 'most'
+  const sort = sp.sort === 'new' ? 'new' : sp.sort === 'old' ? 'old' : 'most'
+  const f = cleanFilter(sp)
   const q = (sp.q || '').slice(0, 60)
   const page = Math.max(1, Number(sp.page) || 1)
-  const { albums, totalDocs, totalPages } = await findPickAlbums({ page, sort, q })
+  const { albums, totalDocs, totalPages } = await findPickAlbums({ page, sort, q, f })
   const href = (o: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams()
     const v = { sort, q, page, ...o }
-    if (v.sort === 'new') p.set('sort', 'new')
+    if (v.sort === 'new' || v.sort === 'old') p.set('sort', String(v.sort))
     if (v.q) p.set('q', String(v.q))
+    if (f.era) p.set('era', f.era)
+    if (f.c) p.set('c', f.c)
+    if (f.type) p.set('type', f.type)
     if (Number(v.page) > 1) p.set('page', String(v.page))
     const s = p.toString()
     return `/picks/albums${s ? `?${s}` : ''}`
@@ -46,16 +51,21 @@ export default async function PickAlbumsPage({ searchParams }: { searchParams: P
         <div className="plist-head">
           <h2 className="h-lg">{q ? `‘${q}’ 검색 결과` : '앨범으로 보기'}</h2>
           <form action="/picks/albums" className="plist-search" role="search">
-            {sort === 'new' ? <input type="hidden" name="sort" value="new" /> : null}
+            {sort !== 'most' ? <input type="hidden" name="sort" value={sort} /> : null}
+            {f.era ? <input type="hidden" name="era" value={f.era} /> : null}
+            {f.c ? <input type="hidden" name="c" value={f.c} /> : null}
+            {f.type ? <input type="hidden" name="type" value={f.type} /> : null}
             <input type="search" name="q" defaultValue={q} placeholder="앨범·아티스트·곡 검색" aria-label="앨범 검색" />
             <button type="submit" className="btn btn--outline">
               <span>찾기</span>
             </button>
           </form>
         </div>
+        <PickFilters base="/picks/albums" keep={{ ...(sort !== 'most' ? { sort } : {}), ...(q ? { q } : {}) }} f={f} />
         <p className="small plist-order">
           {sort === 'most' ? <span aria-current="true">많이 담은 순</span> : <Link href={href({ sort: 'most', page: 1 })}>많이 담은 순</Link>}
           {sort === 'new' ? <span aria-current="true">최신 발매순</span> : <Link href={href({ sort: 'new', page: 1 })}>최신 발매순</Link>}
+          {sort === 'old' ? <span aria-current="true">오래된 순</span> : <Link href={href({ sort: 'old', page: 1 })}>오래된 순</Link>}
         </p>
 
         {albums.length ? (
@@ -75,7 +85,7 @@ export default async function PickAlbumsPage({ searchParams }: { searchParams: P
             ))}
           </ul>
         ) : (
-          <p className="muted">찾는 앨범이 없어요.</p>
+          <p className="muted">조건에 맞는 앨범이 없어요.</p>
         )}
 
         {totalPages > 1 ? (
