@@ -6,7 +6,7 @@ import { PickGrid, TagLinks, toRow, asTags, spotifyEmbed } from '@/components/Pi
 import { ArrowLink, SectionHeader } from '@/components/ui'
 import { ViewTracker } from '@/components/Track'
 import { AddButton } from '@/components/AddButton'
-import { asGenres, getPick, similarPicks } from '@/lib/data'
+import { albumKeyOf, asGenres, getPick, similarPicks } from '@/lib/data'
 
 type Params = Promise<{ id: string }>
 
@@ -64,7 +64,15 @@ export default async function PickPage({ params }: { params: Params }) {
                 {pick.album ? (
                   <div>
                     <dt className="label">Album</dt>
-                    <dd>{pick.album}</dd>
+                    <dd>
+                      {albumKeyOf(pick.coverUrl) ? (
+                        <Link href={`/picks/albums/${albumKeyOf(pick.coverUrl)}`} className="pick-detail__album">
+                          {pick.album}
+                        </Link>
+                      ) : (
+                        pick.album
+                      )}
+                    </dd>
                   </div>
                 ) : null}
                 {genres.length ? (

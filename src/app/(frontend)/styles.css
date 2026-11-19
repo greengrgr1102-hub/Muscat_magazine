@@ -3825,3 +3825,14 @@ a.ess-badge:hover svg {
     width: 100%;
   }
 }
+
+.pick-detail__album {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s;
+}
+.pick-detail__album:hover {
+  text-decoration-color: currentColor;
+}
