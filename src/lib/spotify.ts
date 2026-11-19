@@ -2,6 +2,7 @@ import 'server-only'
 import type { Payload } from 'payload'
 import { sql } from '@payloadcms/db-postgres'
 import { parseSpotify } from '../collections/Picks'
+import { cleanAlbumName } from './albumName'
 
 // Spotify 연동 — 에디터 본인 계정의 플레이리스트를 읽어 Editor's Picks로 옮깁니다.
 // 필요한 환경 변수: SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET (Vercel 프로젝트 설정에서 입력)
@@ -213,7 +214,7 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
       const { it, t } = todo[i]
       if (!t?.id || have.has(t.id)) continue
       have.add(t.id)
-      const key = sameKey(t.name, (t.artists || [])[0]?.name, t.album?.name)
+      const key = sameKey(t.name, (t.artists || [])[0]?.name, cleanAlbumName(t.album?.name))
       if (t.album?.name && haveSame.has(key)) continue
       haveSame.add(key)
       const names = (t.artists || []).map((a) => a.name)
@@ -228,7 +229,7 @@ export async function syncPlaylist(payload: Payload, { minIntervalMin = 0 } = {}
           track: t.name,
           artistName: names.join(', ') || 'Unknown',
           coverUrl: t.album?.images?.[0]?.url,
-          album: t.album?.name,
+          album: cleanAlbumName(t.album?.name),
           releaseDate: releaseOf(t),
           pickedAt: it.added_at || new Date().toISOString(),
           artist: match?.id,
@@ -334,7 +335,7 @@ export async function renameToKorean(payload: Payload) {
           // 새 이름에 한글이 있고, 지금 이름에는 없을 때만 바꿔요.
           if (t.name && HANGUL.test(t.name) && !HANGUL.test(mine.track || '') && t.name !== mine.track) data.track = t.name
           if (names && HANGUL.test(names) && !HANGUL.test(mine.artistName) && names !== mine.artistName) data.artistName = names
-          const albumName = t.album?.name
+          const albumName = cleanAlbumName(t.album?.name)
           const rel = releaseOf(t)
           // 앨범·발매일은 한 페이지(50곡)씩 모아서 한 번에 저장 (하나씩 저장하면 느려서 하루에 몇백 곡밖에 못 채움)
           if ((albumName && albumName !== mine.album) || (rel && rel !== mine.releaseDate)) {
@@ -425,7 +426,7 @@ async function albumFromTrackPage(trackId: string): Promise<{ album: string; rel
   const album = parts.length >= 4 ? parts[parts.length - 3] : parts.length >= 2 ? parts[1] : null
   if (!album) return null
   const rel = metaOf(html, 'music:release_date') || undefined
-  return { album, release: rel ? rel.slice(0, 10) : undefined }
+  return { album: cleanAlbumName(album) || album, release: rel ? rel.slice(0, 10) : undefined }
 }
 
 export async function fillAlbumNames(payload: Payload, budgetMs = 45_000) {

@@ -2,6 +2,7 @@ import 'server-only'
 import type { Payload } from 'payload'
 import { sql } from '@payloadcms/db-postgres'
 import { parseSpotify } from '../collections/Picks'
+import { cleanAlbumName } from './albumName'
 import { romanize } from './romanize'
 import { metaOf } from './spotify'
 
@@ -144,7 +145,7 @@ async function englishNames(trackId: string): Promise<{ track: string; artist: s
   if (!title || parts.length < 3) return null
   // "Artist1, Artist2 · Album · Song · 2025"
   const artist = parts.length >= 4 ? parts.slice(0, parts.length - 3).join(' · ') : parts[0]
-  const album = parts.length >= 4 ? parts[parts.length - 3] : null
+  const album = parts.length >= 4 ? cleanAlbumName(parts[parts.length - 3]) || null : null
   return { track: title, artist, album }
 }
 
@@ -422,9 +423,24 @@ export async function fillCountries(payload: Payload, deadline: number) {
   return { quick, found, missed, busy, left }
 }
 
+/** 앨범 이름에 붙은 「The 2nd Mini Album」 같은 설명 떼기 (사이트 안에서만 계산해서 빨라요) */
+export async function cleanAlbumNames(payload: Payload) {
+  const db = dbOf(payload)
+  const names = (await db.drizzle.execute(sql`select distinct album from picks where album is not null`)).rows.map((r) => String(r.album))
+  let changed = 0
+  for (const old of names) {
+    const next = cleanAlbumName(old)
+    if (!next || next === old) continue
+    await db.drizzle.execute(sql`update picks set album = ${next} where album = ${old}`)
+    changed++
+  }
+  return changed
+}
+
 /** 둘 다 시간 안에 할 수 있는 만큼 (서로 다른 사이트라 같이 돌려요) */
 export async function fillFilters(payload: Payload, budgetMs = 45_000) {
   const deadline = Date.now() + budgetMs
+  const albumsCleaned = await cleanAlbumNames(payload)
   // 나라는 일본어 이름(가나)으로도 찾으니까, 이름을 영어로 바꾸기 전에 빠른 단계부터 끝내요.
   const countriesP = fillCountries(payload, deadline)
   await new Promise((r) => setTimeout(r, 1500))
@@ -445,10 +461,11 @@ export async function fillFilters(payload: Payload, budgetMs = 45_000) {
   const [{ en, types }, countries] = await Promise.all([spotifySide(), countriesP])
   const roman = Date.now() < deadline - 5000 ? await romanizeNames(payload, deadline) : { changed: 0, scanned: 0 }
   const parts = [
+    ...(albumsCleaned ? [`앨범 이름 ${albumsCleaned}개 정리`] : []),
     `영어 이름이 없는 ${roman.changed}곡은 로마자 발음으로`,
     `외국어 이름 ${en.changed}곡을 한국어·영어로 바꿈${en.left > 0 ? ` (남은 곡 ${en.left}곡)` : ''}`,
     `앨범 형태 ${types.done}개 채움${types.left > 0 ? ` (남은 앨범 ${types.left}개${types.busy ? ', Spotify가 잠깐 쉬어 가재서 멈춤' : ''})` : ''}`,
     `나라: ${countries.quick}곡은 이름·아티스트 정보로, 아티스트 ${countries.found}명은 MusicBrainz로 채움${countries.left ? ` (남은 아티스트 ${countries.left}명)` : ''}`,
   ]
-  return { en, roman, types, countries, message: parts.join(' · ') }
+  return { albumsCleaned, en, roman, types, countries, message: parts.join(' · ') }
 }

@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { sql } from '@payloadcms/db-postgres'
+import { cleanAlbumName } from '../lib/albumName'
 
 // Editor's Picks — 에디터가 들은 곡 중 좋았던 곡을 하나씩 올리는 짧은 기록.
 // Spotify 링크만 붙이면 곡 제목·커버를 Spotify에서 가져와 채웁니다.
@@ -177,7 +178,8 @@ export const Picks: CollectionConfig = {
       name: 'album',
       label: '앨범',
       type: 'text',
-      admin: { position: 'sidebar', description: 'Spotify에서 자동으로 가져와요' },
+      admin: { position: 'sidebar', description: 'Spotify에서 자동으로 가져와요. 「The 2nd Mini Album」 같은 설명은 저장할 때 떼요.' },
+      hooks: { beforeChange: [({ value }) => cleanAlbumName(value)] },
     },
     {
       name: 'releaseDate',
