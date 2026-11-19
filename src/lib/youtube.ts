@@ -1,5 +1,7 @@
 import 'server-only'
 import type { Payload } from 'payload'
+import { parseSpotify } from '../collections/Picks'
+import { trackNamesEn } from './spotify'
 
 // 곡 하나에 맞는 YouTube 영상 찾기.
 // YouTube Data API 검색은 하루 무료 한도(10,000점, 검색 1번 = 100점)가 있어서 하루 90번까지만 검색해요.
@@ -19,36 +21,32 @@ const norm = (s: string) => s.toLowerCase().replace(/[\s'’"「」()\[\]\-–�
 
 /**
  * 공식 영상만 써요.
- * - 「아티스트 - Topic」 채널 (YouTube Music 공식 음원, 설명이 "Provided to YouTube by …"로 시작)
- * - 아티스트 본인 채널 (채널 이름에 아티스트 이름이 들어 있음) · VEVO
- * 팬 업로드·가사 영상·커버·라이브 등은 버려요.
+ * - 「아티스트 - Topic」 채널 (YouTube Music 공식 음원) — 채널 이름이 그 아티스트여야 해요
+ * - 아티스트 본인 채널 · VEVO
+ * 그리고 영상 제목에 곡 제목(한국어 또는 영어)이 들어 있어야 해요.
+ * 팬 업로드·가사 영상·커버·라이브, 다른 가수의 같은 제목 곡은 버려요.
  */
-function officialKind(it: SearchItem, artist: string): 'topic' | 'artist' | null {
-  const ch = it.snippet?.channelTitle || ''
-  const desc = it.snippet?.description || ''
-  if (/ - Topic$/.test(ch) || /^Provided to YouTube by/i.test(desc)) return 'topic'
-  const names = artist
-    .split(', ')
-    .map(norm)
-    .filter((a) => a.length >= 2)
-  const c = norm(ch)
-  if (/vevo$/i.test(ch) && names.some((a) => c.startsWith(a))) return 'artist'
-  if (names.some((a) => c === a || c === `${a}official` || c === `official${a}` || c.startsWith(a))) return 'artist'
-  return null
-}
+type Names = { tracks: string[]; artists: string[] }
 
-function score(it: SearchItem, track: string, artist: string) {
-  const kind = officialKind(it, artist)
-  if (!kind) return -99
+const stripParen = (t: string) => t.replace(/\s*[([（【].*?[)\]）】]/g, '')
+
+function score(it: SearchItem, n: Names) {
+  const ch = it.snippet?.channelTitle || ''
   const rawTitle = it.snippet?.title || ''
   const title = norm(rawTitle)
-  // 곡 제목이 영상 제목에 들어 있어야 해요 (feat. 같은 괄호 부분은 빼고 비교)
-  const base = norm(track.replace(/\s*[([（【].*?[)\]）】]/g, '')) || norm(track)
-  if (!base || !title.includes(base)) return -99
-  let s = kind === 'topic' ? 10 : 6
-  s += 4
+  const artists = n.artists.map(norm).filter((a) => a.length >= 2)
+  const isTopic = / - Topic$/.test(ch)
+  const chBase = norm(ch.replace(/ - Topic$/, '').replace(/vevo$/i, ''))
+  const chIsArtist = artists.some((a) => chBase === a || chBase === `${a}official` || chBase === `official${a}` || chBase.startsWith(a))
+  if (!chIsArtist) return -99
+  const titleOk = n.tracks.some((t) => {
+    const b = norm(stripParen(t)) || norm(t)
+    return b.length > 0 && title.includes(b)
+  })
+  if (!titleOk) return -99
+  let s = isTopic ? 14 : 10
   if (/official (audio|music video|video)|공식|m\/?v/i.test(rawTitle)) s += 1
-  if (/live|cover|커버|라이브|reaction|karaoke|노래방|1 ?hour|loop|sped ?up|slowed|teaser|티저|behind|비하인드/i.test(rawTitle)) s -= 6
+  if (/live|cover|커버|라이브|reaction|karaoke|노래방|1 ?hour|loop|sped ?up|slowed|teaser|티저|behind|비하인드|instrumental|inst\.?\)/i.test(rawTitle)) s -= 6
   return s
 }
 
@@ -65,7 +63,7 @@ export async function resolveYoutube(
   payload: Payload,
   pickId: number,
   opts: { debug?: boolean } = {},
-): Promise<{ id: string | null; reason?: string; candidates?: unknown[] }> {
+): Promise<{ id: string | null; reason?: string; candidates?: unknown[]; q?: string; names?: unknown }> {
   const pick = await payload
     .findByID({ collection: 'picks', id: pickId, depth: 0, overrideAccess: true })
     .catch(() => null)
@@ -80,8 +78,16 @@ export async function resolveYoutube(
 
   const artist = pick.artistName || ''
   const track = pick.track || ''
-  // 「- Topic」을 붙이면 YouTube Music 공식 음원이 위로 올라와요
-  const q = `${artist.split(', ')[0]} ${track} topic`.trim()
+  const sid = parseSpotify(pick.spotifyUrl)?.id
+  const en = sid ? await trackNamesEn(sid) : null
+  const names: Names = {
+    tracks: [...new Set([track, en?.track].filter(Boolean) as string[])],
+    artists: [...new Set([...artist.split(', '), ...(en?.artists || [])].filter(Boolean))],
+  }
+  // 「topic」을 붙이면 YouTube Music 공식 음원이 위로 올라와요. 공식 음원은 영어 이름인 경우가 많아 영어 이름으로 찾아요.
+  const qArtist = en?.artists[0] || artist.split(', ')[0]
+  const qTrack = stripParen(en?.track || track) || en?.track || track
+  const q = `${qArtist} ${qTrack} topic`.trim()
   const url = new URL('https://www.googleapis.com/youtube/v3/search')
   url.search = new URLSearchParams({
     part: 'snippet',
@@ -95,10 +101,12 @@ export async function resolveYoutube(
   const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) return { id: null, reason: `api-${res.status}` }
   const items = (((await res.json()) as { items?: SearchItem[] }).items || []).filter((it) => it.id?.videoId)
-  const ranked = items.map((it) => ({ it, s: score(it, track, artist) })).sort((x, y) => y.s - x.s)
+  const ranked = items.map((it) => ({ it, s: score(it, names) })).sort((x, y) => y.s - x.s)
   if (opts.debug) {
     return {
       id: ranked[0] && ranked[0].s >= 10 ? ranked[0].it.id!.videoId! : null,
+      q,
+      names,
       candidates: ranked.map((r) => ({ s: r.s, title: r.it.snippet?.title, channel: r.it.snippet?.channelTitle, id: r.it.id?.videoId })),
     }
   }

@@ -471,3 +471,27 @@ export async function fillAlbumNames(payload: Payload, budgetMs = 45_000) {
         : `앨범 이름 채우기를 마쳤어요. (이번에 ${done}개${failed ? `, 못 찾은 앨범 ${failed}개` : ''})`,
   }
 }
+
+/** Spotify 공개 곡 페이지에서 영어 이름 읽기 (YouTube 공식 음원은 영어 제목인 경우가 많아서) */
+export async function trackNamesEn(trackId: string): Promise<{ track: string; artists: string[] } | null> {
+  try {
+    const res = await fetch(`https://open.spotify.com/track/${trackId}`, {
+      headers: {
+        'Accept-Language': 'en-US,en;q=0.9',
+        'User-Agent': 'Mozilla/5.0 (compatible; MuscatMagazineBot/1.0; +https://muscat-magazine.vercel.app)',
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(6000),
+    })
+    if (!res.ok) return null
+    const html = await res.text()
+    const title = metaOf(html, 'og:title')
+    const desc = metaOf(html, 'og:description')
+    if (!title || !desc) return null
+    const parts = desc.split(' · ').map((p) => p.trim())
+    const artistPart = parts.length >= 4 ? parts.slice(0, parts.length - 3).join(' · ') : parts[0]
+    return { track: title, artists: artistPart.split(', ').filter(Boolean) }
+  } catch {
+    return null
+  }
+}
