@@ -3051,6 +3051,102 @@ body.has-plbar--player {
 .taste__go {
   margin-top: 16px;
 }
+.taste-q {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 980px;
+  margin-top: 8px;
+}
+.taste-q__opt {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.taste-q__opt:hover,
+.taste-q__opt.is-on {
+  border-color: var(--accent);
+}
+.taste-q__opt.is-playing {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--tint);
+}
+.taste-q__pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 20px 16px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.taste-q__label {
+  font-size: clamp(18px, 1.6vw, 22px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  word-break: keep-all;
+}
+.taste-q__hint {
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+.taste-q__sample {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: var(--tint);
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.taste-q__sample img,
+.taste-q__sample > span:first-child:empty {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex: none;
+}
+.taste-q__song {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.taste-q__song > span:first-child {
+  font-weight: 600;
+  color: var(--accent-ink);
+}
+.taste-q__song-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-muted);
+}
+.taste-q__sample--wait {
+  color: var(--ink-muted);
+  cursor: default;
+}
+.taste-q__player {
+  max-width: 980px;
+}
+@media (max-width: 640px) {
+  .taste-q {
+    grid-template-columns: 1fr;
+  }
+}
 .taste__bar {
   height: 3px;
   background: var(--line);

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import type { Where } from 'payload'
 import { getClient } from '@/lib/data'
+import { QUIZ, decodeW, eraOk, type Era } from '@/lib/tasteQuiz'
 
 // 취향 찾기용 데이터
-//  ?step=sample&g=dream-pop,shoegaze  → 들어볼 곡 10개 (고른 장르에서 고루, 없으면 전체에서)
-//  ?step=result&liked=1,2,3&g=…       → 취향 요약 + 추천곡 20개
+//  ?step=quiz                                → 질문 보기마다 들어볼 샘플 곡
+//  ?step=sample&w=shoegaze:3,…&era=2010s     → 답에 맞춰 들어볼 곡 10개
+//  ?step=result&liked=1,2,3&w=…&era=…        → 취향 요약 + 추천곡 20개
 
 function spotifyEmbed(url: string) {
   const m = url.match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(track|album|playlist)\/([A-Za-z0-9]+)/)
@@ -37,6 +39,26 @@ function shuffle<T>(a: T[]) {
 }
 const SELECT = { track: true, artistName: true, coverUrl: true, spotifyUrl: true, releaseDate: true, genres: true } as const
 
+const artistOf = (p: Doc) => p.artistName.split(',')[0].trim().toLowerCase()
+
+/** 점수에 비례해서 뽑기 (점수 높은 곡이 잘 나오지만, 매번 조금씩 달라요) */
+function weightedPick(items: { d: Doc; s: number }[], n: number, skipArtists = new Set<string>()) {
+  const pool = items.filter((x) => x.s > 0)
+  const out: Doc[] = []
+  const seen = new Set(skipArtists)
+  while (out.length < n && pool.length) {
+    const total = pool.reduce((t, x) => t + x.s, 0)
+    let r = Math.random() * total
+    let k = 0
+    while (k < pool.length - 1 && r > pool[k].s) r -= pool[k++].s
+    const [x] = pool.splice(k, 1)
+    if (seen.has(artistOf(x.d))) continue
+    seen.add(artistOf(x.d))
+    out.push(x.d)
+  }
+  return out
+}
+
 export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams
   const payload = await getClient()
@@ -49,44 +71,86 @@ export async function GET(req: Request) {
     .filter((x): x is number => typeof x === 'number')
     .slice(0, 3)
 
+  const w = decodeW(sp.get('w'))
+  const era = (['2020s', '2010s', 'old', 'any'].includes(sp.get('era') || '') ? sp.get('era') : 'any') as Era
+  // 장르 slug 점수 → 장르 id 점수
+  const wid = new Map<number, number>()
+  for (const [slug, n] of Object.entries(w)) {
+    const id = bySlug.get(slug)
+    if (id) wid.set(id, (wid.get(id) || 0) + n)
+  }
+  for (const g of chosen) wid.set(g, (wid.get(g) || 0) + 2)
+
+  if (sp.get('step') === 'quiz') {
+    // 보기마다 그 보기에서 점수가 가장 높은 장르 두 개에서 한 곡씩
+    const used = new Set<number>()
+    for (const q of QUIZ) for (const o of q.options) for (const g of Object.keys(o.w || {})) if (bySlug.has(g)) used.add(bySlug.get(g)!)
+    const pool = shuffle(
+      (
+        await payload.find({
+          collection: 'picks',
+          where: { and: [{ genres: { in: [...used] } }, { coverUrl: { exists: true } }] },
+          pagination: false,
+          depth: 0,
+          select: SELECT,
+        })
+      ).docs as unknown as Doc[],
+    )
+    const taken = new Set<string>()
+    const samples: Record<string, ReturnType<typeof row>> = {}
+    for (const q of QUIZ) {
+      if (!q.samples) continue
+      for (const o of q.options) {
+        const top = Object.entries(o.w || {})
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 2)
+          .map(([g]) => bySlug.get(g))
+          .filter((x): x is number => typeof x === 'number')
+        const others = new Set(
+          q.options
+            .filter((x) => x.id !== o.id)
+            .flatMap((x) => Object.keys(x.w || {}))
+            .map((g) => bySlug.get(g)),
+        )
+        // 다른 보기와 겹치지 않는 장르의 곡이면 더 좋아요 (보기끼리 소리가 달라야 고르기 쉬워서)
+        const fits = (d: Doc) => (d.genres || []).map(gid).some((g) => top.includes(g))
+        const pure = (d: Doc) => !(d.genres || []).map(gid).some((g) => others.has(g))
+        const pick =
+          pool.find((d) => fits(d) && pure(d) && !taken.has(artistOf(d))) || pool.find((d) => fits(d) && !taken.has(artistOf(d)))
+        if (pick) {
+          taken.add(artistOf(pick))
+          samples[`${q.id}.${o.id}`] = row(pick, names)
+        }
+      }
+    }
+    return NextResponse.json({ samples })
+  }
+
   if (sp.get('step') === 'sample') {
     const exclude = (sp.get('not') || '').split(',').map(Number).filter(Number.isInteger)
-    const where: Where = chosen.length ? { genres: { in: chosen } } : { genres: { exists: true } }
-    const pool = (
-      await payload.find({
-        collection: 'picks',
-        where: exclude.length ? { and: [where, { id: { not_in: exclude } }] } : where,
-        pagination: false,
-        depth: 0,
-        select: SELECT,
-      })
-    ).docs as unknown as Doc[]
-    shuffle(pool)
-    // 고른 장르마다 골고루, 한 아티스트는 한 곡만
-    const out: Doc[] = []
-    const artists = new Set<string>()
-    const buckets = chosen.length ? chosen.map((g) => pool.filter((p) => (p.genres || []).map(gid).includes(g))) : [pool]
-    const artistOf = (p: Doc) => p.artistName.split(',')[0].trim().toLowerCase()
-    // 1) 커버 있고 아티스트 겹치지 않게 → 2) 아티스트만 안 겹치게 → 3) 아무거나
-    const rules = [
-      (p: Doc) => Boolean(p.coverUrl) && !artists.has(artistOf(p)),
-      (p: Doc) => !artists.has(artistOf(p)),
-      () => true,
-    ]
-    for (const ok of rules) {
-      for (let round = 0; out.length < 10 && round < 40; round++) {
-        let added = false
-        for (const b of buckets) {
-          const next = b.find((p) => !out.includes(p) && ok(p))
-          if (next) {
-            out.push(next)
-            artists.add(artistOf(next))
-            added = true
-          }
-          if (out.length >= 10) break
-        }
-        if (!added) break
-      }
+    const ids = [...wid.keys()]
+    const where: Where = ids.length ? { genres: { in: ids } } : { genres: { exists: true } }
+    const pool = shuffle(
+      (
+        await payload.find({
+          collection: 'picks',
+          where: exclude.length ? { and: [where, { id: { not_in: exclude } }] } : where,
+          pagination: false,
+          depth: 0,
+          select: SELECT,
+        })
+      ).docs as unknown as Doc[],
+    )
+    // 답과 맞는 장르가 많을수록, 고른 시대에 나온 곡일수록 잘 나와요. 커버 없는 곡은 덜.
+    const scored = pool.map((d) => {
+      const g = (d.genres || []).map(gid).reduce((t, x) => t + (wid.get(x) || 0), 0)
+      const base = ids.length ? g : 1
+      return { d, s: base * base * (eraOk(era, d.releaseDate) ? 2 : 1) * (d.coverUrl ? 1 : 0.3) }
+    })
+    let out = weightedPick(scored, 10)
+    if (out.length < 10) {
+      const have = new Set(out.map((d) => d.id))
+      out = [...out, ...weightedPick(scored.filter((x) => !have.has(x.d.id)).map((x) => ({ ...x, s: 1 })), 10 - out.length, new Set(out.map(artistOf)))]
     }
     return NextResponse.json({ songs: out.map((d) => row(d, names)) })
   }
@@ -99,7 +163,9 @@ export async function GET(req: Request) {
     : []
   const weight = new Map<number, number>()
   for (const d of likedDocs) for (const g of (d.genres || []).map(gid)) weight.set(g, (weight.get(g) || 0) + 1)
-  if (!weight.size) for (const g of chosen) weight.set(g, 1)
+  // 질문 답은 좋아요보다 약하게 섞어요 (실제로 들어 보고 고른 게 더 정확해서)
+  const wsum = [...wid.values()].reduce((a, b) => a + b, 0) || 1
+  for (const [g, n] of wid) weight.set(g, (weight.get(g) || 0) + (n / wsum) * Math.max(2, likedDocs.length * 0.5))
   const top = [...weight.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4)
   const topIds = top.map(([g]) => g)
 
@@ -119,7 +185,8 @@ export async function GET(req: Request) {
       ).docs as unknown as Doc[])
     : []
   shuffle(pool)
-  const score = (d: Doc) => (d.genres || []).map(gid).reduce((s, g) => s + (weight.get(g) || 0), 0)
+  const score = (d: Doc) =>
+    (d.genres || []).map(gid).reduce((s, g) => s + (weight.get(g) || 0), 0) * (eraOk(era, d.releaseDate) ? 1.5 : 1)
   const ranked = pool.map((d) => ({ d, s: score(d) })).sort((a, b) => b.s - a.s)
   const recs: Doc[] = []
   const perArtist = new Map<string, number>()

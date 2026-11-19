@@ -17,7 +17,7 @@ export function TasteBanner() {
             내 취향 <em>{taste.genres.slice(0, 3).join(' · ') || '추천'}</em> — 추천곡 {taste.recs.length}곡 보기
           </>
         ) : (
-          <>10곡만 들어 보면, 수천 곡 중에서 내 취향에 맞는 곡을 골라 드려요</>
+          <>질문 네 개에 답하고 10곡만 들어 보면, 수천 곡 중에서 내 취향에 맞는 곡을 골라 드려요</>
         )}
       </span>
       <span className="taste-banner__go" aria-hidden="true">

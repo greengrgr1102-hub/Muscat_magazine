@@ -6,13 +6,15 @@ import { PickList } from '@/components/PickList'
 import { SongPlayer } from '@/components/SongPlayer'
 import { myPlaylist } from '@/lib/myPlaylist'
 import { loadTaste, saveTaste, type Taste, type TasteSong } from '@/lib/taste'
+import { QUIZ, encodeW, scoreAnswers } from '@/lib/tasteQuiz'
 
-type G = { slug: string; name: string; count: number }
-const ROUND = 10
-
-export function TasteFinder({ genres }: { genres: G[] }) {
-  const [step, setStep] = useState<'pick' | 'listen' | 'result'>('pick')
-  const [chosen, setChosen] = useState<string[]>([])
+export function TasteFinder() {
+  const [step, setStep] = useState<'quiz' | 'listen' | 'result'>('quiz')
+  // 질문 단계
+  const [qi, setQi] = useState(0)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [samples, setSamples] = useState<Record<string, TasteSong>>({})
+  const [preview, setPreview] = useState<string | null>(null)
   const [songs, setSongs] = useState<TasteSong[]>([])
   const [i, setI] = useState(0)
   const [liked, setLiked] = useState<TasteSong[]>([])
@@ -29,10 +31,24 @@ export function TasteFinder({ genres }: { genres: G[] }) {
     }
   }, [])
 
-  async function start(more = false) {
+  // 질문 보기마다 붙일 샘플 곡
+  useEffect(() => {
+    if (step !== 'quiz' || Object.keys(samples).length) return
+    fetch('/taste/data?step=quiz')
+      .then((x) => x.json())
+      .then((r) => setSamples(r.samples || {}))
+      .catch(() => {})
+  }, [step, samples])
+
+  const quizParams = (a = answers) => {
+    const { w, era } = scoreAnswers(a)
+    return { w: encodeW(w), era }
+  }
+
+  async function start(more = false, a = answers) {
     setLoading(true)
     myPlaylist.stop()
-    const q = new URLSearchParams({ step: 'sample', g: chosen.join(','), not: (more ? seen : []).join(',') })
+    const q = new URLSearchParams({ step: 'sample', ...quizParams(a), not: (more ? seen : []).join(',') })
     const r = await fetch(`/taste/data?${q}`).then((x) => x.json())
     setSongs(r.songs || [])
     setI(0)
@@ -43,7 +59,7 @@ export function TasteFinder({ genres }: { genres: G[] }) {
 
   async function finish(likedNow: TasteSong[]) {
     setLoading(true)
-    const q = new URLSearchParams({ step: 'result', liked: likedNow.map((s) => s.id).join(','), g: chosen.join(',') })
+    const q = new URLSearchParams({ step: 'result', liked: likedNow.map((s) => s.id).join(','), ...quizParams() })
     const r = await fetch(`/taste/data?${q}`).then((x) => x.json())
     const t: Taste = { genres: r.genres || [], era: r.era || null, liked: r.liked || [], recs: r.recs || [], at: Date.now() }
     saveTaste(t)
@@ -64,33 +80,85 @@ export function TasteFinder({ genres }: { genres: G[] }) {
     else setI(songs.length) // 하나도 고르지 않았을 때 안내
   }
 
-  /* ---------- 1. 장르 고르기 ---------- */
-  if (step === 'pick') {
+  /* ---------- 1. 질문 (보기마다 샘플 곡) ---------- */
+  if (step === 'quiz') {
+    const q = QUIZ[qi]
+    const choose = (optionId: string | null) => {
+      const next = { ...answers }
+      if (optionId) next[q.id] = optionId
+      else delete next[q.id]
+      setAnswers(next)
+      setPreview(null)
+      if (qi + 1 < QUIZ.length) setQi(qi + 1)
+      else start(false, next)
+    }
+    const playing = preview ? samples[preview] : null
     return (
       <section className="wrap taste">
-        <p className="label">Find your taste · 1/3</p>
-        <h1 className="display-md taste__h">어떤 소리에 끌리세요?</h1>
-        <p className="muted taste__lead">마음 가는 장르를 3개까지 골라 주세요. 잘 모르겠으면 그냥 시작해도 돼요.</p>
-        <div className="taste__chips">
-          {genres.map((g) => {
-            const on = chosen.includes(g.slug)
+        <p className="label">
+          Find your taste · 질문 {qi + 1} / {QUIZ.length}
+        </p>
+        <div className="taste__bar" aria-hidden="true">
+          <span style={{ width: `${((qi + 1) / QUIZ.length) * 100}%` }} />
+        </div>
+        <h1 className="display-md taste__h">{q.title}</h1>
+        <p className="muted taste__lead">{q.lead}</p>
+        <div className="taste-q">
+          {q.options.map((o) => {
+            const key = `${q.id}.${o.id}`
+            const sample = q.samples ? samples[key] : null
+            const on = answers[q.id] === o.id
             return (
-              <button
-                key={g.slug}
-                type="button"
-                className={`chip${on ? ' chip--active' : ''}`}
-                aria-pressed={on}
-                disabled={!on && chosen.length >= 3}
-                onClick={() => setChosen((c) => (on ? c.filter((x) => x !== g.slug) : [...c, g.slug]))}
-              >
-                {g.name}
-              </button>
+              <div key={o.id} className={`taste-q__opt${on ? ' is-on' : ''}${preview === key ? ' is-playing' : ''}`}>
+                <button type="button" className="taste-q__pick" onClick={() => choose(o.id)}>
+                  <span className="taste-q__label">{o.label}</span>
+                  <span className="taste-q__hint">{o.hint}</span>
+                </button>
+                {sample ? (
+                  <button
+                    type="button"
+                    className="taste-q__sample"
+                    onClick={() => {
+                      myPlaylist.stop()
+                      setPreview(preview === key ? null : key)
+                    }}
+                    aria-label={`${sample.track} 들어보기`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {sample.coverUrl ? <img src={sample.coverUrl.replace('ab67616d0000b273', 'ab67616d00001e02')} alt="" /> : <span />}
+                    <span className="taste-q__song">
+                      <span>{preview === key ? '■ 듣는 중' : '▶ 들어보기'}</span>
+                      <span className="taste-q__song-name">
+                        {sample.track} · {sample.artistName}
+                      </span>
+                    </span>
+                  </button>
+                ) : q.samples ? (
+                  <span className="taste-q__sample taste-q__sample--wait">곡을 고르는 중…</span>
+                ) : null}
+              </div>
             )
           })}
         </div>
+        {playing ? (
+          <div className="taste-q__player">
+            <SongPlayer key={playing.id} pickId={playing.id} embed={playing.embed} title={`${playing.track} — ${playing.artistName}`} autoPlay />
+          </div>
+        ) : null}
         <div className="my-actions taste__go">
-          <button className="btn btn--filled" onClick={() => start()} disabled={loading}>
-            <span>{loading ? '곡을 고르는 중…' : chosen.length ? `${chosen.length}개 장르로 10곡 듣기` : '아무 장르나 10곡 듣기'}</span>
+          {qi > 0 ? (
+            <button
+              className="btn btn--outline"
+              onClick={() => {
+                setPreview(null)
+                setQi(qi - 1)
+              }}
+            >
+              <span>이전 질문</span>
+            </button>
+          ) : null}
+          <button className="text-btn" onClick={() => choose(null)} disabled={loading}>
+            {loading ? '곡을 고르는 중…' : '잘 모르겠어요'}
           </button>
         </div>
       </section>
@@ -103,15 +171,21 @@ export function TasteFinder({ genres }: { genres: G[] }) {
     if (!s) {
       return (
         <section className="wrap taste">
-          <p className="label">Find your taste · 2/3</p>
+          <p className="label">들어보기</p>
           <h1 className="display-md taste__h">아직 끌리는 곡이 없었어요</h1>
-          <p className="muted taste__lead">10곡 더 들어 보거나, 장르를 다시 골라 볼까요?</p>
+          <p className="muted taste__lead">10곡 더 들어 보거나, 질문에 다시 답해 볼까요?</p>
           <div className="my-actions">
             <button className="btn btn--filled" onClick={() => start(true)} disabled={loading}>
               <span>10곡 더 듣기</span>
             </button>
-            <button className="btn btn--outline" onClick={() => setStep('pick')}>
-              <span>장르 다시 고르기</span>
+            <button
+              className="btn btn--outline"
+              onClick={() => {
+                setQi(0)
+                setStep('quiz')
+              }}
+            >
+              <span>질문 다시 하기</span>
             </button>
           </div>
         </section>
@@ -120,7 +194,7 @@ export function TasteFinder({ genres }: { genres: G[] }) {
     return (
       <section className="wrap taste">
         <p className="label">
-          Find your taste · 2/3 · {i + 1} / {songs.length}
+          들어보기 · {i + 1} / {songs.length}
         </p>
         <div className="taste__bar" aria-hidden="true">
           <span style={{ width: `${((i + 1) / songs.length) * 100}%` }} />
@@ -164,7 +238,7 @@ export function TasteFinder({ genres }: { genres: G[] }) {
   return (
     <>
       <section className="wrap taste">
-        <p className="label">Your taste · 3/3</p>
+        <p className="label">Your taste</p>
         <h1 className="display-md taste__h">
           {taste.genres.length ? (
             <>
@@ -185,8 +259,9 @@ export function TasteFinder({ genres }: { genres: G[] }) {
             className="text-btn"
             onClick={() => {
               setTaste(null)
-              setChosen([])
-              setStep('pick')
+              setAnswers({})
+              setQi(0)
+              setStep('quiz')
             }}
           >
             취향 다시 찾기
