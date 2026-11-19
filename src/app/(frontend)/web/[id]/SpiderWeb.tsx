@@ -32,6 +32,22 @@ export function SpiderWeb({ startId }: { startId: number }) {
   nodesRef.current = nodes
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean; k: number } | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
+  // 화면 폭에 맞춰 확대: 좁은 화면(휴대폰)에서는 더 가까이 보여줘요.
+  const [vb, setVb] = useState({ w: 1000, h: 680 })
+  useEffect(() => {
+    const el = svgRef.current
+    if (!el) return
+    const fit = () => {
+      const cw = el.clientWidth || 1000
+      const ch = el.clientHeight || 680
+      const w = cw < 520 ? 560 : cw < 800 ? 760 : 1000
+      setVb({ w, h: Math.round((w * ch) / cw) })
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   // 곡 하나를 펼치기: 비슷한 곡을 불러와서 그 곡 둘레(지나온 방향의 반대쪽)에 놓아요.
   const busy = useRef(new Set<number>())
@@ -121,7 +137,7 @@ export function SpiderWeb({ startId }: { startId: number }) {
         onPointerDown={(e) => {
           // 화면 픽셀 → 그림 좌표 비율 (그림이 화면보다 크거나 작게 그려지므로)
           const w = svgRef.current?.clientWidth || 1000
-          drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y, moved: false, k: 1000 / w }
+          drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y, moved: false, k: vb.w / w }
         }}
         onPointerMove={(e) => {
           const d = drag.current
@@ -134,7 +150,7 @@ export function SpiderWeb({ startId }: { startId: number }) {
         onPointerUp={() => setTimeout(() => (drag.current = null), 0)}
         onPointerLeave={() => (drag.current = null)}
       >
-        <svg ref={svgRef} className="web__svg" viewBox="-500 -340 1000 680" preserveAspectRatio="xMidYMid meet" role="img" aria-label="비슷한 곡 거미줄">
+        <svg ref={svgRef} className="web__svg" viewBox={`${-vb.w / 2} ${-vb.h / 2} ${vb.w} ${vb.h}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label="비슷한 곡 거미줄">
           <defs>
             <clipPath id="web-clip-s">
               <circle r="34" />
