@@ -272,6 +272,21 @@ const ids = (list: unknown) =>
   (Array.isArray(list) ? list : []).map((x) => (typeof x === 'object' && x ? (x as { id: number }).id : (x as number)))
 
 /** 같은 취향 태그·장르·아티스트를 많이 공유할수록 위로 오는 '비슷한 곡'. */
+/**
+ * 장르마다 「얼마나 구체적인가」 점수. 곡이 적게 붙은 장르일수록 높아요.
+ * (Indie Rock처럼 흔한 장르가 겹치는 것보다 Chamber Folk 같은 드문 장르가 겹치는 게 더 비슷하다고 봐요)
+ */
+export const genreWeights = cache(async () => {
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const rows = (
+    await db.drizzle.execute(sql`
+      select genres_id as g, 1 + ln((select count(distinct parent_id) from picks_rels where path = 'genres')::float / count(*)) as w
+      from picks_rels where path = 'genres' and genres_id is not null group by genres_id`)
+  ).rows
+  return new Map(rows.map((r) => [Number(r.g), Number(r.w)]))
+})
+
 export async function similarPicks(pick: import('@/payload-types').Pick, limit = 12) {
   const payload = await getClient()
   type Row = { id: number; artistName?: string; genres?: unknown; tags?: unknown }
@@ -311,13 +326,16 @@ export async function similarPicks(pick: import('@/payload-types').Pick, limit =
     const j = Math.floor(Math.random() * (i + 1))
     ;[pool[i], pool[j]] = [pool[j], pool[i]]
   }
+  const gw = await genreWeights()
   const score = (p: Row) => {
     const t = ids(p.tags as never).filter((x) => tagIds.includes(x)).length
     const gs = ids(p.genres as never)
-    const g = gs.filter((x) => genreIds.includes(x)).length
+    const shared = gs.filter((x) => genreIds.includes(x))
+    // 드문(구체적인) 장르가 겹칠수록 점수가 커요
+    const g = shared.reduce((sum, x) => sum + (gw.get(x) || 1), 0)
     // 장르가 딱 겹칠수록(덜 섞일수록) 더 비슷하다고 봐요.
-    const exact = g && g === gs.length && g === genreIds.length ? 1 : 0
-    return t * 3 + g * 2 + exact
+    const exact = shared.length && shared.length === gs.length && shared.length === genreIds.length ? 2 : 0
+    return t * 3 + g + exact
   }
   const ranked = pool
     .map((p) => ({ p, s: score(p) }))
@@ -550,13 +568,27 @@ export async function similarAlbums(key: string, limit = 8): Promise<{ center: W
         select distinct r.genres_id from picks_rels r join t2 on t2.id = r.parent_id
         where r.path = 'genres' and r.genres_id is not null and t2.a1 = ${a1} and not exists (select 1 from g0)
       ),
-      ts as (select distinct tags_id as t from picks_rels where path = 'tags' and tags_id is not null and parent_id in (select id from mine))
-      select t2.gk, min(t2.ck) as key, max(t2.a1) as a1,
-             (count(distinct r.tags_id) filter (where r.path = 'tags') * 3 + count(distinct r.genres_id) filter (where r.path = 'genres') * 2)::int as s
-      from t2 join picks_rels r on r.parent_id = t2.id
-      where t2.gk <> ${gk}
-        and ((r.path = 'genres' and r.genres_id in (select g from gs)) or (r.path = 'tags' and r.tags_id in (select t from ts)))
-      group by t2.gk
+      ts as (select distinct tags_id as t from picks_rels where path = 'tags' and tags_id is not null and parent_id in (select id from mine)),
+      -- 장르마다 구체적인 정도 (적게 쓰인 장르일수록 큼)
+      gw as (
+        select genres_id as g, 1 + ln((select count(distinct parent_id) from picks_rels where path = 'genres')::float / count(*)) as w
+        from picks_rels where path = 'genres' and genres_id is not null group by genres_id
+      ),
+      hit as (
+        select t2.gk, t2.ck, t2.a1, r.path, r.genres_id, r.tags_id
+        from t2 join picks_rels r on r.parent_id = t2.id
+        where t2.gk <> ${gk}
+          and ((r.path = 'genres' and r.genres_id in (select g from gs)) or (r.path = 'tags' and r.tags_id in (select t from ts)))
+      ),
+      per as (select gk, min(ck) as key, max(a1) as a1 from hit group by gk),
+      gsc as (
+        select d.gk, sum(gw.w) as s
+        from (select distinct gk, genres_id from hit where path = 'genres') d join gw on gw.g = d.genres_id
+        group by d.gk
+      ),
+      tsc as (select gk, count(distinct tags_id) * 3 as s from hit where path = 'tags' group by gk)
+      select per.gk, per.key, per.a1, (coalesce(gsc.s, 0) + coalesce(tsc.s, 0))::float as s
+      from per left join gsc on gsc.gk = per.gk left join tsc on tsc.gk = per.gk
       order by s desc, random()
       limit 80`)
   ).rows
