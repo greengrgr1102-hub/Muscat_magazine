@@ -3707,7 +3707,11 @@ a.ess-badge:hover svg {
   color: var(--ink-muted);
 }
 .palb-hero__genres {
-  color: var(--accent-ink);
+  gap: 6px;
+  margin: 4px 0;
+}
+.palb-hero__genres .chip {
+  font-size: 13px;
 }
 .palb-hero__actions {
   display: flex;

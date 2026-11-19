@@ -515,8 +515,8 @@ export async function findAlbumPicks(key: string) {
     where: { id: { in: ids } },
     pagination: false,
     sort: 'createdAt',
-    depth: 0,
-    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, album: true, genres: true, youtubeId: true },
+    depth: 1,
+    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, album: true, genres: true, youtubeId: true, releaseType: true },
   })
   return res.docs.length ? res.docs : null
 }

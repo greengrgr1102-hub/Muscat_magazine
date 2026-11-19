@@ -40,7 +40,18 @@ export default async function PickAlbumPage({ params }: Props) {
   const release = docs.find((d) => d.releaseDate)?.releaseDate
   const cover = (first.coverUrl || '').replace('ab67616d00004851', 'ab67616d0000b273')
   const title = titleOf(docs)
-  const genres = [...new Set(docs.flatMap((d) => (d.genres || []).map((g) => (typeof g === 'object' && g ? g.name : null)).filter(Boolean)))] as string[]
+  // 수록곡에 많이 붙은 장르부터
+  const gcount = new Map<string, { name: string; slug: string; n: number }>()
+  for (const d of docs)
+    for (const g of d.genres || [])
+      if (typeof g === 'object' && g?.slug) {
+        const c = gcount.get(g.slug) || { name: g.name, slug: g.slug, n: 0 }
+        c.n++
+        gcount.set(g.slug, c)
+      }
+  const genres = [...gcount.values()].sort((a, b) => b.n - a.n)
+  const TYPE: Record<string, string> = { album: 'Album', ep: 'EP', single: 'Single', compilation: 'Compilation' }
+  const kind = TYPE[docs.find((d) => d.releaseType)?.releaseType || ''] || 'Album'
 
   return (
     <>
@@ -54,10 +65,18 @@ export default async function PickAlbumPage({ params }: Props) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {cover ? <img src={cover} alt="" className="palb-hero__cover" /> : null}
         <div className="palb-hero__body">
-          <p className="label">Album{release ? ` · ${String(release).slice(0, 7).replace('-', '.')} 발매` : ''}</p>
+          <p className="label">{kind}{release ? ` · ${String(release).slice(0, 7).replace('-', '.')} 발매` : ''}</p>
           <h1 className="palb-hero__title">{title}</h1>
           <p className="palb-hero__artist">{artistOf(docs)}</p>
-          {genres.length ? <p className="small palb-hero__genres">{genres.slice(0, 4).join(' · ')}</p> : null}
+          {genres.length ? (
+            <div className="chips palb-hero__genres">
+              {genres.map((g) => (
+                <Link key={g.slug} href={`/genres/${g.slug}`} className="chip chip--link">
+                  {g.name}
+                </Link>
+              ))}
+            </div>
+          ) : null}
           <p className="small muted">에디터가 이 앨범에서 {docs.length}곡을 담았어요.</p>
           <div className="palb-hero__actions">
             <PlayAllButton songs={rows} label={title} />
