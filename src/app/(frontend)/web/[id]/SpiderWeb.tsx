@@ -38,6 +38,17 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
   nodesRef.current = nodes
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean; k: number } | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  // 확대·축소 (0.35배 ~ 2.5배)
+  const [zoom, setZoom] = useState(1)
+  const [quick, setQuick] = useState(false) // 확대 중에는 부드럽게 따라가는 효과를 끄기
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
+  const panRef = useRef(pan)
+  panRef.current = pan
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const pinch = useRef<{ d0: number; z0: number } | null>(null)
+  const quickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // 화면 폭에 맞춰 확대: 좁은 화면(휴대폰)에서는 더 가까이 보여줘요.
   const [vb, setVb] = useState({ w: 1000, h: 680 })
   useEffect(() => {
@@ -54,6 +65,47 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+
+  // 화면의 한 점(clientX, clientY)을 기준으로 확대: 그 점 아래 있던 곳이 그대로 손가락·마우스 아래 남게
+  const zoomAt = useCallback(
+    (next: number, cx?: number, cy?: number) => {
+      const z0 = zoomRef.current
+      const z1 = Math.min(2.5, Math.max(0.35, next))
+      if (z1 === z0) return
+      const el = svgRef.current
+      let sx = 0
+      let sy = 0
+      if (el && cx !== undefined && cy !== undefined) {
+        const r = el.getBoundingClientRect()
+        const k = vb.w / (r.width || 1)
+        sx = (cx - r.left - r.width / 2) * k
+        sy = (cy - r.top - r.height / 2) * k
+      }
+      const p = panRef.current
+      const np = { x: sx / z1 - sx / z0 + p.x, y: sy / z1 - sy / z0 + p.y }
+      zoomRef.current = z1
+      panRef.current = np
+      setZoom(z1)
+      setPan(np)
+      setQuick(true)
+      if (quickTimer.current) clearTimeout(quickTimer.current)
+      quickTimer.current = setTimeout(() => setQuick(false), 180)
+    },
+    [vb.w],
+  )
+
+  // 마우스 휠·트랙패드로 확대 (페이지가 같이 스크롤되지 않게 직접 받아요)
+  useEffect(() => {
+    const el = stageRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const step = e.ctrlKey ? 0.012 : 0.0018 // 트랙패드 핀치는 값이 작게 들어와요
+      zoomAt(zoomRef.current * Math.exp(-e.deltaY * step), e.clientX, e.clientY)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [zoomAt])
 
   // 곡 하나를 펼치기: 비슷한 곡을 불러와서 그 곡 둘레(지나온 방향의 반대쪽)에 놓아요.
   const busy = useRef(new Set<string>())
@@ -142,22 +194,55 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
   return (
     <div className="web">
       <div
+        ref={stageRef}
         className="web__stage"
         onPointerDown={(e) => {
+          pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+          if (pointers.current.size === 2) {
+            // 두 손가락: 벌리고 오므려서 확대·축소
+            const [a, b] = [...pointers.current.values()]
+            pinch.current = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: zoomRef.current }
+            if (drag.current) drag.current.moved = true
+            return
+          }
           // 화면 픽셀 → 그림 좌표 비율 (그림이 화면보다 크거나 작게 그려지므로)
           const w = svgRef.current?.clientWidth || 1000
           drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y, moved: false, k: vb.w / w }
         }}
         onPointerMove={(e) => {
+          if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+          if (pinch.current && pointers.current.size >= 2) {
+            const [a, b] = [...pointers.current.values()]
+            const d = Math.hypot(a.x - b.x, a.y - b.y)
+            zoomAt(pinch.current.z0 * (d / pinch.current.d0), (a.x + b.x) / 2, (a.y + b.y) / 2)
+            return
+          }
           const d = drag.current
-          if (!d) return
+          if (!d || pinch.current) return
           const dx = e.clientX - d.x
           const dy = e.clientY - d.y
           if (Math.abs(dx) + Math.abs(dy) > 4) d.moved = true
-          if (d.moved) setPan({ x: d.px + dx * d.k, y: d.py + dy * d.k })
+          const k = d.k / zoomRef.current
+          if (d.moved) setPan({ x: d.px + dx * k, y: d.py + dy * k })
         }}
-        onPointerUp={() => setTimeout(() => (drag.current = null), 0)}
-        onPointerLeave={() => (drag.current = null)}
+        onPointerUp={(e) => {
+          pointers.current.delete(e.pointerId)
+          if (pointers.current.size < 2 && pinch.current) {
+            pinch.current = null
+            // 남은 손가락으로 바로 끌지 않게, 다음에 새로 누를 때부터 끌기
+            pointers.current.clear()
+          }
+          setTimeout(() => (drag.current = null), 0)
+        }}
+        onPointerCancel={(e) => {
+          pointers.current.delete(e.pointerId)
+          pinch.current = null
+          drag.current = null
+        }}
+        onPointerLeave={(e) => {
+          pointers.current.delete(e.pointerId)
+          drag.current = null
+        }}
       >
         <svg ref={svgRef} className="web__svg" viewBox={`${-vb.w / 2} ${-vb.h / 2} ${vb.w} ${vb.h}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={`비슷한 ${word} 거미줄`}>
           <defs>
@@ -168,7 +253,10 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
               <circle r="50" />
             </clipPath>
           </defs>
-          <g className={`web__world${drag.current?.moved ? ' is-dragging' : ''}`} style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}>
+          <g
+            className={`web__world${drag.current?.moved || quick ? ' is-dragging' : ''}`}
+            style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)` }}
+          >
             {visibleEdges.map(([a, b]) => {
               const A = nodes.get(a)!
               const B = nodes.get(b)!
@@ -220,6 +308,26 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
             })}
           </g>
         </svg>
+        <div className="web__zoom" onPointerDown={(e) => e.stopPropagation()}>
+          <button type="button" aria-label="확대" onClick={() => zoomAt(zoomRef.current * 1.3)}>
+            +
+          </button>
+          <button type="button" aria-label="축소" onClick={() => zoomAt(zoomRef.current / 1.3)}>
+            −
+          </button>
+          <button
+            type="button"
+            aria-label="처음 크기로"
+            className="web__zoom-reset"
+            onClick={() => {
+              setZoom(1)
+              zoomRef.current = 1
+              if (f) setPan({ x: -f.x, y: -f.y })
+            }}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+        </div>
         {!nodes.size ? <p className="web__wait muted">거미줄을 펼치는 중…</p> : null}
       </div>
 
