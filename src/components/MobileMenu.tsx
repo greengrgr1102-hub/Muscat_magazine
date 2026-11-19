@@ -6,13 +6,18 @@ import { createPortal } from 'react-dom'
 import { Icon } from './ui'
 
 const ITEMS = [
-  { href: '/', label: 'Home' },
   { href: '/articles', label: 'Articles' },
-  { href: '/essential', label: 'Essential' },
   { href: '/picks', label: "Editor's Picks" },
-  { href: '/playlists', label: 'Playlists' },
   { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
+]
+// 큰 메뉴 아래 작은 링크로
+const SUB = [
+  { href: '/picks/albums', label: '앨범' },
+  { href: '/essential', label: 'Essential' },
+  { href: '/playlists', label: '플레이리스트' },
+  { href: '/taste', label: '취향 찾기' },
+  { href: '/my', label: '내 플리' },
+  { href: '/contact', label: '문의하기' },
 ]
 
 export function MobileMenu({ instagramUrl }: { instagramUrl?: string }) {
@@ -59,6 +64,13 @@ export function MobileMenu({ instagramUrl }: { instagramUrl?: string }) {
                 <Icon name="right" size={22} />
               </Link>
             ))}
+            <div className="mmenu__sub">
+              {SUB.map((it) => (
+                <Link key={it.href} href={it.href} onClick={() => setOpen(false)}>
+                  {it.label}
+                </Link>
+              ))}
+            </div>
           </nav>
           <div className="mmenu__bottom">
             <form

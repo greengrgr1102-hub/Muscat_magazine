@@ -3299,8 +3299,7 @@ a.ess-badge:hover svg {
 .ess-albums {
   list-style: none;
   margin: 0;
-  padding: 32px 0 0;
-  border-top: 1px solid var(--ink);
+  padding: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 40px var(--gutter);
@@ -3350,4 +3349,168 @@ a.ess-badge:hover svg {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 32px var(--gutter);
   }
+}
+
+/* ---------- Editor's Picks 묶음 탭 ---------- */
+.listen-tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.listen-tabs::-webkit-scrollbar {
+  display: none;
+}
+.listen-tabs__a {
+  padding: 0 0 14px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-muted);
+  font-size: 15px;
+  white-space: nowrap;
+}
+.listen-tabs__a:hover {
+  color: var(--ink);
+}
+.listen-tabs__a.is-on {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.listen-tabs-top {
+  padding-top: 32px;
+}
+.listen-tabs-wrap {
+  margin-bottom: 40px;
+}
+.mmenu__sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding-top: 24px;
+  font-size: 16px;
+  color: var(--ink-muted);
+}
+.mmenu__sub a:hover {
+  color: var(--ink);
+}
+@media (max-width: 768px) {
+  .listen-tabs {
+    gap: 20px;
+  }
+  .listen-tabs-top {
+    padding-top: 20px;
+  }
+  .listen-tabs-wrap {
+    margin-bottom: 24px;
+  }
+}
+
+/* ---------- Editor's Picks 앨범 ---------- */
+.palb-grid {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 32px 20px;
+}
+.palb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.palb__cover {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--tint);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.palb:hover .palb__title {
+  color: var(--accent-ink);
+}
+.palb__title {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.palb__artist {
+  font-size: 13px;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.palb__meta {
+  font-size: 12px;
+  color: var(--ink-subtle, var(--ink-muted));
+}
+.palb-back {
+  padding-top: 40px;
+}
+.palb-hero {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 48px;
+  align-items: end;
+  padding-top: 32px;
+  padding-bottom: 48px;
+}
+.palb-hero__cover {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--tint);
+}
+.palb-hero__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.palb-hero__title {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.palb-hero__artist {
+  margin: 0;
+  font-size: 20px;
+  color: var(--ink-muted);
+}
+.palb-hero__genres {
+  color: var(--accent-ink);
+}
+.palb-hero__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+@media (max-width: 1024px) {
+  .palb-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 768px) {
+  .palb-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 14px;
+  }
+  .palb-hero {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .palb-hero__cover {
+    max-width: 280px;
+  }
+}
+.ess-section .ess-albums {
+  margin-top: 8px;
 }

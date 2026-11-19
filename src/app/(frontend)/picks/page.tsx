@@ -1,3 +1,4 @@
+import { ListenTabs } from '@/components/ListenTabs'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { after } from 'next/server'
@@ -69,6 +70,7 @@ export default async function PicksPage({
           커버를 누르면 이 자리에서 바로 들을 수 있어요.
         </p>
       </section>
+      <ListenTabs />
 
       {plain ? (
         <section className="wrap taste-banner-wrap">

@@ -1,3 +1,4 @@
+import { sql } from '@payloadcms/db-postgres'
 import 'server-only'
 import { cache } from 'react'
 import { getPayload, type Where } from 'payload'
@@ -369,4 +370,70 @@ export async function findEssentialAlbums(): Promise<EssentialAlbum[]> {
     })
   }
   return out
+}
+
+// ---------- Editor's Picks 앨범 단위 ----------
+// Spotify 커버 주소(i.scdn.co/image/ab67616d0000b273 + 24자)의 끝 24자가 앨범마다 같아서, 이걸로 곡을 앨범으로 묶음
+export function albumKeyOf(coverUrl?: string | null): string | null {
+  if (!coverUrl) return null
+  const m = coverUrl.match(/\/image\/([a-z0-9]+)$/i)
+  return m && m[1].length >= 24 ? m[1].slice(-24) : null
+}
+
+export type PickAlbum = {
+  key: string
+  cover: string
+  album: string | null
+  artist: string | null
+  release: string | null
+  n: number
+  firstTrack: string | null
+}
+
+export async function findPickAlbums({ page = 1, limit = 48, sort = 'most', q = '' }: { page?: number; limit?: number; sort?: 'most' | 'new'; q?: string }) {
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const like = q.trim() ? `%${q.trim()}%` : null
+  const filter = like ? sql`and (album ilike ${like} or artist_name ilike ${like} or track ilike ${like})` : sql``
+  const order = sort === 'new' ? sql`max(release_date) desc nulls last, count(*) desc` : sql`count(*) desc, max(release_date) desc nulls last`
+  const offset = (Math.max(1, page) - 1) * limit
+  const [rows, total] = await Promise.all([
+    db.drizzle.execute(sql`
+      select right(cover_url, 24) as key, max(cover_url) as cover, max(album) as album, max(artist_name) as artist,
+             max(release_date) as release, count(*)::int as n, (array_agg(track order by id))[1] as first_track
+      from picks
+      where cover_url like 'https://i.scdn.co/image/%' ${filter}
+      group by right(cover_url, 24)
+      order by ${order}
+      limit ${limit} offset ${offset}`),
+    db.drizzle.execute(sql`
+      select count(distinct right(cover_url, 24))::int as c from picks
+      where cover_url like 'https://i.scdn.co/image/%' ${filter}`),
+  ])
+  const totalDocs = Number(total.rows[0]?.c || 0)
+  const albums: PickAlbum[] = rows.rows.map((r) => ({
+    key: String(r.key),
+    cover: String(r.cover),
+    album: (r.album as string) || null,
+    artist: (r.artist as string) || null,
+    release: r.release ? String(r.release) : null,
+    n: Number(r.n),
+    firstTrack: (r.first_track as string) || null,
+  }))
+  return { albums, totalDocs, totalPages: Math.max(1, Math.ceil(totalDocs / limit)), page }
+}
+
+/** 한 앨범에 속한 Editor's Picks 곡 */
+export async function findAlbumPicks(key: string) {
+  if (!/^[a-z0-9]{24}$/i.test(key)) return null
+  const payload = await getClient()
+  const res = await payload.find({
+    collection: 'picks',
+    where: { coverUrl: { like: key } },
+    pagination: false,
+    sort: 'createdAt',
+    depth: 0,
+    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, album: true, genres: true },
+  })
+  return res.docs.length ? res.docs : null
 }

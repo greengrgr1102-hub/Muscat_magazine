@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { Media } from '@/payload-types'
 import { Img } from '@/components/ui'
+import { ListenTabs } from '@/components/ListenTabs'
 import { EssentialBadge } from '@/components/EssentialBadge'
 import { findEssentialAlbums } from '@/lib/data'
 
@@ -26,6 +27,7 @@ export default async function EssentialPage() {
           점수 대신, 이것만은 놓치지 않았으면 하는 앨범을 모았습니다.
         </p>
       </section>
+      <ListenTabs />
 
       <section className="wrap section ess-section">
         {albums.length ? (

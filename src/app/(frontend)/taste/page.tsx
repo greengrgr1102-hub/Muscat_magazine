@@ -1,3 +1,4 @@
+import { ListenTabs } from '@/components/ListenTabs'
 import type { Metadata } from 'next'
 import { sql } from '@payloadcms/db-postgres'
 import { getClient } from '@/lib/data'
@@ -19,5 +20,12 @@ export default async function TastePage() {
   const genres = (await payload.find({ collection: 'genres', pagination: false, depth: 0, sort: 'order' })).docs
     .map((g) => ({ slug: g.slug as string, name: g.name, count: n.get(g.id) || 0 }))
     .filter((g) => g.count >= 10)
-  return <TasteFinder genres={genres} />
+  return (
+    <>
+      <div className="listen-tabs-top">
+        <ListenTabs />
+      </div>
+      <TasteFinder genres={genres} />
+    </>
+  )
 }
