@@ -2943,3 +2943,176 @@ body.has-plbar--player {
     gap: 28px 14px;
   }
 }
+
+/* ---------- 취향 찾기 ---------- */
+.taste {
+  padding-top: 56px;
+  padding-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.taste__h {
+  font-size: clamp(32px, 4.6vw, 64px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+  max-width: 980px;
+}
+.taste__h em {
+  font-style: normal;
+  color: var(--accent-ink);
+}
+.taste__lead {
+  max-width: 720px;
+  font-size: clamp(16px, 1.3vw, 18px);
+  line-height: 1.7;
+  word-break: keep-all;
+}
+.taste__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  max-width: 980px;
+}
+.taste__chips .chip:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.taste__go {
+  margin-top: 16px;
+}
+.taste__bar {
+  height: 3px;
+  background: var(--line);
+  max-width: 980px;
+}
+.taste__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s;
+}
+.taste__card {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 48px;
+  align-items: center;
+  margin-top: 16px;
+}
+.taste__cover {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--tint);
+  border-radius: 8px;
+}
+.taste__info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.taste__artist {
+  font-size: clamp(18px, 1.6vw, 22px);
+  margin-top: -8px;
+}
+.taste__genres {
+  color: var(--accent-ink);
+}
+.taste__answer {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+.taste__answer .btn {
+  min-width: 128px;
+  justify-content: center;
+}
+.taste__sub {
+  margin-bottom: 16px;
+}
+.taste__liked {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px 24px;
+}
+.taste__liked-item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.taste__liked-item img,
+.taste__liked-item > span:first-child {
+  grid-row: span 2;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  background: var(--tint);
+}
+.taste__liked-item .add-btn {
+  grid-row: span 2;
+  grid-column: 3;
+  grid-row-start: 1;
+}
+.taste-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px 24px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 22px 28px;
+  border-radius: 14px;
+  background: var(--tint);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  transition: background 0.2s;
+}
+.taste-banner:hover {
+  background: color-mix(in srgb, var(--tint) 70%, var(--accent) 12%);
+}
+.taste-banner--ghost {
+  height: 74px;
+  background: transparent;
+  border: 0;
+}
+.taste-banner .label {
+  color: var(--accent-ink);
+}
+.taste-banner__h {
+  font-size: clamp(16px, 1.5vw, 20px);
+  font-weight: 500;
+  word-break: keep-all;
+}
+.taste-banner__h em {
+  font-style: normal;
+  color: var(--accent-ink);
+}
+.taste-banner__go {
+  font-size: 22px;
+  color: var(--accent-ink);
+}
+@media (max-width: 760px) {
+  .taste__card {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .taste__cover {
+    max-width: 260px;
+  }
+  .taste-banner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 18px 20px;
+  }
+  .taste-banner .label {
+    grid-column: 1 / -1;
+  }
+}
+
+.taste-banner-wrap {
+  padding-bottom: 40px;
+}

@@ -5,6 +5,7 @@ import type { Where } from 'payload'
 import { PickGrid, toRow } from '@/components/Picks'
 import { PickList } from '@/components/PickList'
 import { PlaylistCards } from '@/components/Playlists'
+import { TasteBanner } from '@/components/TasteBanner'
 import { findPickRows, findPickRowsRandom, findPicks, findPlaylists, getClient, getTag } from '@/lib/data'
 import { syncPlaylist } from '@/lib/spotify'
 import type { Pick } from '@/payload-types'
@@ -68,6 +69,12 @@ export default async function PicksPage({
           커버를 누르면 이 자리에서 바로 들을 수 있어요.
         </p>
       </section>
+
+      {plain ? (
+        <section className="wrap taste-banner-wrap">
+          <TasteBanner />
+        </section>
+      ) : null}
 
       {playlists?.docs.length ? (
         <section className="wrap section">
