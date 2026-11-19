@@ -437,12 +437,15 @@ export async function findPickAlbums({
   sort = 'most',
   q = '',
   f = {},
-}: { page?: number; limit?: number; sort?: 'most' | 'new' | 'old'; q?: string; f?: PickFilter }) {
+  genreId,
+}: { page?: number; limit?: number; sort?: 'most' | 'new' | 'old'; q?: string; f?: PickFilter; genreId?: number }) {
   const payload = await getClient()
   const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
   const like = q.trim() ? `%${q.trim()}%` : null
   const conds = [...(like ? [sql`(alb ilike ${like} or artist_name ilike ${like} or track ilike ${like})`] : []), ...pickFilterSql(f)]
   if (sort === 'new' || sort === 'old') conds.push(sql`release_date is not null`)
+  // 이 장르가 붙은 곡이 하나라도 있는 앨범
+  if (genreId) conds.push(sql`id in (select parent_id from picks_rels where path = 'genres' and genres_id = ${genreId})`)
   const filter = conds.length ? sql`where ${sql.join(conds, sql` and `)}` : sql``
   const order =
     sort === 'new'
@@ -722,4 +725,30 @@ function pickFilterSql(f: PickFilter) {
   else if (f.c) conds.push(sql`country = ${f.c}`)
   if (f.type) conds.push(sql`release_type = ${f.type}::enum_picks_release_type`)
   return conds
+}
+
+/** 이 장르와 같은 곡에 자주 같이 붙는 장르 (많이 겹치는 순) */
+export async function relatedGenres(genreId: number, limit = 16) {
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const rows = (
+    await db.drizzle.execute(sql`
+      select g.id, g.name, g.slug, count(*)::int as n
+      from picks_rels a
+      join picks_rels b on b.parent_id = a.parent_id and b.path = 'genres' and b.genres_id is not null and b.genres_id <> a.genres_id
+      join genres g on g.id = b.genres_id
+      where a.path = 'genres' and a.genres_id = ${genreId}
+      group by g.id, g.name, g.slug
+      order by n desc, g.name
+      limit ${limit}`)
+  ).rows
+  return rows.map((r) => ({ id: Number(r.id), name: String(r.name), slug: String(r.slug), n: Number(r.n) }))
+}
+
+/** 이 장르가 붙은 Editor's Picks 곡 수 */
+export async function pickCountForGenre(genreId: number) {
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const r = await db.drizzle.execute(sql`select count(distinct parent_id)::int as c from picks_rels where path = 'genres' and genres_id = ${genreId}`)
+  return Number(r.rows[0]?.c || 0)
 }

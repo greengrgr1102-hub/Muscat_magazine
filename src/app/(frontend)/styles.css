@@ -3836,3 +3836,7 @@ a.ess-badge:hover svg {
 .pick-detail__album:hover {
   text-decoration-color: currentColor;
 }
+
+.genre-related {
+  margin-top: 8px;
+}
