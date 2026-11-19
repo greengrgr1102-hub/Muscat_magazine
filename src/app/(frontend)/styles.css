@@ -1593,6 +1593,27 @@ a.track:hover .h-sm {
 .search-genres {
   padding-top: 20px;
 }
+/* 장르 칩: 한 줄 높이만 보이고 넘치는 칩은 다음 줄로 밀려 가려져요 (많이 쓰인 장르가 앞) */
+.genre-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.genre-line > .chips {
+  flex: 1;
+  min-width: 0;
+}
+.genre-line__one {
+  flex-wrap: wrap;
+  max-height: 40px;
+  overflow: hidden;
+}
+.genre-line__more {
+  flex: none;
+  margin-top: 10px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
 @media (max-width: 768px) {
   .search-head {
     padding-top: 32px;

@@ -58,6 +58,24 @@ export async function getGenres() {
   return res.docs
 }
 
+/** 곡·글에 많이 붙은 장르부터 (한 번도 안 쓰인 장르는 빼요) */
+export async function getGenresByUse() {
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const rows = (
+    await db.drizzle.execute(sql`
+      select g.id, g.name, g.slug, count(*)::int as n
+      from (
+        select genres_id as gid from picks_rels where path = 'genres' and genres_id is not null
+        union all
+        select genres_id from articles_rels where path = 'genres' and genres_id is not null
+      ) x join genres g on g.id = x.gid
+      group by g.id, g.name, g.slug
+      order by n desc, g.name`)
+  ).rows
+  return rows.map((r) => ({ id: Number(r.id), name: String(r.name), slug: String(r.slug), n: Number(r.n) }))
+}
+
 // 공개된 글에 실제로 붙어 있는 장르만 (장르 고르기 목록이 너무 길어지지 않게)
 export async function getArticleGenres() {
   const payload = await getClient()

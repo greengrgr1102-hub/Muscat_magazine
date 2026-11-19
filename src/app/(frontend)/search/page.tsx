@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { ArtistRow } from '@/components/ArtistRow'
-import { CardGrid, Chip, Icon, SectionHeader } from '@/components/ui'
-import { articleCountFor, getGenres, search, shuffle } from '@/lib/data'
+import { CardGrid, Icon, SectionHeader } from '@/components/ui'
+import { GenreLine } from '@/components/GenreLine'
+import { articleCountFor, getGenresByUse, search } from '@/lib/data'
 
 export const metadata: Metadata = { title: 'Search' }
 
@@ -10,7 +11,7 @@ type SP = Promise<{ q?: string }>
 export default async function SearchPage({ searchParams }: { searchParams: SP }) {
   const { q = '' } = await searchParams
   const term = q.trim().slice(0, 80)
-  const [genres, results] = await Promise.all([getGenres(), search(term)])
+  const [genres, results] = await Promise.all([getGenresByUse(), search(term)])
   const counts = await Promise.all(results.artists.map((a) => articleCountFor('artists', a.id)))
 
   return (
@@ -44,13 +45,7 @@ export default async function SearchPage({ searchParams }: { searchParams: SP })
         {genres.length ? (
           <div className="stack-12 search-genres">
             <p className="label">장르로 찾기</p>
-            <div className="chips chips--wrap">
-              {shuffle(genres).map((g) => (
-                <Chip key={g.id} href={`/genres/${g.slug}`}>
-                  {g.name}
-                </Chip>
-              ))}
-            </div>
+            <GenreLine genres={genres} />
           </div>
         ) : null}
       </section>
