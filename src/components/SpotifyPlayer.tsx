@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { myPlaylist, useMyPlaylist } from '@/lib/myPlaylist'
 import { SpotifyEmbed } from './SpotifyEmbed'
 import { sendTrack } from './Track'
 
@@ -17,6 +18,11 @@ export function SpotifyPlayer({
   pickId?: number
 }) {
   const [open, setOpen] = useState(false)
+  const { player } = useMyPlaylist()
+  // 아래 플리 플레이어가 재생을 시작하면 카드 플레이어는 닫아요.
+  useEffect(() => {
+    if (player) setOpen(false)
+  }, [player])
   if (open && embed) {
     return (
       <div className="epick__media epick__media--player">
@@ -29,6 +35,7 @@ export function SpotifyPlayer({
       type="button"
       className="epick__media"
       onClick={() => {
+        myPlaylist.stop()
         setOpen(true)
         if (pickId) sendTrack({ kind: 'play', id: pickId })
       }}

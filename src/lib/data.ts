@@ -286,7 +286,8 @@ export async function similarPicks(pick: import('@/payload-types').Pick, limit =
     // 그래도 모자라면 아무 곡이나 랜덤으로 채워요.
     const all = (await payload.find({ collection: 'picks', pagination: false, depth: 0, select: { artistName: true } })).docs
     const rest = all.filter((d) => d.id !== pick.id && !chosen.includes(d.id as number))
-    for (let i = 0; i < limit - chosen.length && rest.length; i++) {
+    const need = limit - chosen.length
+    for (let i = 0; i < need && rest.length; i++) {
       const k = Math.floor(Math.random() * rest.length)
       chosen.push(rest.splice(k, 1)[0].id as number)
     }

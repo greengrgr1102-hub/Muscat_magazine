@@ -1,6 +1,8 @@
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { myPlaylist, useMyPlaylist } from '@/lib/myPlaylist'
+import { AddButton } from './AddButton'
 import { SpotifyEmbed } from './SpotifyEmbed'
 import { sendTrack } from './Track'
 
@@ -31,6 +33,11 @@ const dayOf = (d?: string | null) => {
 // 한 줄에 한 곡씩: 작은 커버(누르면 바로 아래에서 재생) · 곡 · 아티스트 · 날짜
 export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; groupByMonth?: boolean }) {
   const [open, setOpen] = useState<number | null>(null)
+  // 아래 플리 플레이어가 재생을 시작하면, 줄 안의 작은 플레이어는 닫아요 (두 곡이 겹치지 않게).
+  const { player } = useMyPlaylist()
+  useEffect(() => {
+    if (player) setOpen(null)
+  }, [player])
   const groups: { title: string; rows: PickRow[] }[] = []
   for (const r of rows) {
     const t = groupByMonth ? monthOf(r.pickedAt) : ''
@@ -57,7 +64,10 @@ export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; group
                       aria-label={isOpen ? `${title} 플레이어 닫기` : `${title} 듣기`}
                       onClick={() => {
                         setOpen(isOpen ? null : r.id)
-                        if (!isOpen) sendTrack({ kind: 'play', id: r.id })
+                        if (!isOpen) {
+                          myPlaylist.stop()
+                          sendTrack({ kind: 'play', id: r.id })
+                        }
                       }}
                     >
                       {r.coverUrl ? (
@@ -84,6 +94,7 @@ export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; group
                       {r.comment ? <span className="plist__comment">{r.comment}</span> : null}
                     </div>
                     <span className="plist__date">{dayOf(r.pickedAt)}</span>
+                    <AddButton song={r} compact />
                   </div>
                   {isOpen && r.embed ? (
                     <SpotifyEmbed className="plist__player" embed={r.embed} title={title} height={80} autoPlay />

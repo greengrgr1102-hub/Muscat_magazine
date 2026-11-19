@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { PickGrid, TagLinks, asTags, spotifyEmbed } from '@/components/Picks'
+import { PickGrid, TagLinks, toRow, asTags, spotifyEmbed } from '@/components/Picks'
 import { ArrowLink, SectionHeader } from '@/components/ui'
 import { ViewTracker } from '@/components/Track'
 import { SpotifyEmbed } from '@/components/SpotifyEmbed'
+import { AddButton } from '@/components/AddButton'
 import { asGenres, formatDate, getPick, similarPicks } from '@/lib/data'
 
 type Params = Promise<{ id: string }>
@@ -76,6 +77,20 @@ export default async function PickPage({ params }: { params: Params }) {
               </dl>
             ) : null}
             <TagLinks tags={tags} />
+            <div className="pick-detail__actions">
+              <AddButton song={toRow(pick)} />
+              <Link href={`/web/${pick.id}`} className="add-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                  <circle cx="12" cy="12" r="2.5" />
+                  <circle cx="4" cy="6" r="1.8" />
+                  <circle cx="20" cy="6" r="1.8" />
+                  <circle cx="5" cy="19" r="1.8" />
+                  <circle cx="19" cy="18" r="1.8" />
+                  <path d="M10 11 5.5 7M14 11l4.5-4M10.2 13.6 6.3 17.7M13.9 13.5l3.8 3.4" />
+                </svg>
+                <span>거미줄로 보기</span>
+              </Link>
+            </div>
             <a className="arrow-link" href={pick.spotifyUrl} target="_blank" rel="noreferrer">
               <span>Spotify에서 열기</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
@@ -90,7 +105,11 @@ export default async function PickPage({ params }: { params: Params }) {
         <section className="wrap section">
           <SectionHeader
             title={similar.filled ? '이런 곡은 어때요' : '비슷한 곡 추천'}
-            right={<span className="muted small">{similar.filled ? '랜덤으로 골랐어요' : '장르·취향 태그가 비슷한 곡이에요'}</span>}
+            right={
+              <Link href={`/web/${pick.id}`} className="arrow-link">
+                <span>거미줄로 펼쳐 보기</span>
+              </Link>
+            }
           />
           <PickGrid picks={similar.docs} />
         </section>

@@ -7,6 +7,7 @@ import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { Analytics } from '@vercel/analytics/next'
 import { PageTracker } from '@/components/Track'
+import { PlaylistBar } from '@/components/PlaylistBar'
 import { getSettings } from '@/lib/data'
 
 export const dynamic = 'force-dynamic'
@@ -61,6 +62,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <Header />
         <main id="main">{children}</main>
         <Footer />
+        <PlaylistBar />
         <Analytics />
         <PageTracker />
       </body>

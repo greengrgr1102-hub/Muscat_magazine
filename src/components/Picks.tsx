@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { Pick, Tag } from '@/payload-types'
 import { asGenres, formatDate } from '@/lib/format'
 import { SpotifyPlayer } from './SpotifyPlayer'
+import { AddButton } from './AddButton'
 
 export function spotifyEmbed(url: string) {
   const m = url.match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(track|album|playlist)\/([A-Za-z0-9]+)/)
@@ -41,9 +42,12 @@ export function PickCard({ pick }: { pick: Pick }) {
             </Link>
           ))}
         </p>
-        <h3 className="epick__track">
-          <Link href={`/picks/${pick.id}`}>{pick.track || 'Untitled'}</Link>
-        </h3>
+        <div className="epick__head">
+          <h3 className="epick__track">
+            <Link href={`/picks/${pick.id}`}>{pick.track || 'Untitled'}</Link>
+          </h3>
+          <AddButton song={toRow(pick)} compact />
+        </div>
         <p className="epick__artist">
           {artist ? <Link href={`/artists/${artist.slug}`}>{pick.artistName}</Link> : pick.artistName}
         </p>
