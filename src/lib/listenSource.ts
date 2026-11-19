@@ -39,7 +39,7 @@ export function youtubeFor(pickId: number, known?: string | null): Promise<strin
   if (known) return Promise.resolve(known)
   let p = cache.get(pickId)
   if (!p) {
-    p = fetch(`/youtube/resolve?pick=${pickId}`)
+    p = fetch(`/youtube/resolve?pick=${pickId}&v=2`)
       .then((r) => (r.ok ? r.json() : { id: null }))
       .then((j: { id?: string | null }) => j.id || null)
       .catch(() => null)

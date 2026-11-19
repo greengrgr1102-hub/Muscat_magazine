@@ -136,7 +136,7 @@ export const Picks: CollectionConfig = {
       type: 'text',
       admin: {
         position: 'sidebar',
-        description: '비워 두면 처음 재생될 때 자동으로 찾아요. 엉뚱한 영상이면 YouTube 링크를 붙여 넣어 바꿔 주세요.',
+        description: '비워 두면 처음 재생될 때 공식 영상(아티스트 - Topic 채널, 아티스트 채널)만 자동으로 찾아요. 엉뚱한 영상이면 YouTube 링크를 붙여 넣어 바꿔 주세요.',
       },
       hooks: {
         // youtube.com/watch?v=… · youtu.be/… · music.youtube.com/… 어떤 링크든 영상 ID만 남겨요

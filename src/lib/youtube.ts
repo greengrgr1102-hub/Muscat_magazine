@@ -13,20 +13,42 @@ export function youtubeConfigured() {
   return Boolean(process.env.YOUTUBE_API_KEY?.trim())
 }
 
-type SearchItem = { id?: { videoId?: string }; snippet?: { title?: string; channelTitle?: string } }
+type SearchItem = { id?: { videoId?: string }; snippet?: { title?: string; channelTitle?: string; description?: string } }
 
 const norm = (s: string) => s.toLowerCase().replace(/[\s'’"「」()\[\]\-–—.,!?·:]/g, '')
 
-function score(it: SearchItem, track: string, artist: string) {
-  const title = norm(it.snippet?.title || '')
+/**
+ * 공식 영상만 써요.
+ * - 「아티스트 - Topic」 채널 (YouTube Music 공식 음원, 설명이 "Provided to YouTube by …"로 시작)
+ * - 아티스트 본인 채널 (채널 이름에 아티스트 이름이 들어 있음) · VEVO
+ * 팬 업로드·가사 영상·커버·라이브 등은 버려요.
+ */
+function officialKind(it: SearchItem, artist: string): 'topic' | 'artist' | null {
   const ch = it.snippet?.channelTitle || ''
-  const a = norm(artist.split(', ')[0] || '')
-  let s = 0
-  if (/ - Topic$/.test(ch)) s += 5 // 유튜브 뮤직 공식 음원 채널
-  if (a && (norm(ch).includes(a) || title.includes(a))) s += 3
-  if (title.includes(norm(track))) s += 3
-  if (/official (audio|music video|video)|공식|audio|lyric/i.test(it.snippet?.title || '')) s += 1
-  if (/live|cover|커버|라이브|reaction|karaoke|노래방|1 ?hour|loop|sped ?up|slowed/i.test(it.snippet?.title || '')) s -= 4
+  const desc = it.snippet?.description || ''
+  if (/ - Topic$/.test(ch) || /^Provided to YouTube by/i.test(desc)) return 'topic'
+  const names = artist
+    .split(', ')
+    .map(norm)
+    .filter((a) => a.length >= 2)
+  const c = norm(ch)
+  if (/vevo$/i.test(ch) && names.some((a) => c.startsWith(a))) return 'artist'
+  if (names.some((a) => c === a || c === `${a}official` || c === `official${a}` || c.startsWith(a))) return 'artist'
+  return null
+}
+
+function score(it: SearchItem, track: string, artist: string) {
+  const kind = officialKind(it, artist)
+  if (!kind) return -99
+  const rawTitle = it.snippet?.title || ''
+  const title = norm(rawTitle)
+  // 곡 제목이 영상 제목에 들어 있어야 해요 (feat. 같은 괄호 부분은 빼고 비교)
+  const base = norm(track.replace(/\s*[([（【].*?[)\]）】]/g, '')) || norm(track)
+  if (!base || !title.includes(base)) return -99
+  let s = kind === 'topic' ? 10 : 6
+  s += 4
+  if (/official (audio|music video|video)|공식|m\/?v/i.test(rawTitle)) s += 1
+  if (/live|cover|커버|라이브|reaction|karaoke|노래방|1 ?hour|loop|sped ?up|slowed|teaser|티저|behind|비하인드/i.test(rawTitle)) s -= 6
   return s
 }
 
@@ -60,7 +82,7 @@ export async function resolveYoutube(payload: Payload, pickId: number): Promise<
     part: 'snippet',
     type: 'video',
     videoEmbeddable: 'true',
-    maxResults: '6',
+    maxResults: '10',
     regionCode: 'KR',
     q,
     key,
@@ -69,7 +91,8 @@ export async function resolveYoutube(payload: Payload, pickId: number): Promise<
   if (!res.ok) return { id: null, reason: `api-${res.status}` }
   const items = (((await res.json()) as { items?: SearchItem[] }).items || []).filter((it) => it.id?.videoId)
   const best = items.map((it) => ({ it, s: score(it, track, artist) })).sort((x, y) => y.s - x.s)[0]
-  if (!best || best.s < 2) {
+  // 공식 채널 영상이 없거나 제목이 곡과 안 맞으면 쓰지 않아요 (Spotify로 재생)
+  if (!best || best.s < 10) {
     await payload.update({ collection: 'picks', id: pickId, overrideAccess: true, data: { youtubeMissAt: new Date().toISOString() } })
     return { id: null, reason: 'no-match' }
   }

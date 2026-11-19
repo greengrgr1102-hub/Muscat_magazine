@@ -77,7 +77,7 @@ export function SongPlayer({
         <button type="button" className={source === 'spotify' ? 'is-on' : ''} onClick={() => setSource('spotify')}>
           Spotify
         </button>
-        {fellBack ? <span className="muted song-player__note">YouTube 영상이 없어 Spotify로 들려드려요</span> : null}
+        {fellBack ? <span className="muted song-player__note">공식 YouTube 영상이 없어 Spotify로 들려드려요</span> : null}
       </div>
     </div>
   )
