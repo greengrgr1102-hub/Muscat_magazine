@@ -4,7 +4,8 @@ import { after } from 'next/server'
 import type { Where } from 'payload'
 import { PickGrid, toRow } from '@/components/Picks'
 import { PickList } from '@/components/PickList'
-import { findPickRows, findPickRowsRandom, findPicks, getClient, getTag } from '@/lib/data'
+import { PlaylistCards } from '@/components/Playlists'
+import { findPickRows, findPickRowsRandom, findPicks, findPlaylists, getClient, getTag } from '@/lib/data'
 import { syncPlaylist } from '@/lib/spotify'
 import type { Pick } from '@/payload-types'
 
@@ -43,6 +44,7 @@ export default async function PicksPage({
     latest ? findPickRows({ where, page, limit: PER_PAGE }) : findPickRowsRandom({ where, seed, page, limit: PER_PAGE }),
     plain ? findPickRowsRandom({ where: hasComment, seed, limit: 6 }) : Promise.resolve(null),
   ])
+  const playlists = plain ? await findPlaylists(4) : null
   const featuredFull = featured?.docs.length
     ? await findPicks({ where: { id: { in: featured.docs.map((d) => d.id) } }, limit: 6 })
     : null
@@ -66,6 +68,18 @@ export default async function PicksPage({
           커버를 누르면 이 자리에서 바로 들을 수 있어요.
         </p>
       </section>
+
+      {playlists?.docs.length ? (
+        <section className="wrap section">
+          <div className="section-header">
+            <h2 className="h-lg">에디터 플리</h2>
+            <Link href="/playlists" className="arrow-link">
+              <span>전체 보기</span>
+            </Link>
+          </div>
+          <PlaylistCards lists={playlists.docs} />
+        </section>
+      ) : null}
 
       {featuredFull?.docs.length ? (
         <section className="wrap section">

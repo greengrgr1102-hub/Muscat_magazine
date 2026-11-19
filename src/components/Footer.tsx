@@ -25,6 +25,7 @@ export async function Footer() {
             <Link href="/">Home</Link>
             <Link href="/articles">Articles</Link>
             <Link href="/picks">Editor&apos;s Picks</Link>
+            <Link href="/playlists">Playlists</Link>
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
           </div>

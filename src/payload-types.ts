@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     articles: Article;
     picks: Pick;
+    playlists: Playlist;
     artists: Artist;
     genres: Genre;
     tags: Tag;
@@ -86,6 +87,7 @@ export interface Config {
   collectionsSelect: {
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     picks: PicksSelect<false> | PicksSelect<true>;
+    playlists: PlaylistsSelect<false> | PlaylistsSelect<true>;
     artists: ArtistsSelect<false> | ArtistsSelect<true>;
     genres: GenresSelect<false> | GenresSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
@@ -555,6 +557,7 @@ export interface Pick {
    * Spotify에서 자동으로 가져온 커버
    */
   coverUrl?: string | null;
+  label?: string | null;
   /**
    * Spotify에서 자동으로 가져와요
    */
@@ -585,6 +588,35 @@ export interface Tag {
   slug?: string | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * Editor's Picks 곡을 골라 플레이리스트로 엮어요. 공개하면 사이트에 올라가요.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "playlists".
+ */
+export interface Playlist {
+  id: number;
+  title: string;
+  /**
+   * 사이트 주소에 쓰입니다. 비워 두면 자동으로 만들어집니다. 예: shoegaze, album-title
+   */
+  slug?: string | null;
+  /**
+   * 어떤 순간에 듣는 플리인지 짧게 (예: 새벽 3시, 잠들기 전 듣는 슈게이즈)
+   */
+  description?: string | null;
+  /**
+   * 비워 두면 앞쪽 곡 커버 4장을 모아 보여 줘요.
+   */
+  cover?: (number | null) | Media;
+  /**
+   * 곡 이름으로 검색해서 담아요. 끌어서 순서를 바꿀 수 있어요.
+   */
+  songs: (number | Pick)[];
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -651,6 +683,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'picks';
         value: number | Pick;
+      } | null)
+    | ({
+        relationTo: 'playlists';
+        value: number | Playlist;
       } | null)
     | ({
         relationTo: 'artists';
@@ -828,10 +864,25 @@ export interface PicksSelect<T extends boolean = true> {
   genres?: T;
   tags?: T;
   coverUrl?: T;
+  label?: T;
   album?: T;
   releaseDate?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "playlists_select".
+ */
+export interface PlaylistsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  description?: T;
+  cover?: T;
+  songs?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

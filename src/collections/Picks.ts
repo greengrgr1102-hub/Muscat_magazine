@@ -15,7 +15,7 @@ export const Picks: CollectionConfig = {
   labels: { singular: "Editor's Pick", plural: "Editor's Picks" },
   admin: {
     group: '콘텐츠',
-    useAsTitle: 'track',
+    useAsTitle: 'label',
     defaultColumns: ['track', 'artistName', 'pickedAt'],
     description: 'Spotify 곡 링크와 한 줄 코멘트만 넣으면 됩니다. 곡 제목과 커버는 저장할 때 자동으로 채워져요.',
   },
@@ -111,6 +111,16 @@ export const Picks: CollectionConfig = {
       label: '커버 이미지 주소',
       type: 'text',
       admin: { readOnly: true, description: 'Spotify에서 자동으로 가져온 커버', position: 'sidebar' },
+    },
+    {
+      // 관리자 화면 검색·선택용 이름: "곡 — 아티스트"
+      name: 'label',
+      type: 'text',
+      index: true,
+      admin: { hidden: true },
+      hooks: {
+        beforeChange: [({ siblingData }) => `${siblingData.track || 'Untitled'} — ${siblingData.artistName || ''}`.trim()],
+      },
     },
     {
       name: 'album',

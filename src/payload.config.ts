@@ -18,6 +18,7 @@ import { Artists } from './collections/Artists'
 import { Articles } from './collections/Articles'
 import { Inquiries, Subscribers } from './collections/Inquiries'
 import { Stats } from './collections/Stats'
+import { Playlists } from './collections/Playlists'
 import { AboutPage, SiteSettings } from './globals/Settings'
 import { SpotifySync } from './globals/SpotifySync'
 
@@ -52,7 +53,7 @@ export default buildConfig({
     fallbackLanguage: 'ko',
     supportedLanguages: { ko, en },
   },
-  collections: [Articles, Picks, Artists, Genres, Tags, Media, Inquiries, Subscribers, Users, Stats],
+  collections: [Articles, Picks, Playlists, Artists, Genres, Tags, Media, Inquiries, Subscribers, Users, Stats],
   globals: [SiteSettings, AboutPage, SpotifySync],
   editor: lexicalEditor(),
   secret: SECRET,

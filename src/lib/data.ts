@@ -139,6 +139,17 @@ export async function nextArticle(article: Article) {
   return res.docs[0] ?? null
 }
 
+/* ---------- 에디터 플리 ---------- */
+export async function findPlaylists(limit = 24) {
+  const payload = await getClient()
+  return payload.find({ collection: 'playlists', limit, sort: '-updatedAt', depth: 1 })
+}
+export async function getPlaylist(slug: string) {
+  const payload = await getClient()
+  const r = await payload.find({ collection: 'playlists', where: { slug: { equals: slug } }, limit: 1, depth: 1 })
+  return r.docs[0] || null
+}
+
 /* ---------- Editor's Picks ---------- */
 export async function findPicks({ where, limit = 24, page = 1 }: { where?: Where; limit?: number; page?: number } = {}) {
   const payload = await getClient()
