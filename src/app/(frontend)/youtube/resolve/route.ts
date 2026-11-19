@@ -14,6 +14,6 @@ export async function GET(req: NextRequest) {
     await markYoutubeBad(payload, pick, bad)
     return NextResponse.json({ ok: true })
   }
-  const r = await resolveYoutube(payload, pick)
+  const r = await resolveYoutube(payload, pick, { debug: req.nextUrl.searchParams.get('debug') === '1' })
   return NextResponse.json(r, { headers: { 'Cache-Control': r.id ? 'public, max-age=3600' : 'no-store' } })
 }

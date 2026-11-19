@@ -61,13 +61,17 @@ async function useQuota(payload: Payload) {
   return true
 }
 
-export async function resolveYoutube(payload: Payload, pickId: number): Promise<{ id: string | null; reason?: string }> {
+export async function resolveYoutube(
+  payload: Payload,
+  pickId: number,
+  opts: { debug?: boolean } = {},
+): Promise<{ id: string | null; reason?: string; candidates?: unknown[] }> {
   const pick = await payload
     .findByID({ collection: 'picks', id: pickId, depth: 0, overrideAccess: true })
     .catch(() => null)
   if (!pick) return { id: null, reason: 'not-found' }
-  if (pick.youtubeId) return { id: pick.youtubeId }
-  if (pick.youtubeMissAt && Date.now() - new Date(pick.youtubeMissAt).getTime() < MISS_DAYS * 86400_000) {
+  if (pick.youtubeId && !opts.debug) return { id: pick.youtubeId }
+  if (!opts.debug && pick.youtubeMissAt && Date.now() - new Date(pick.youtubeMissAt).getTime() < MISS_DAYS * 86400_000) {
     return { id: null, reason: 'miss' }
   }
   const key = process.env.YOUTUBE_API_KEY?.trim()
@@ -76,7 +80,8 @@ export async function resolveYoutube(payload: Payload, pickId: number): Promise<
 
   const artist = pick.artistName || ''
   const track = pick.track || ''
-  const q = `${artist.split(', ')[0]} ${track}`.trim()
+  // 「- Topic」을 붙이면 YouTube Music 공식 음원이 위로 올라와요
+  const q = `${artist.split(', ')[0]} ${track} topic`.trim()
   const url = new URL('https://www.googleapis.com/youtube/v3/search')
   url.search = new URLSearchParams({
     part: 'snippet',
@@ -90,7 +95,14 @@ export async function resolveYoutube(payload: Payload, pickId: number): Promise<
   const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) return { id: null, reason: `api-${res.status}` }
   const items = (((await res.json()) as { items?: SearchItem[] }).items || []).filter((it) => it.id?.videoId)
-  const best = items.map((it) => ({ it, s: score(it, track, artist) })).sort((x, y) => y.s - x.s)[0]
+  const ranked = items.map((it) => ({ it, s: score(it, track, artist) })).sort((x, y) => y.s - x.s)
+  if (opts.debug) {
+    return {
+      id: ranked[0] && ranked[0].s >= 10 ? ranked[0].it.id!.videoId! : null,
+      candidates: ranked.map((r) => ({ s: r.s, title: r.it.snippet?.title, channel: r.it.snippet?.channelTitle, id: r.it.id?.videoId })),
+    }
+  }
+  const best = ranked[0]
   // 공식 채널 영상이 없거나 제목이 곡과 안 맞으면 쓰지 않아요 (Spotify로 재생)
   if (!best || best.s < 10) {
     await payload.update({ collection: 'picks', id: pickId, overrideAccess: true, data: { youtubeMissAt: new Date().toISOString() } })
