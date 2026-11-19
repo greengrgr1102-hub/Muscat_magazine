@@ -16,9 +16,11 @@ export default async function AboutPage() {
         </h1>
       </section>
 
-      <section className="wrap section">
-        <Img media={about.image} ratio="21 / 10" label="Image" sizes="100vw" />
-      </section>
+      {about.image ? (
+        <section className="wrap section">
+          <Img media={about.image} ratio="21 / 10" label="Image" sizes="100vw" />
+        </section>
+      ) : null}
 
       {about.approach?.length ? (
         <section className="wrap section grid12 approach">
@@ -38,11 +40,17 @@ export default async function AboutPage() {
 
       {about.coverage?.length ? (
         <section className="wrap section">
-          <SectionHeader title="What we do" right={<span className="muted">네 가지 방식으로 음악을 전합니다</span>} />
+          <SectionHeader
+            title="What we do"
+            right={<span className="muted">네 가지 방식으로 음악을 전합니다</span>}
+          />
           <ul className="index-list">
             {about.coverage.map((c, i) => (
               <li key={c.id || i}>
-                <Link href={c.type ? `/articles?type=${c.type}` : '/articles'} className="index-row">
+                <Link
+                  href={c.type ? `/articles?type=${c.type}` : '/articles'}
+                  className="index-row"
+                >
                   <span className="label">{String(i + 1).padStart(2, '0')}</span>
                   <span className="h-md index-row__title">{c.title}</span>
                   <span className="muted index-row__desc">{c.description}</span>
@@ -56,7 +64,10 @@ export default async function AboutPage() {
 
       {about.principles?.length ? (
         <section className="wrap section">
-          <SectionHeader title="Principles" right={<span className="muted">머스캣이 지키는 원칙</span>} />
+          <SectionHeader
+            title="Principles"
+            right={<span className="muted">머스캣이 지키는 원칙</span>}
+          />
           <div className="principles">
             {about.principles.map((p, i) => (
               <div key={p.id || i} className="principle">
@@ -75,11 +86,23 @@ export default async function AboutPage() {
 
       {about.editors?.length ? (
         <section className="wrap section">
-          <SectionHeader title="Editors" right={<span className="muted">머스캣을 만드는 사람</span>} />
-          <div className={`editors${about.editors.length === 1 ? ' editors--one' : ''}`}>
+          <SectionHeader
+            title="Editors"
+            right={<span className="muted">머스캣을 만드는 사람</span>}
+          />
+          <div
+            className={`editors${about.editors.length === 1 && about.editors[0].photo ? ' editors--one' : ''}`}
+          >
             {about.editors.map((e, i) => (
               <article key={e.id || i} className="editor">
-                <Img media={e.photo} ratio="4 / 5" label="Editor" sizes="(max-width: 768px) 100vw, 33vw" />
+                {e.photo ? (
+                  <Img
+                    media={e.photo}
+                    ratio="4 / 5"
+                    label="Editor"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                  />
+                ) : null}
                 <div className="editor__body">
                   <p className="label">{e.role || 'Editor'}</p>
                   <h3 className="h-lg">{e.name}</h3>
@@ -103,7 +126,13 @@ export default async function AboutPage() {
                       <Icon name="right" />
                     </Link>
                     {(e.links || []).map((l, j) => (
-                      <a key={l.id || j} href={l.url} target="_blank" rel="noreferrer" className="arrow-link">
+                      <a
+                        key={l.id || j}
+                        href={l.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="arrow-link"
+                      >
                         <span>{l.label}</span>
                         <Icon name="upright" />
                       </a>

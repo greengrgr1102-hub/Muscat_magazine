@@ -377,7 +377,6 @@ export interface Media {
    * 사진 밑에 작게 보여요. 예: 2024년 롤링홀 공연 · 사진 홍길동
    */
   caption?: string | null;
-  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -950,7 +949,6 @@ export interface TagsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
-  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
