@@ -5,6 +5,14 @@ import type { CollectionConfig } from 'payload'
 
 const SPOTIFY_RE = /open\.spotify\.com\/(?:intl-[a-z-]+\/)?(track|album|playlist)\/([A-Za-z0-9]+)/
 
+export function youtubeIdOf(v: unknown): string | null {
+  const s = typeof v === 'string' ? v.trim() : ''
+  if (!s) return null
+  if (/^[A-Za-z0-9_-]{11}$/.test(s)) return s
+  const m = s.match(/(?:v=|youtu\.be\/|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})/)
+  return m ? m[1] : null
+}
+
 export function parseSpotify(url?: string | null): { kind: string; id: string } | null {
   const m = url?.match(SPOTIFY_RE)
   return m ? { kind: m[1], id: m[2] } : null
@@ -121,6 +129,24 @@ export const Picks: CollectionConfig = {
       hooks: {
         beforeChange: [({ siblingData }) => `${siblingData.track || 'Untitled'} — ${siblingData.artistName || ''}`.trim()],
       },
+    },
+    {
+      name: 'youtubeId',
+      label: 'YouTube 영상',
+      type: 'text',
+      admin: {
+        position: 'sidebar',
+        description: '비워 두면 처음 재생될 때 자동으로 찾아요. 엉뚱한 영상이면 YouTube 링크를 붙여 넣어 바꿔 주세요.',
+      },
+      hooks: {
+        // youtube.com/watch?v=… · youtu.be/… · music.youtube.com/… 어떤 링크든 영상 ID만 남겨요
+        beforeChange: [({ value }) => youtubeIdOf(value) ?? (value ? String(value).trim() : value)],
+      },
+    },
+    {
+      name: 'youtubeMissAt',
+      type: 'date',
+      admin: { hidden: true },
     },
     {
       name: 'album',

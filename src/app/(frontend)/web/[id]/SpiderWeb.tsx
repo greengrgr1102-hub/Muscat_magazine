@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AddButton } from '@/components/AddButton'
-import { SpotifyEmbed } from '@/components/SpotifyEmbed'
+import { SongPlayer } from '@/components/SongPlayer'
 import { sendTrack } from '@/components/Track'
 import { myPlaylist } from '@/lib/myPlaylist'
 
@@ -222,7 +222,7 @@ export function SpiderWeb({ startId }: { startId: number }) {
             <p className="muted">{f.artistName}</p>
             {f.genres.length ? <p className="small web__genres">{f.genres.join(' · ')}</p> : null}
             {playing && playing.id === f.id && f.embed ? (
-              <SpotifyEmbed key={f.id} embed={f.embed} title={`${f.track} — ${f.artistName}`} height={80} autoPlay />
+              <SongPlayer key={f.id} pickId={f.id} embed={f.embed} title={`${f.track} — ${f.artistName}`} autoPlay />
             ) : (
               <button type="button" className="btn btn--filled" onClick={() => choose(f.id)} disabled={!f.embed}>
                 <span>▶ 듣기</span>

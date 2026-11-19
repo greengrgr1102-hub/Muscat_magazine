@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { myPlaylist, useMyPlaylist } from '@/lib/myPlaylist'
 import { SpotifyEmbed } from './SpotifyEmbed'
+import { SongPlayer } from './SongPlayer'
 import { sendTrack } from './Track'
 
 // 처음엔 커버만 보여 주고, 재생 버튼을 누르면 그 자리에 Spotify 플레이어를 불러옵니다.
@@ -11,11 +12,13 @@ export function SpotifyPlayer({
   cover,
   title,
   pickId,
+  youtubeId,
 }: {
   embed: string | null
   cover?: string | null
   title: string
   pickId?: number
+  youtubeId?: string | null
 }) {
   const [open, setOpen] = useState(false)
   const { player } = useMyPlaylist()
@@ -26,7 +29,11 @@ export function SpotifyPlayer({
   if (open && embed) {
     return (
       <div className="epick__media epick__media--player">
-        <SpotifyEmbed embed={embed} title={title} height={152} autoPlay />
+        {pickId ? (
+          <SongPlayer pickId={pickId} embed={embed} youtubeId={youtubeId} title={title} spotifyHeight={152} autoPlay />
+        ) : (
+          <SpotifyEmbed embed={embed} title={title} height={152} autoPlay />
+        )}
       </div>
     )
   }

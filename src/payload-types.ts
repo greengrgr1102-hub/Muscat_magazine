@@ -109,11 +109,13 @@ export interface Config {
     'site-settings': SiteSetting;
     'about-page': AboutPage;
     'spotify-sync': SpotifySync;
+    'youtube-usage': YoutubeUsage;
   };
   globalsSelect: {
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     'about-page': AboutPageSelect<false> | AboutPageSelect<true>;
     'spotify-sync': SpotifySyncSelect<false> | SpotifySyncSelect<true>;
+    'youtube-usage': YoutubeUsageSelect<false> | YoutubeUsageSelect<true>;
   };
   locale: null;
   widgets: {
@@ -568,6 +570,11 @@ export interface Pick {
   coverUrl?: string | null;
   label?: string | null;
   /**
+   * 비워 두면 처음 재생될 때 자동으로 찾아요. 엉뚱한 영상이면 YouTube 링크를 붙여 넣어 바꿔 주세요.
+   */
+  youtubeId?: string | null;
+  youtubeMissAt?: string | null;
+  /**
    * Spotify에서 자동으로 가져와요
    */
   album?: string | null;
@@ -876,6 +883,8 @@ export interface PicksSelect<T extends boolean = true> {
   tags?: T;
   coverUrl?: T;
   label?: T;
+  youtubeId?: T;
+  youtubeMissAt?: T;
   album?: T;
   releaseDate?: T;
   updatedAt?: T;
@@ -1232,6 +1241,17 @@ export interface SpotifySync {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "youtube-usage".
+ */
+export interface YoutubeUsage {
+  id: number;
+  day?: string | null;
+  count?: number | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
@@ -1315,6 +1335,17 @@ export interface SpotifySyncSelect<T extends boolean = true> {
   renameOffset?: T;
   renameChanged?: T;
   pausedUntil?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "youtube-usage_select".
+ */
+export interface YoutubeUsageSelect<T extends boolean = true> {
+  day?: T;
+  count?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

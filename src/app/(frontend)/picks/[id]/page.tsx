@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { SongPlayer } from '@/components/SongPlayer'
 import { notFound } from 'next/navigation'
 import { PickGrid, TagLinks, toRow, asTags, spotifyEmbed } from '@/components/Picks'
 import { ArrowLink, SectionHeader } from '@/components/ui'
 import { ViewTracker } from '@/components/Track'
-import { SpotifyEmbed } from '@/components/SpotifyEmbed'
 import { AddButton } from '@/components/AddButton'
 import { asGenres, getPick, similarPicks } from '@/lib/data'
 
@@ -39,7 +39,16 @@ export default async function PickPage({ params }: { params: Params }) {
         </ArrowLink>
         <div className="pick-detail__grid">
           <div className="pick-detail__player">
-            {embed ? <SpotifyEmbed embed={embed} title={`${pick.track || ''} — ${pick.artistName}`} height={352} /> : null}
+            {embed ? (
+              <SongPlayer
+                pickId={pick.id}
+                embed={embed}
+                youtubeId={pick.youtubeId}
+                title={`${pick.track || ''} — ${pick.artistName}`}
+                spotifyHeight={352}
+                size="large"
+              />
+            ) : null}
           </div>
           <div className="pick-detail__info">
             <p className="label">

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { myPlaylist, useMyPlaylist } from '@/lib/myPlaylist'
 import { AddButton } from './AddButton'
-import { SpotifyEmbed } from './SpotifyEmbed'
+import { SongPlayer } from './SongPlayer'
 import { sendTrack } from './Track'
 import { releaseShort } from '@/lib/format'
 
@@ -16,6 +16,7 @@ export type PickRow = {
   releaseDate?: string | null
   comment?: string | null
   embed: string | null
+  youtubeId?: string | null
 }
 
 // Spotify 커버는 640px짜리라, 목록에서는 64px짜리 주소로 바꿔서 가볍게 불러옵니다.
@@ -96,7 +97,7 @@ export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; group
                     <AddButton song={r} compact />
                   </div>
                   {isOpen && r.embed ? (
-                    <SpotifyEmbed className="plist__player" embed={r.embed} title={title} height={80} autoPlay />
+                    <SongPlayer className="plist__player" pickId={r.id} embed={r.embed} youtubeId={r.youtubeId} title={title} autoPlay />
                   ) : null}
                 </li>
               )

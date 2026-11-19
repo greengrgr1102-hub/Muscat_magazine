@@ -20,6 +20,7 @@ import { Inquiries, Subscribers } from './collections/Inquiries'
 import { Stats } from './collections/Stats'
 import { Playlists } from './collections/Playlists'
 import { AboutPage, SiteSettings } from './globals/Settings'
+import { YouTubeUsage } from './globals/YouTubeUsage'
 import { SpotifySync } from './globals/SpotifySync'
 
 const filename = fileURLToPath(import.meta.url)
@@ -54,7 +55,7 @@ export default buildConfig({
     supportedLanguages: { ko, en },
   },
   collections: [Articles, Picks, Playlists, Artists, Genres, Tags, Media, Inquiries, Subscribers, Users, Stats],
-  globals: [SiteSettings, AboutPage, SpotifySync],
+  globals: [SiteSettings, AboutPage, SpotifySync, YouTubeUsage],
   editor: lexicalEditor(),
   secret: SECRET,
   typescript: {

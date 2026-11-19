@@ -184,7 +184,7 @@ export async function findPickRows({ where, limit = 100, page = 1 }: { where?: W
     page,
     sort: '-pickedAt',
     depth: 0,
-    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true },
+    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, youtubeId: true },
   })
 }
 
@@ -219,7 +219,7 @@ export async function findPickRowsRandom({ where, seed, page = 1, limit = 100 }:
           where: { id: { in: slice } },
           limit: slice.length,
           depth: 0,
-          select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true },
+          select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, youtubeId: true },
         })
       ).docs
     : []
@@ -459,7 +459,7 @@ export async function findAlbumPicks(key: string) {
     pagination: false,
     sort: 'createdAt',
     depth: 0,
-    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, album: true, genres: true },
+    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, album: true, genres: true, youtubeId: true },
   })
   return res.docs.length ? res.docs : null
 }

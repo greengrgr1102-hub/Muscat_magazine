@@ -10,6 +10,7 @@ export type Song = {
   artistName: string
   coverUrl?: string | null
   embed: string | null
+  youtubeId?: string | null
 }
 
 type State = {

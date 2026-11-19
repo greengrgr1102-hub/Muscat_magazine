@@ -3514,3 +3514,92 @@ a.ess-badge:hover svg {
 .ess-section .ess-albums {
   margin-top: 8px;
 }
+
+/* ---------- 곡 플레이어 (YouTube 전체 듣기 / Spotify) ---------- */
+.song-player {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.yt-embed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 200px; /* YouTube 규정: 최소 200×200 */
+  min-width: 200px;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.yt-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.song-player--inline .yt-embed {
+  max-width: 480px;
+}
+.song-player--bar .yt-embed {
+  width: 356px;
+  max-width: 100%;
+  border-radius: 10px;
+}
+.song-player__wait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+.song-player--large .song-player__wait {
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+.song-player__src {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--ink-muted);
+}
+.song-player__src button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.song-player__src button.is-on {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--accent);
+}
+.song-player__note {
+  margin-left: 6px;
+}
+/* 아래 바(검은 배경) 안에서는 밝은 글씨로 */
+.plbar .song-player__src {
+  color: rgba(255, 255, 255, 0.55);
+}
+.plbar .song-player__src button.is-on {
+  color: #fff;
+}
+.plbar .song-player__wait {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+}
+.epick__media--player .song-player .yt-embed {
+  max-width: none;
+}
+@media (max-width: 768px) {
+  .song-player--bar .yt-embed {
+    width: 100%;
+  }
+}

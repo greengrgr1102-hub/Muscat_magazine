@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { myPlaylist, useMyPlaylist } from '@/lib/myPlaylist'
-import { SpotifyEmbed } from './SpotifyEmbed'
+import { SongPlayer } from './SongPlayer'
 
 const small = (u?: string | null) => (u ? u.replace('ab67616d0000b273', 'ab67616d00004851') : null)
 
@@ -45,11 +45,13 @@ export function PlaylistBar() {
         <div className="plbar" role="region" aria-label="내 플리">
           {now ? (
             <div className="plbar__player">
-              <SpotifyEmbed
+              <SongPlayer
                 key={`${now.id}-${player!.index}`}
+                pickId={now.id}
                 embed={now.embed}
+                youtubeId={now.youtubeId}
                 title={`${now.track || ''} — ${now.artistName}`}
-                height={80}
+                size="bar"
                 autoPlay
                 onEnded={() => myPlaylist.step(1)}
               />

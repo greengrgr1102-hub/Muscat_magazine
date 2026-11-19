@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { AddAllButton, AddButton, PlayAllButton } from '@/components/AddButton'
 import { PickList } from '@/components/PickList'
-import { SpotifyEmbed } from '@/components/SpotifyEmbed'
+import { SongPlayer } from '@/components/SongPlayer'
 import { myPlaylist } from '@/lib/myPlaylist'
 import { loadTaste, saveTaste, type Taste, type TasteSong } from '@/lib/taste'
 
@@ -132,7 +132,7 @@ export function TasteFinder({ genres }: { genres: G[] }) {
             <h1 className="h-xl">{s.track}</h1>
             <p className="muted taste__artist">{s.artistName}</p>
             {s.genres.length ? <p className="small taste__genres">{s.genres.join(' · ')}</p> : null}
-            <SpotifyEmbed key={s.id} embed={s.embed} title={`${s.track} — ${s.artistName}`} height={80} autoPlay />
+            <SongPlayer key={s.id} pickId={s.id} embed={s.embed} title={`${s.track} — ${s.artistName}`} autoPlay />
             <div className="taste__answer">
               <button className="btn btn--filled taste__like" onClick={() => answer(true)}>
                 <span>♥ 좋아요</span>

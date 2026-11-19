@@ -19,6 +19,7 @@ import * as migration_20261119_063538_about_editors from './20261119_063538_abou
 import * as migration_20261119_064500_about_content from './20261119_064500_about_content';
 import * as migration_20261119_072641_essential from './20261119_072641_essential';
 import * as migration_20261119_084647_essential_albums_only from './20261119_084647_essential_albums_only';
+import * as migration_20261119_125330_youtube from './20261119_125330_youtube';
 
 export const migrations = [
   {
@@ -124,6 +125,11 @@ export const migrations = [
   {
     up: migration_20261119_084647_essential_albums_only.up,
     down: migration_20261119_084647_essential_albums_only.down,
-    name: '20261119_084647_essential_albums_only'
+    name: '20261119_084647_essential_albums_only',
+  },
+  {
+    up: migration_20261119_125330_youtube.up,
+    down: migration_20261119_125330_youtube.down,
+    name: '20261119_125330_youtube'
   },
 ];
