@@ -9,6 +9,7 @@ const ITEMS = [
   { href: '/articles', label: 'Articles' },
   { href: '/picks', label: "Editor's Picks" },
   { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
 ]
 // 큰 메뉴 아래 작은 링크로
 const SUB = [
@@ -17,7 +18,6 @@ const SUB = [
   { href: '/playlists', label: '플레이리스트' },
   { href: '/taste', label: '취향 찾기' },
   { href: '/my', label: '내 플리' },
-  { href: '/contact', label: '문의하기' },
 ]
 
 export function MobileMenu({ instagramUrl }: { instagramUrl?: string }) {

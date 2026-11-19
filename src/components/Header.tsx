@@ -18,8 +18,8 @@ export const NAV = [
   { href: '/articles', label: 'Articles' },
   // 곡·앨범·Essential·플레이리스트·취향 찾기·내 플리는 Editor's Picks 안에 묶음
   { href: '/picks', label: "Editor's Picks", also: ['/essential', '/playlists', '/taste', '/my', '/web', '/share'] },
-  // 문의는 About 안에
-  { href: '/about', label: 'About', also: ['/contact'] },
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
 ]
 
 export async function Header() {

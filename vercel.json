@@ -7,6 +7,10 @@
     {
       "path": "/spotify/sync",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/spotify/sync",
+      "schedule": "30 18 * * *"
     }
   ]
 }

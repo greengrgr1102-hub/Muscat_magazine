@@ -1,5 +1,6 @@
 import 'server-only'
 import type { Payload } from 'payload'
+import { sql } from '@payloadcms/db-postgres'
 import { parseSpotify } from '../collections/Picks'
 
 // Spotify 연동 — 에디터 본인 계정의 플레이리스트를 읽어 Editor's Picks로 옮깁니다.
@@ -297,6 +298,8 @@ export async function renameToKorean(payload: Payload) {
     }
     let total = 0
     let finished = false
+    const bulk: { id: number; album: string | null; rel: string | null }[] = []
+    const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<unknown> } }
     for (const path of ['items', 'tracks']) {
       const base = `https://api.spotify.com/v1/playlists/${pid}/${path}`
       const first = await getJSON<ItemsPage>(`${base}?limit=1`, tok.access_token, deadline)
@@ -315,18 +318,32 @@ export async function renameToKorean(payload: Payload) {
           const mine = byId.get(t.id)
           if (!mine) continue
           const names = (t.artists || []).map((a) => a.name).join(', ')
-          const data: { track?: string; artistName?: string; album?: string; releaseDate?: string } = {}
+          const data: { track?: string; artistName?: string } = {}
           // 새 이름에 한글이 있고, 지금 이름에는 없을 때만 바꿔요.
           if (t.name && HANGUL.test(t.name) && !HANGUL.test(mine.track || '') && t.name !== mine.track) data.track = t.name
           if (names && HANGUL.test(names) && !HANGUL.test(mine.artistName) && names !== mine.artistName) data.artistName = names
           const albumName = t.album?.name
           const rel = releaseOf(t)
-          if (albumName && albumName !== mine.album) data.album = albumName
-          if (rel && rel !== mine.releaseDate) data.releaseDate = rel
-          if (data.track || data.artistName || data.album || data.releaseDate) {
-            await payload.update({ collection: 'picks', id: mine.id, overrideAccess: true, data })
-            if (data.track || data.artistName) changed++
+          // 앨범·발매일은 한 페이지(50곡)씩 모아서 한 번에 저장 (하나씩 저장하면 느려서 하루에 몇백 곡밖에 못 채움)
+          if ((albumName && albumName !== mine.album) || (rel && rel !== mine.releaseDate)) {
+            bulk.push({ id: mine.id, album: albumName || mine.album || null, rel: rel || mine.releaseDate || null })
+            mine.album = albumName || mine.album
+            mine.releaseDate = rel || mine.releaseDate
           }
+          if (data.track || data.artistName) {
+            await payload.update({ collection: 'picks', id: mine.id, overrideAccess: true, data })
+            changed++
+          }
+        }
+        if (bulk.length) {
+          await db.drizzle.execute(sql`
+            update picks as p set album = v.album, release_date = v.rel
+            from (values ${sql.join(
+              bulk.map((b) => sql`(${b.id}::int, ${b.album}::varchar, ${b.rel}::varchar)`),
+              sql`, `,
+            )}) as v(id, album, rel)
+            where p.id = v.id`)
+          bulk.length = 0
         }
         offset += items.length || 50
         if (!items.length) break
