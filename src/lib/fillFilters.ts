@@ -124,7 +124,12 @@ function koEnArtists(current: string, english: string | null | undefined) {
   if (!hasForeign(current)) return null
   const mine = current.split(', ')
   const theirs = (english || '').split(', ')
-  const out = mine.map((a, i) => koEn(a, theirs.length === mine.length ? theirs[i] : null) ?? a)
+  // 아티스트 이름은 「莫創崴53mo」처럼 한 덩어리에 섞여 있어도, 영어·한국어 부분이 두 글자 넘게 남으면 그것만 써요
+  const strip = (a: string) => {
+    const rest = a.replace(new RegExp(`[${FOREIGN_SRC}]+`, 'g'), ' ').replace(/\s+/g, ' ').trim()
+    return rest.replace(/[\p{P}\p{S}\s\d]/gu, '').length >= 2 ? rest : null
+  }
+  const out = mine.map((a, i) => koEn(a, theirs.length === mine.length ? theirs[i] : null) ?? (hasForeign(a) ? strip(a) : null) ?? a)
   const joined = out.join(', ')
   return joined !== current ? joined : null
 }
@@ -276,6 +281,19 @@ export async function fillCountries(payload: Payload, deadline: number) {
       update picks set country = 'JP', country_checked_at = now()
       where country is null and split_part(artist_name, ', ', 1) ~ '[ぁ-んァ-ヶ]' returning id`)
   ).rows.length
+  // 아티스트 이름이 영어여도, 곡·앨범 제목에 가나가 있으면 일본 곡이에요 (한 아티스트의 곡 대부분이 그럴 때만)
+  quick += (
+    await db.drizzle.execute(sql`
+      update picks p set country = 'JP', country_checked_at = now()
+      from (
+        select lower(split_part(artist_name, ', ', 1)) as a
+        from picks
+        group by 1
+        having avg(case when coalesce(track, '') ~ '[ぁ-んァ-ヶ]' or coalesce(album, '') ~ '[ぁ-んァ-ヶ]' then 1 else 0 end) >= 0.5
+      ) x
+      where p.country is null and lower(split_part(p.artist_name, ', ', 1)) = x.a
+      returning p.id`)
+  ).rows.length
 
   // 2) 아티스트 페이지 「활동 지역」
   const linked = (
@@ -322,7 +340,11 @@ export async function fillCountries(payload: Payload, deadline: number) {
     if (Date.now() > deadline - 3000) break
     const started = Date.now()
     try {
-      const c = await countryFromMusicBrainz(name)
+      let c = await countryFromMusicBrainz(name)
+      for (let k = 0; c === 'busy' && k < 2 && Date.now() < deadline - 8000; k++) {
+        await new Promise((r) => setTimeout(r, 2500))
+        c = await countryFromMusicBrainz(name)
+      }
       if (c === 'busy') {
         busy = true
         break
