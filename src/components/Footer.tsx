@@ -22,11 +22,8 @@ export async function Footer() {
         <div className="footer__cols">
           <div className="footer__col">
             <p className="label">Sitemap</p>
-            <Link href="/">Home</Link>
             <Link href="/articles">Articles</Link>
             <Link href="/picks">Editor&apos;s Picks</Link>
-            <Link href="/essential">Essential</Link>
-            <Link href="/playlists">Playlists</Link>
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
           </div>
@@ -43,7 +40,6 @@ export async function Footer() {
           <div className="footer__col">
             <p className="label">Contact</p>
             {s.email ? <a href={`mailto:${s.email}`}>{s.email}</a> : null}
-            <Link href="/contact">문의하기</Link>
           </div>
         </div>
       </div>
