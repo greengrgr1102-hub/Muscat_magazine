@@ -91,6 +91,122 @@ export async function fillReleaseTypes(payload: Payload, deadline: number) {
   return { done, missed, busy, left: Math.max(0, todo.length - done - missed) }
 }
 
+/* ───────── 이름은 한국어·영어로만 ───────── */
+// 한국 독자가 못 읽는 글자(일본어 가나·한자, 중국어, 키릴 문자 등)가 들어간 곡·아티스트·앨범 이름은
+// Spotify 영어 화면에 나오는 이름으로 바꿔요. (예: 米津玄師 → Kenshi Yonezu)
+// 영어 이름이 따로 없으면, 「東京酒吐座(Tokyo Shoegazer)」처럼 영어·한국어 이름이 같이 적힌 경우만 그 부분을 남겨요.
+
+// 한글·라틴 문자(악센트 포함)·숫자·기호가 아닌 글자
+const FOREIGN_SRC = '぀-ヿ㐀-鿿豈-﫿ｦ-ﾟЀ-ӿͰ-Ͽ֐-׿؀-ۿऀ-ॿ฀-๿'
+const FOREIGN = new RegExp(`[${FOREIGN_SRC}]`)
+const hasForeign = (s?: string | null) => Boolean(s && FOREIGN.test(s))
+
+/** 영어 이름이 없을 때: 띄어쓰기·괄호로 나뉜 조각 중 외국 글자로만 된 조각을 빼요. 한 조각 안에 섞여 있으면 손대지 않아요. */
+export function dropForeignParts(name: string): string | null {
+  // 「怪獣の花唄 - replica -」처럼 뒤에 붙은 버전 표시만 영어인 경우는 빼면 안 돼요
+  if (/\s[-–—~]\s?/.test(name)) return null
+  const tokens = name.split(/([\s()（）[\]【】/|·・]+)/)
+  const words = tokens.filter((t, i) => i % 2 === 0 && t)
+  if (!words.some((w) => FOREIGN.test(w))) return null
+  if (words.some((w) => FOREIGN.test(w) && new RegExp(`[^${FOREIGN_SRC}\\s]`).test(w.replace(/[\p{P}\p{S}]/gu, '')))) return null
+  const kept = words.filter((w) => !FOREIGN.test(w))
+  const out = kept.join(' ').replace(/\s+/g, ' ').trim()
+  return out.replace(/[\p{P}\p{S}\s]/gu, '').length >= 2 ? out : null
+}
+
+/** 한 이름을 한국어·영어로: Spotify 영어 이름 → 섞인 이름에서 외국 글자 빼기 → 못 하면 그대로 */
+function koEn(current: string | null, english: string | null | undefined) {
+  if (!current || !hasForeign(current)) return null
+  if (english && !hasForeign(english) && english !== current) return english
+  return dropForeignParts(current)
+}
+function koEnArtists(current: string, english: string | null | undefined) {
+  if (!hasForeign(current)) return null
+  const mine = current.split(', ')
+  const theirs = (english || '').split(', ')
+  const out = mine.map((a, i) => koEn(a, theirs.length === mine.length ? theirs[i] : null) ?? a)
+  const joined = out.join(', ')
+  return joined !== current ? joined : null
+}
+
+async function englishNames(trackId: string): Promise<{ track: string; artist: string; album: string | null } | 'busy' | null> {
+  const t = await page(`https://open.spotify.com/track/${trackId}`)
+  if (t === 'busy') return 'busy'
+  if (!t) return null
+  const title = metaOf(t, 'og:title')
+  const parts = (metaOf(t, 'og:description') || '').split(' · ').map((p) => p.trim())
+  if (!title || parts.length < 3) return null
+  // "Artist1, Artist2 · Album · Song · 2025"
+  const artist = parts.length >= 4 ? parts.slice(0, parts.length - 3).join(' · ') : parts[0]
+  const album = parts.length >= 4 ? parts[parts.length - 3] : null
+  return { track: title, artist, album }
+}
+
+export async function fillEnglishNames(payload: Payload, deadline: number) {
+  const db = dbOf(payload)
+  const re = sql.raw(`'[${FOREIGN_SRC}]'`)
+  // 앨범 단위로 이어서 (중간에 멈춰도 한 앨범이 두 이름으로 갈라지는 일이 적게)
+  const todo = (
+    await db.drizzle.execute(sql`
+      select id, spotify_url, track, artist_name, album, right(cover_url, 24) as ck
+      from picks
+      where en_checked_at is null
+        and (track ~ ${re} or artist_name ~ ${re} or album ~ ${re})
+      order by right(cover_url, 24), id
+      limit 300`)
+  ).rows.map((r) => ({
+    id: Number(r.id),
+    sid: parseSpotify(String(r.spotify_url))?.id,
+    track: (r.track as string) || null,
+    artist: String(r.artist_name),
+    album: (r.album as string) || null,
+    ck: (r.ck as string) || null,
+  }))
+  let changed = 0
+  let busy = false
+  let i = 0
+  const worker = async () => {
+    while (i < todo.length && !busy && Date.now() < deadline - 6000) {
+      const p = todo[i++]
+      try {
+        const en = p.sid ? await englishNames(p.sid) : null
+        if (en === 'busy') {
+          busy = true
+          break
+        }
+        const track = koEn(p.track, en?.track)
+        const artist = koEnArtists(p.artist, en?.artist)
+        const album = koEn(p.album, en?.album)
+        // 가나가 들어간 아티스트 이름은 일본 — 영어로 바꾸기 전에 나라부터 적어 둬요
+        const first = p.artist.split(', ')[0]
+        const kana = /[\u3040-\u30ff]/.test(first) && !/[\uac00-\ud7a3]/.test(first)
+        await db.drizzle.execute(sql`
+          update picks set
+            track = coalesce(${track}::varchar, track),
+            artist_name = coalesce(${artist}::varchar, artist_name),
+            country = coalesce(country, ${kana ? 'JP' : null}::varchar),
+            en_checked_at = now()
+          where id = ${p.id}`)
+        if (album && p.ck) {
+          await db.drizzle.execute(sql`update picks set album = ${album} where right(cover_url, 24) = ${p.ck} and album = ${p.album}`)
+        }
+        await db.drizzle.execute(sql`update picks set label = coalesce(track, 'Untitled') || ' — ' || artist_name where id = ${p.id}`)
+        if (track || artist || album) changed++
+      } catch {
+        // 다음에 다시
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: 4 }, worker))
+  const left = Number(
+    (
+      await db.drizzle.execute(sql`
+        select count(*)::int as c from picks where en_checked_at is null and (track ~ ${re} or artist_name ~ ${re} or album ~ ${re})`)
+    ).rows[0]?.c || 0,
+  )
+  return { changed, busy, left }
+}
+
 /* ───────── 나라 ───────── */
 
 // 아티스트 페이지 「활동 지역」에 적힌 말 → 나라 코드
@@ -240,10 +356,19 @@ export async function fillCountries(payload: Payload, deadline: number) {
 /** 둘 다 시간 안에 할 수 있는 만큼 (서로 다른 사이트라 같이 돌려요) */
 export async function fillFilters(payload: Payload, budgetMs = 45_000) {
   const deadline = Date.now() + budgetMs
-  const [types, countries] = await Promise.all([fillReleaseTypes(payload, deadline), fillCountries(payload, deadline)])
+  // 나라는 일본어 이름(가나)으로도 찾으니까, 이름을 영어로 바꾸기 전에 빠른 단계부터 끝내요.
+  const countriesP = fillCountries(payload, deadline)
+  await new Promise((r) => setTimeout(r, 1500))
+  const spotifySide = async () => {
+    const en = await fillEnglishNames(payload, deadline)
+    const types = en.busy ? { done: 0, missed: 0, busy: true, left: -1 } : await fillReleaseTypes(payload, deadline)
+    return { en, types }
+  }
+  const [{ en, types }, countries] = await Promise.all([spotifySide(), countriesP])
   const parts = [
+    `외국어 이름 ${en.changed}곡을 한국어·영어로 바꿈${en.left ? ` (남은 곡 ${en.left}곡)` : ''}`,
     `앨범 형태 ${types.done}개 채움${types.left ? ` (남은 앨범 ${types.left}개${types.busy ? ', Spotify가 잠깐 쉬어 가재서 멈춤' : ''})` : ''}`,
     `나라: ${countries.quick}곡은 이름·아티스트 정보로, 아티스트 ${countries.found}명은 MusicBrainz로 채움${countries.left ? ` (남은 아티스트 ${countries.left}명)` : ''}`,
   ]
-  return { types, countries, message: parts.join(' · ') }
+  return { en, types, countries, message: parts.join(' · ') }
 }

@@ -591,6 +591,7 @@ export interface Pick {
   country?: string | null;
   typeCheckedAt?: string | null;
   countryCheckedAt?: string | null;
+  enCheckedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -900,6 +901,7 @@ export interface PicksSelect<T extends boolean = true> {
   country?: T;
   typeCheckedAt?: T;
   countryCheckedAt?: T;
+  enCheckedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

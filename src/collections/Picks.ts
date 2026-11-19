@@ -212,5 +212,7 @@ export const Picks: CollectionConfig = {
     // 자동 채우기를 한 번 해 봤는지 (못 찾았으면 한동안 다시 안 찾아요)
     { name: 'typeCheckedAt', type: 'date', admin: { hidden: true } },
     { name: 'countryCheckedAt', type: 'date', admin: { hidden: true } },
+    // 일본어 이름을 영어 이름으로 바꿔 봤는지
+    { name: 'enCheckedAt', type: 'date', admin: { hidden: true } },
   ],
 }
