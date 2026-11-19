@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { currentAdmin } from '@/lib/admin'
 import { formatDate } from '@/lib/data'
 import { redirectUri, spotifyKeyProblem } from '@/lib/spotify'
-import { PlaylistForm, RenameButton, SyncButton } from './SpotifyForms'
+import { AlbumNamesButton, PlaylistForm, RenameButton, SyncButton } from './SpotifyForms'
 
 export const metadata: Metadata = { title: 'Spotify 연동', robots: { index: false, follow: false } }
 
@@ -94,6 +94,15 @@ export default async function SpotifyPage({ searchParams }: { searchParams: Prom
           {typeof cfg.renameOffset === 'number' ? ` 지금 ${cfg.renameOffset.toLocaleString()}곡까지 확인했어요.` : ''}
         </p>
         <RenameButton />
+      </div>
+
+      <div className="stack-12">
+        <p className="label">앨범 이름 채우기</p>
+        <p className="muted small">
+          앨범 이름이 비어 있는 앨범을 Spotify 공개 곡 페이지에서 찾아 채워요. API 요청 제한과 상관없이 돼요. 한 번에 다 안 되면 몇 번
+          더 눌러 주세요. 새벽 예약 실행 때도 자동으로 이어서 해요.
+        </p>
+        <AlbumNamesButton />
       </div>
     </section>
   )

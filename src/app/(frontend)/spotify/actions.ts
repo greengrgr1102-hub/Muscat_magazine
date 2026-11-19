@@ -2,7 +2,7 @@
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { getClient } from '@/lib/data'
-import { playlistId, renameToKorean, syncPlaylist } from '@/lib/spotify'
+import { fillAlbumNames, playlistId, renameToKorean, syncPlaylist } from '@/lib/spotify'
 
 async function requireUser() {
   const payload = await getClient()
@@ -37,4 +37,11 @@ export async function renameNow() {
   const r = await renameToKorean(payload)
   revalidatePath('/picks')
   return r.error ? { error: r.error } : { ok: r.ok }
+}
+
+export async function fillAlbumsNow() {
+  const payload = await requireUser()
+  const r = await fillAlbumNames(payload, 45_000)
+  revalidatePath('/picks')
+  return { ok: r.message }
 }

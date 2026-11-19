@@ -374,3 +374,100 @@ export async function renameToKorean(payload: Payload) {
     return { error: busy || (e instanceof Error ? e.message : '곡 정보를 고치는 중 문제가 생겼어요.') }
   }
 }
+
+// ---------- 앨범 이름 채우기 (Spotify 공개 곡 페이지에서) ----------
+// API 요청 제한에 걸려도 앨범 이름을 채울 수 있게, 누구나 보는 곡 페이지(open.spotify.com/track/…)의
+// 미리보기 정보(og:description = "아티스트 · 앨범 · 노래 · 연도")를 읽어요.
+// 같은 커버를 쓰는 곡들은 같은 앨범이라, 앨범마다 한 곡만 읽고 나머지 곡에도 같이 넣어요.
+const decodeHtml = (s: string) =>
+  s
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+
+function metaOf(html: string, prop: string) {
+  const re = new RegExp(`<meta[^>]+(?:property|name)="${prop}"[^>]+content="([^"]*)"`, 'i')
+  const m = html.match(re) || html.match(new RegExp(`<meta[^>]+content="([^"]*)"[^>]+(?:property|name)="${prop}"`, 'i'))
+  return m ? decodeHtml(m[1]) : null
+}
+
+async function albumFromTrackPage(trackId: string): Promise<{ album: string; release?: string } | 'busy' | null> {
+  const res = await fetch(`https://open.spotify.com/track/${trackId}`, {
+    headers: {
+      'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.5',
+      'User-Agent': 'Mozilla/5.0 (compatible; MuscatMagazineBot/1.0; +https://muscat-magazine.vercel.app)',
+    },
+    cache: 'no-store',
+  })
+  if (res.status === 429) return 'busy'
+  if (!res.ok) return null
+  const html = await res.text()
+  const desc = metaOf(html, 'og:description')
+  if (!desc) return null
+  const parts = desc.split(' · ').map((p) => p.trim())
+  // "아티스트 · 앨범 · 노래 · 2010" → 끝에서 세 번째가 앨범 (아티스트 이름에 쉼표가 있어도 안전)
+  const album = parts.length >= 4 ? parts[parts.length - 3] : parts.length >= 2 ? parts[1] : null
+  if (!album) return null
+  const rel = metaOf(html, 'music:release_date') || undefined
+  return { album, release: rel ? rel.slice(0, 10) : undefined }
+}
+
+export async function fillAlbumNames(payload: Payload, budgetMs = 45_000) {
+  const deadline = Date.now() + budgetMs
+  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const todo = (
+    await db.drizzle.execute(sql`
+      select right(cover_url, 24) as key, min(spotify_url) as url
+      from picks
+      where cover_url like 'https://i.scdn.co/image/%'
+      group by right(cover_url, 24)
+      having max(album) is null
+      limit 1500`)
+  ).rows.map((r) => ({ key: String(r.key), id: parseSpotify(String(r.url))?.id }))
+  let done = 0
+  let failed = 0
+  let busy = false
+  let i = 0
+  const worker = async () => {
+    while (i < todo.length && !busy && Date.now() < deadline - 4000) {
+      const t = todo[i++]
+      if (!t.id) {
+        failed++
+        continue
+      }
+      try {
+        const r = await albumFromTrackPage(t.id)
+        if (r === 'busy') {
+          busy = true
+          break
+        }
+        if (!r) {
+          failed++
+          continue
+        }
+        await db.drizzle.execute(sql`
+          update picks set album = ${r.album}, release_date = coalesce(release_date, ${r.release ?? null}::varchar)
+          where right(cover_url, 24) = ${t.key} and album is null`)
+        done++
+      } catch {
+        failed++
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: 6 }, worker))
+  const left = Math.max(0, todo.length - done - failed)
+  return {
+    done,
+    failed,
+    left,
+    message: busy
+      ? `앨범 ${done}개 이름을 채웠어요. Spotify가 잠깐 쉬어 가재서 멈췄어요. 조금 뒤 다시 눌러 주세요.`
+      : left
+        ? `앨범 ${done}개 이름을 채웠어요. 남은 앨범 ${left}개 — 한 번 더 누르면 이어서 해요.`
+        : `앨범 이름 채우기를 마쳤어요. (이번에 ${done}개${failed ? `, 못 찾은 앨범 ${failed}개` : ''})`,
+  }
+}

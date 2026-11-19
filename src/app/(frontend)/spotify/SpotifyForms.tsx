@@ -1,6 +1,6 @@
 'use client'
 import { useActionState, useTransition, useState } from 'react'
-import { renameNow, savePlaylist, syncNow } from './actions'
+import { renameNow, fillAlbumsNow, savePlaylist, syncNow } from './actions'
 
 type R = { ok?: string; error?: string } | null
 
@@ -42,6 +42,20 @@ export function RenameButton() {
     <div className="stack-12">
       <button className="btn btn--outline" disabled={pending} onClick={() => start(async () => setRes(await renameNow()))}>
         <span>{pending ? '맞추는 중… (최대 40초)' : '곡 정보 새로 고치기'}</span>
+      </button>
+      {res?.ok ? <p className="small" style={{ color: 'var(--accent-ink)' }}>{res.ok}</p> : null}
+      {res?.error ? <p className="small" style={{ color: '#B3261E' }}>{res.error}</p> : null}
+    </div>
+  )
+}
+
+export function AlbumNamesButton() {
+  const [pending, start] = useTransition()
+  const [res, setRes] = useState<R>(null)
+  return (
+    <div className="stack-12">
+      <button className="btn btn--outline" disabled={pending} onClick={() => start(async () => setRes(await fillAlbumsNow()))}>
+        <span>{pending ? '채우는 중… (최대 45초)' : '앨범 이름 채우기'}</span>
       </button>
       {res?.ok ? <p className="small" style={{ color: 'var(--accent-ink)' }}>{res.ok}</p> : null}
       {res?.error ? <p className="small" style={{ color: '#B3261E' }}>{res.error}</p> : null}
