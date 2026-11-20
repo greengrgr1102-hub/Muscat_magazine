@@ -4,6 +4,7 @@ import { cache } from 'react'
 import { getPayload, type Where } from 'payload'
 import config from '@payload-config'
 import type { Article } from '@/payload-types'
+import { ACCENT_FROM, ACCENT_TO, KEEP, searchKey } from './searchKey'
 
 export const getClient = cache(async () => getPayload({ config: await config }))
 
@@ -123,32 +124,119 @@ export async function articleCountFor(field: 'artists' | 'genres', id: number | 
   return res.totalDocs
 }
 
+// DB 글자를 searchKey()와 같은 규칙으로 고르게 만드는 SQL
+const sqlKey = (col: string) =>
+  sql`regexp_replace(translate(lower(coalesce(${sql.raw(col)}, '')), ${ACCENT_FROM}, ${ACCENT_TO}), ${`[^${KEEP}]`}, '', 'g')`
+
+// 장르 이름·주소·다른 이름(한국어 등)으로 찾기. 딱 맞을수록 앞에.
+async function searchGenres(key: string) {
+  const payload = await getClient()
+  const [all, used] = await Promise.all([
+    payload.find({ collection: 'genres', limit: 1000, depth: 0, pagination: false }),
+    getGenresByUse(),
+  ])
+  const n = new Map(used.map((g) => [g.id, g.n]))
+  const hits: { id: number; name: string; slug: string; n: number; score: number }[] = []
+  for (const g of all.docs) {
+    const keys = [g.name, g.slug, ...String((g as { aliases?: string | null }).aliases || '').split(/[,，、\n]/)]
+      .map(searchKey)
+      .filter(Boolean)
+    let score = 0
+    for (const k of keys) {
+      if (k === key) score = Math.max(score, 3)
+      else if (k.startsWith(key)) score = Math.max(score, 2)
+      else if (key.length >= 2 && k.includes(key)) score = Math.max(score, 1)
+      else if (k.length >= 3 && key.includes(k)) score = Math.max(score, 1) // 「시티팝 추천」처럼 장르 이름이 검색어 안에 있을 때
+    }
+    if (score) hits.push({ id: Number(g.id), name: g.name, slug: String(g.slug), n: n.get(Number(g.id)) || 0, score })
+  }
+  return hits.sort((a, b) => b.score - a.score || b.n - a.n).slice(0, 12)
+}
+
+export type SearchSong = { id: number; track: string | null; artist: string; album: string | null; cover: string | null }
+export type SearchAlbum = { key: string; album: string; artist: string; cover: string | null; n: number }
+
+/**
+ * 통합 검색: 장르 · 아티스트 · 앨범 · 곡 · 아티클.
+ * 띄어쓰기·하이픈·대소문자·악센트는 무시하고, 장르는 한국어 이름으로도 찾아요.
+ */
 export async function search(q: string) {
   const payload = await getClient()
   const term = q.trim()
-  if (!term) return { artists: [], articles: [] }
-  const [artists, articles] = await Promise.all([
-    payload.find({
-      collection: 'artists',
-      where: { or: [{ name: { like: term } }, { nameAlt: { like: term } }] },
-      limit: 20,
-      depth: 1,
-    }),
-    findArticles({
-      where: { or: [{ title: { like: term } }, { excerpt: { like: term } }, { tags: { like: term } }] },
-      limit: 24,
-    }),
+  const key = searchKey(term)
+  const empty = { genres: [], artists: [], pickArtists: [], albums: [], songs: [], articles: [] as Article[] }
+  if (!term || !key) return empty
+  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const like = `%${key}%`
+
+  const [genres, artistDocs, rows] = await Promise.all([
+    searchGenres(key),
+    payload.find({ collection: 'artists', limit: 1000, depth: 1, pagination: false }),
+    db.drizzle.execute(sql`
+      select id, track, artist_name, album, cover_url,
+             ${sqlKey('track')} as kt, ${sqlKey('artist_name')} as ka, ${sqlKey('album')} as kb
+      from picks
+      where ${sqlKey('track')} like ${like} or ${sqlKey('artist_name')} like ${like} or ${sqlKey('album')} like ${like}
+      order by picked_at desc nulls last
+      limit 600`),
   ])
-  // 아티스트 이름으로 찾은 경우 그 아티스트의 글도 함께 보여 줍니다.
-  let byArtist: Article[] = []
-  if (artists.docs.length) {
-    const res = await findArticles({ where: { artists: { in: artists.docs.map((a) => a.id) } }, limit: 24 })
-    byArtist = res.docs
+
+  // 에디터가 만든 아티스트 페이지 (이름·다른 이름)
+  const artists = artistDocs.docs
+    .map((a) => {
+      const ks = [a.name, (a as { nameAlt?: string | null }).nameAlt].map(searchKey).filter(Boolean)
+      const score = ks.some((k) => k === key) ? 3 : ks.some((k) => k.startsWith(key)) ? 2 : ks.some((k) => k.includes(key)) ? 1 : 0
+      return { a, score }
+    })
+    .filter((x) => x.score)
+    .sort((x, y) => y.score - x.score)
+    .map((x) => x.a)
+    .slice(0, 20)
+  const pageNames = new Set(artists.flatMap((a) => [a.name, (a as { nameAlt?: string | null }).nameAlt].map(searchKey)))
+
+  // 곡 기록에서 찾은 아티스트 (페이지가 없는 아티스트도)
+  const artistHit = new Map<string, { name: string; n: number; exact: boolean }>()
+  const songs: (SearchSong & { s: number })[] = []
+  const albums = new Map<string, SearchAlbum & { s: number }>()
+  for (const r of rows.rows) {
+    const kt = String(r.kt || '')
+    const ka = String(r.ka || '')
+    const kb = String(r.kb || '')
+    const artist = String(r.artist_name || '')
+    const cover = (r.cover_url as string | null) || null
+    if (kt.includes(key)) songs.push({ id: Number(r.id), track: (r.track as string) || null, artist, album: (r.album as string) || null, cover, s: kt === key ? 2 : kt.startsWith(key) ? 1 : 0 })
+    if (ka.includes(key)) {
+      for (const one of artist.split(', ')) {
+        const k1 = searchKey(one)
+        if (!k1.includes(key) || pageNames.has(k1)) continue
+        const h = artistHit.get(k1) || { name: one, n: 0, exact: k1 === key }
+        h.n++
+        artistHit.set(k1, h)
+      }
+    }
+    if (kb.includes(key) && r.album && cover && /\/image\//.test(cover)) {
+      const ck = cover.slice(-24)
+      const al = albums.get(ck) || { key: ck, album: String(r.album), artist: artist.split(', ')[0], cover, n: 0, s: kb === key ? 2 : kb.startsWith(key) ? 1 : 0 }
+      al.n++
+      albums.set(ck, al)
+    }
   }
-  const seen = new Set<number | string>()
-  const merged = [...articles.docs, ...byArtist].filter((a) => (seen.has(a.id) ? false : (seen.add(a.id), true)))
-  merged.sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''))
-  return { artists: artists.docs, articles: merged }
+  const pickArtists = [...artistHit.values()].sort((a, b) => Number(b.exact) - Number(a.exact) || b.n - a.n).slice(0, 20)
+
+  // 아티클: 제목·요약·태그 + 찾은 아티스트·장르가 붙은 글
+  const or: Where[] = [{ title: { like: term } }, { excerpt: { like: term } }, { tags: { like: term } }]
+  if (artists.length) or.push({ artists: { in: artists.map((a) => a.id) } })
+  if (genres.length && genres[0].score >= 2) or.push({ genres: { in: genres.filter((g) => g.score >= 2).map((g) => g.id) } })
+  const articles = await findArticles({ where: { or }, limit: 24 })
+
+  return {
+    genres,
+    artists,
+    pickArtists,
+    albums: [...albums.values()].sort((a, b) => b.s - a.s || b.n - a.n).slice(0, 12),
+    songs: songs.sort((a, b) => b.s - a.s).slice(0, 30),
+    articles: articles.docs,
+  }
 }
 
 export async function relatedArticles(article: Article, limit = 3) {

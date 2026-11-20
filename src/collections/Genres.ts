@@ -15,6 +15,12 @@ export const Genres: CollectionConfig = {
     { name: 'name', label: '장르 이름', type: 'text', required: true, admin: { description: '예: Shoegaze' } },
     slugField('name'),
     {
+      name: 'aliases',
+      label: '다른 이름',
+      type: 'text',
+      admin: { description: '검색에 걸리게 할 다른 이름들. 쉼표로 구분 (예: 시티팝, 시티 팝). 띄어쓰기·하이픈 차이는 자동으로 같게 봐요.' },
+    },
+    {
       name: 'description',
       label: '설명',
       type: 'textarea',

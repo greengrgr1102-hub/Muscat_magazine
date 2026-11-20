@@ -522,6 +522,10 @@ export interface Genre {
    */
   slug?: string | null;
   /**
+   * 검색에 걸리게 할 다른 이름들. 쉼표로 구분 (예: 시티팝, 시티 팝). 띄어쓰기·하이픈 차이는 자동으로 같게 봐요.
+   */
+  aliases?: string | null;
+  /**
    * 장르 페이지 상단에 보이는 짧은 소개 (선택)
    */
   description?: string | null;
@@ -574,7 +578,7 @@ export interface Pick {
   youtubeId?: string | null;
   youtubeMissAt?: string | null;
   /**
-   * Spotify에서 자동으로 가져와요
+   * Spotify에서 자동으로 가져와요. 「The 2nd Mini Album」 같은 설명은 저장할 때 떼요.
    */
   album?: string | null;
   /**
@@ -961,6 +965,7 @@ export interface ArtistsSelect<T extends boolean = true> {
 export interface GenresSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
+  aliases?: T;
   description?: T;
   order?: T;
   updatedAt?: T;

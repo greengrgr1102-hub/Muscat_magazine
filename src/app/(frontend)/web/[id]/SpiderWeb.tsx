@@ -202,7 +202,7 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
   const sharedOf = (a: Node, b: Node) =>
     a.genres.filter((g) => b.genres.includes(g)).sort((x, y) => (gw[y] ?? 1) - (gw[x] ?? 1))
   // 연결 강도 0~1: 겹치는 장르의 점수 합
-  const strengthOf = (a: Node, b: Node) => Math.min(1, sharedOf(a, b).reduce((t, g) => t + (gw[g] ?? 1), 0) / 14)
+  const strengthOf = (a: Node, b: Node) => Math.min(1, sharedOf(a, b).reduce((t, g) => t + (gw[g] ?? 1), 0) / 30)
 
   const neighborsOfFocus = new Set(edges.filter(([a, b]) => a === focus || b === focus).flatMap(([a, b]) => [a, b]))
   const trailSet = new Set(trail)
@@ -389,7 +389,7 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
                   <span className="web__why-bar">
                     <span style={{ width: `${Math.max(8, Math.round(peekStrength * 100))}%` }} />
                   </span>
-                  {peekStrength > 0.66 ? '아주 가까워요' : peekStrength > 0.33 ? '꽤 비슷해요' : '살짝 닮았어요'}
+                  {peekStrength > 0.6 ? '아주 가까워요' : peekStrength > 0.3 ? '꽤 비슷해요' : '살짝 닮았어요'}
                 </p>
               </>
             ) : (
