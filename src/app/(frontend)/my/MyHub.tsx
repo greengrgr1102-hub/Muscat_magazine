@@ -8,7 +8,7 @@ import { MyPlaylist } from './MyPlaylist'
 
 const small = (u?: string | null) => (u ? u.replace('ab67616d0000b273', 'ab67616d00004851') : null)
 
-// My — 이 브라우저에 쌓인 내 기록을 한곳에.
+// My Room — 이 브라우저에 쌓인 내 기록을 한곳에.
 // 지금은 로그인 없이 브라우저에 저장되고, 나중에 로그인·결제를 붙이면 계정 페이지(주문 내역 등)로 넓혀요.
 export function MyHub() {
   const { player } = useMyPlaylist()
@@ -25,9 +25,9 @@ export function MyHub() {
   return (
     <>
       <section className="page-title wrap">
-        <p className="label">My</p>
+        <p className="label">My Room</p>
         <h1 className="page-title__h">
-          <span className="display-lg">My</span>
+          <span className="display-lg">My Room</span>
         </h1>
         <p className="muted page-title__desc">
           {mounted && played.size ? `지금까지 ${played.size.toLocaleString()}곡을 들었어요. ` : ''}
