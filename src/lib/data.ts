@@ -129,7 +129,9 @@ const sqlKey = (col: string) =>
   sql`regexp_replace(translate(lower(coalesce(${sql.raw(col)}, '')), ${ACCENT_FROM}, ${ACCENT_TO}), ${`[^${KEEP}]`}, '', 'g')`
 
 // 장르 이름·주소·다른 이름(한국어 등)으로 찾기. 딱 맞을수록 앞에.
-async function searchGenres(key: string) {
+async function searchGenres(key: string, term: string) {
+  const words = term.split(/\s+/).map(searchKey).filter(Boolean)
+  const loose: { id: number; name: string; slug: string; n: number; score: number }[] = []
   const payload = await getClient()
   const [all, used] = await Promise.all([
     payload.find({ collection: 'genres', limit: 1000, depth: 0, pagination: false }),
@@ -146,11 +148,14 @@ async function searchGenres(key: string) {
       if (k === key) score = Math.max(score, 3)
       else if (k.startsWith(key)) score = Math.max(score, 2)
       else if (key.length >= 2 && k.includes(key)) score = Math.max(score, 1)
-      else if (k.length >= 3 && key.includes(k)) score = Math.max(score, 1) // 「시티팝 추천」처럼 장르 이름이 검색어 안에 있을 때
     }
-    if (score) hits.push({ id: Number(g.id), name: g.name, slug: String(g.slug), n: n.get(Number(g.id)) || 0, score })
+    const id = Number(g.id)
+    if (score) hits.push({ id, name: g.name, slug: String(g.slug), n: n.get(id) || 0, score })
+    else if (words.length > 1 && keys.some((k) => words.includes(k))) loose.push({ id, name: g.name, slug: String(g.slug), n: n.get(id) || 0, score: 1 })
   }
-  return hits.sort((a, b) => b.score - a.score || b.n - a.n).slice(0, 12)
+  // 「시티팝 추천」처럼 여러 낱말 중 하나가 장르 이름일 때 — 더 잘 맞는 장르가 없을 때만
+  const out = hits.some((h) => h.score >= 2) ? hits : [...hits, ...loose]
+  return out.sort((a, b) => b.score - a.score || b.n - a.n).slice(0, 12)
 }
 
 export type SearchSong = { id: number; track: string | null; artist: string; album: string | null; cover: string | null }
@@ -170,7 +175,7 @@ export async function search(q: string) {
   const like = `%${key}%`
 
   const [genres, artistDocs, rows] = await Promise.all([
-    searchGenres(key),
+    searchGenres(key, term),
     payload.find({ collection: 'artists', limit: 1000, depth: 1, pagination: false }),
     db.drizzle.execute(sql`
       select id, track, artist_name, album, cover_url,
