@@ -1,4 +1,5 @@
 import { fillArtistInfo } from './fillArtistInfo'
+import { checkSavedYoutube } from './youtube'
 import 'server-only'
 import type { Payload } from 'payload'
 import { sql } from '@payloadcms/db-postgres'
@@ -442,6 +443,8 @@ export async function cleanAlbumNames(payload: Payload) {
 export async function fillFilters(payload: Payload, budgetMs = 45_000) {
   const deadline = Date.now() + budgetMs
   const albumsCleaned = await cleanAlbumNames(payload)
+  // 저장해 둔 YouTube 영상 중 쇼츠·짧은 클립 걸러내기 (50곡씩)
+  const yt = await checkSavedYoutube(payload).catch(() => ({ checked: 0, cleared: 0, left: 0 }))
   // 나라는 일본어 이름(가나)으로도 찾으니까, 이름을 영어로 바꾸기 전에 빠른 단계부터 끝내요.
   // MusicBrainz는 1초에 한 번만 → 나라 채우기와 아티스트 멤버·다른 이름 채우기를 15분마다 번갈아 해요
   const infoTurn = Math.floor(Date.now() / 900_000) % 2 === 1
@@ -472,6 +475,7 @@ export async function fillFilters(payload: Payload, budgetMs = 45_000) {
     `앨범 형태 ${types.done}개 채움${types.left > 0 ? ` (남은 앨범 ${types.left}개${types.busy ? ', Spotify가 잠깐 쉬어 가재서 멈춤' : ''})` : ''}`,
     `나라: ${countries.quick}곡은 이름·아티스트 정보로, 아티스트 ${countries.found}명은 MusicBrainz로 채움${countries.left ? ` (남은 아티스트 ${countries.left}명)` : ''}`,
   ]
+  if (yt.checked) parts.push(`YouTube 영상 ${yt.checked}개 길이 확인, 짧은 영상 ${yt.cleared}개 지움${yt.left ? ` (남은 영상 ${yt.left}개)` : ''}`)
   if (info.left !== -1) parts.push(`아티스트 멤버·다른 이름 ${info.done}명 확인${info.left > 0 ? ` (남은 아티스트 ${info.left}명)` : ''}`)
-  return { albumsCleaned, en, roman, types, countries, info, message: parts.join(' · ') }
+  return { albumsCleaned, en, roman, types, countries, info, yt, message: parts.join(' · ') }
 }

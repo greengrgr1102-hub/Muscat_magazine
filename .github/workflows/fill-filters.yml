@@ -21,7 +21,7 @@ jobs:
         run: |
           body=$(curl -sS --max-time 90 "https://muscat-magazine.vercel.app/spotify/sync?only=filters" || echo '{}')
           echo "$body" | jq -r '.filters.message // "응답 없음"'
-          left=$(echo "$body" | jq '[.filters.en.left, .filters.types.left, .filters.countries.left, .filters.info.left] | map(select(. != null and . > 0)) | length')
+          left=$(echo "$body" | jq '[.filters.en.left, .filters.types.left, .filters.countries.left, .filters.info.left, .filters.yt.left] | map(select(. != null and . > 0)) | length')
           busy=$(echo "$body" | jq '[.filters.en.busy, .filters.types.busy] | any')
           echo "left=$left" >> "$GITHUB_OUTPUT"
           echo "busy=$busy" >> "$GITHUB_OUTPUT"

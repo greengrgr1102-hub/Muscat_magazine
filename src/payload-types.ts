@@ -579,6 +579,7 @@ export interface Pick {
    */
   youtubeId?: string | null;
   youtubeMissAt?: string | null;
+  youtubeCheckedAt?: string | null;
   /**
    * Spotify에서 자동으로 가져와요. 「The 2nd Mini Album」 같은 설명은 저장할 때 떼요.
    */
@@ -926,6 +927,7 @@ export interface PicksSelect<T extends boolean = true> {
   label?: T;
   youtubeId?: T;
   youtubeMissAt?: T;
+  youtubeCheckedAt?: T;
   album?: T;
   releaseDate?: T;
   releaseType?: T;

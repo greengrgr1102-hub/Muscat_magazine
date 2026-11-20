@@ -174,6 +174,8 @@ export const Picks: CollectionConfig = {
       type: 'date',
       admin: { hidden: true },
     },
+    // 저장한 YouTube 영상 길이를 곡 길이와 맞춰 봤는지 (쇼츠·짧은 클립 걸러내기)
+    { name: 'youtubeCheckedAt', type: 'date', admin: { hidden: true } },
     {
       name: 'album',
       label: '앨범',

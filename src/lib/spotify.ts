@@ -486,7 +486,7 @@ export async function fillAlbumNames(payload: Payload, budgetMs = 45_000) {
 }
 
 /** Spotify 공개 곡 페이지에서 영어 이름 읽기 (YouTube 공식 음원은 영어 제목인 경우가 많아서) */
-export async function trackNamesEn(trackId: string): Promise<{ track: string; artists: string[] } | null> {
+export async function trackNamesEn(trackId: string): Promise<{ track: string; artists: string[]; duration: number | null } | null> {
   try {
     const res = await fetch(`https://open.spotify.com/track/${trackId}`, {
       headers: {
@@ -503,7 +503,8 @@ export async function trackNamesEn(trackId: string): Promise<{ track: string; ar
     if (!title || !desc) return null
     const parts = desc.split(' · ').map((p) => p.trim())
     const artistPart = parts.length >= 4 ? parts.slice(0, parts.length - 3).join(' · ') : parts[0]
-    return { track: title, artists: artistPart.split(', ').filter(Boolean) }
+    const dur = Number(metaOf(html, 'music:duration'))
+    return { track: title, artists: artistPart.split(', ').filter(Boolean), duration: dur > 0 ? dur : null }
   } catch {
     return null
   }

@@ -50,6 +50,39 @@ function score(it: SearchItem, n: Names) {
   return s
 }
 
+/** PT3M25S → 205초 */
+function isoSeconds(d?: string) {
+  const m = d?.match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/)
+  if (!m) return null
+  return (+(m[1] || 0)) * 86400 + (+(m[2] || 0)) * 3600 + (+(m[3] || 0)) * 60 + +(m[4] || 0)
+}
+
+/** 영상 길이 (영상 50개까지 한 번에, 1점만 써요). 지워졌거나 비공개면 빠져요. */
+async function videoSeconds(ids: string[], key: string): Promise<Map<string, number> | null> {
+  if (!ids.length) return new Map()
+  const url = new URL('https://www.googleapis.com/youtube/v3/videos')
+  url.search = new URLSearchParams({ part: 'contentDetails', id: ids.join(','), key }).toString()
+  const res = await fetch(url, { cache: 'no-store' }).catch(() => null)
+  if (!res?.ok) return null
+  const items = ((await res.json()) as { items?: { id: string; contentDetails?: { duration?: string } }[] }).items || []
+  const out = new Map<string, number>()
+  for (const it of items) {
+    const sec = isoSeconds(it.contentDetails?.duration)
+    if (sec !== null) out.set(it.id, sec)
+  }
+  return out
+}
+
+/**
+ * 영상 길이가 곡과 맞는지. 쇼츠·짧은 미리보기·티저를 걸러요.
+ * 곡 길이를 알면 ±15%(최소 20초)까지, 모르면 1분 이상이면 통과.
+ */
+function lengthOk(video: number | undefined, song: number | null | undefined) {
+  if (video === undefined) return false
+  if (song) return Math.abs(video - song) <= Math.max(20, song * 0.15)
+  return video >= 60
+}
+
 async function useQuota(payload: Payload) {
   const g = (await payload.findGlobal({ slug: 'youtube-usage', overrideAccess: true })) as { day?: string | null; count?: number | null }
   const day = kstDay()
@@ -110,14 +143,17 @@ export async function resolveYoutube(
       candidates: ranked.map((r) => ({ s: r.s, title: r.it.snippet?.title, channel: r.it.snippet?.channelTitle, id: r.it.id?.videoId })),
     }
   }
-  const best = ranked[0]
+  // 공식 채널 영상 중에서 곡 길이와 맞는 첫 영상 (쇼츠·짧은 클립은 버려요)
+  const good = ranked.filter((r) => r.s >= 10).slice(0, 6)
+  const secs = good.length ? await videoSeconds(good.map((r) => r.it.id!.videoId!), key) : null
+  const best = good.find((r) => (secs ? lengthOk(secs.get(r.it.id!.videoId!), en?.duration) : true))
   // 공식 채널 영상이 없거나 제목이 곡과 안 맞으면 쓰지 않아요 (Spotify로 재생)
-  if (!best || best.s < 10) {
+  if (!best) {
     await payload.update({ collection: 'picks', id: pickId, overrideAccess: true, data: { youtubeMissAt: new Date().toISOString() } })
     return { id: null, reason: 'no-match' }
   }
   const id = best.it.id!.videoId!
-  await payload.update({ collection: 'picks', id: pickId, overrideAccess: true, data: { youtubeId: id } })
+  await payload.update({ collection: 'picks', id: pickId, overrideAccess: true, data: { youtubeId: id, youtubeCheckedAt: new Date().toISOString() } })
   return { id }
 }
 
@@ -131,4 +167,44 @@ export async function markYoutubeBad(payload: Payload, pickId: number, videoId: 
     overrideAccess: true,
     data: { youtubeId: null, youtubeMissAt: new Date().toISOString() },
   })
+}
+
+/**
+ * 이미 저장해 둔 영상의 길이를 곡 길이와 맞춰 봐요 (한 번에 50곡, 1점).
+ * 쇼츠·짧은 클립이거나 지워진 영상이면 지워서, 다음에 들을 때 다시 찾게 해요.
+ */
+export async function checkSavedYoutube(payload: Payload) {
+  const key = process.env.YOUTUBE_API_KEY?.trim()
+  if (!key) return { checked: 0, cleared: 0, left: 0 }
+  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const { sql } = await import('@payloadcms/db-postgres')
+  const rows = (
+    await db.drizzle.execute(
+      sql`select id, youtube_id, spotify_url from picks where youtube_id is not null and youtube_checked_at is null order by id limit 50`,
+    )
+  ).rows
+  const left = Number(
+    (await db.drizzle.execute(sql`select count(*)::int as n from picks where youtube_id is not null and youtube_checked_at is null`)).rows[0]?.n || 0,
+  )
+  if (!rows.length) return { checked: 0, cleared: 0, left: 0 }
+  const secs = await videoSeconds(rows.map((r) => String(r.youtube_id)), key)
+  if (!secs) return { checked: 0, cleared: 0, left }
+  let cleared = 0
+  for (const r of rows) {
+    const vid = String(r.youtube_id)
+    const v = secs.get(vid)
+    let ok = v !== undefined && v >= 90 // 1분 반 넘으면 그대로 믿어요
+    if (!ok && v !== undefined) {
+      // 짧은 영상은 곡 길이를 확인해서 비교해요 (원래 짧은 곡일 수도 있으니)
+      const sid = parseSpotify(String(r.spotify_url || ''))?.id
+      const en = sid ? await trackNamesEn(sid) : null
+      ok = lengthOk(v, en?.duration)
+    }
+    const data = ok
+      ? { youtubeCheckedAt: new Date().toISOString() }
+      : { youtubeId: null, youtubeMissAt: null, youtubeCheckedAt: new Date().toISOString() }
+    if (!ok) cleared++
+    await payload.update({ collection: 'picks', id: Number(r.id), overrideAccess: true, data })
+  }
+  return { checked: rows.length, cleared, left: Math.max(0, left - rows.length) }
 }
