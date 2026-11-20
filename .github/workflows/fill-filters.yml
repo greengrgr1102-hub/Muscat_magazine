@@ -1,4 +1,4 @@
-# 곡·앨범 필터 정보(앨범 형태·나라)와 한국어·영어 이름을 15분마다 조금씩 채워요.
+# 곡·앨범 필터 정보(앨범 형태·나라), 한국어·영어 이름, 아티스트 멤버·다른 이름을 15분마다 조금씩 채워요.
 # Spotify·MusicBrainz가 한 번에 많이 물어보면 쉬어 가라고 해서 나눠서 해요.
 # 다 채우면 이 예약 실행은 스스로 꺼져요. (비밀값은 쓰지 않아요 — 누구나 부를 수 있는 사이트 주소만 불러요)
 name: 필터 정보 채우기
@@ -21,7 +21,7 @@ jobs:
         run: |
           body=$(curl -sS --max-time 90 "https://muscat-magazine.vercel.app/spotify/sync?only=filters" || echo '{}')
           echo "$body" | jq -r '.filters.message // "응답 없음"'
-          left=$(echo "$body" | jq '[.filters.en.left, .filters.types.left, .filters.countries.left] | map(select(. != null and . > 0)) | length')
+          left=$(echo "$body" | jq '[.filters.en.left, .filters.types.left, .filters.countries.left, .filters.info.left] | map(select(. != null and . > 0)) | length')
           busy=$(echo "$body" | jq '[.filters.en.busy, .filters.types.busy] | any')
           echo "left=$left" >> "$GITHUB_OUTPUT"
           echo "busy=$busy" >> "$GITHUB_OUTPUT"

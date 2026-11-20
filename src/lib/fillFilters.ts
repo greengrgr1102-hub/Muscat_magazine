@@ -1,3 +1,4 @@
+import { fillArtistInfo } from './fillArtistInfo'
 import 'server-only'
 import type { Payload } from 'payload'
 import { sql } from '@payloadcms/db-postgres'
@@ -460,6 +461,8 @@ export async function fillFilters(payload: Payload, budgetMs = 45_000) {
   }
   const [{ en, types }, countries] = await Promise.all([spotifySide(), countriesP])
   const roman = Date.now() < deadline - 5000 ? await romanizeNames(payload, deadline) : { changed: 0, scanned: 0 }
+  // 나라 채우기가 MusicBrainz를 다 쓴 뒤에 (1초에 한 번 규칙)
+  const info = Date.now() < deadline - 6000 ? await fillArtistInfo(payload, deadline) : { done: 0, found: 0, busy: false, left: -1 }
   const parts = [
     ...(albumsCleaned ? [`앨범 이름 ${albumsCleaned}개 정리`] : []),
     `영어 이름이 없는 ${roman.changed}곡은 로마자 발음으로`,
@@ -467,5 +470,6 @@ export async function fillFilters(payload: Payload, budgetMs = 45_000) {
     `앨범 형태 ${types.done}개 채움${types.left > 0 ? ` (남은 앨범 ${types.left}개${types.busy ? ', Spotify가 잠깐 쉬어 가재서 멈춤' : ''})` : ''}`,
     `나라: ${countries.quick}곡은 이름·아티스트 정보로, 아티스트 ${countries.found}명은 MusicBrainz로 채움${countries.left ? ` (남은 아티스트 ${countries.left}명)` : ''}`,
   ]
-  return { albumsCleaned, en, roman, types, countries, message: parts.join(' · ') }
+  if (info.left !== -1) parts.push(`아티스트 멤버·다른 이름 ${info.done}명 확인${info.left > 0 ? ` (남은 아티스트 ${info.left}명)` : ''}`)
+  return { albumsCleaned, en, roman, types, countries, info, message: parts.join(' · ') }
 }

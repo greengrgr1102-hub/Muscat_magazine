@@ -174,9 +174,10 @@ export async function search(q: string) {
   const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
   const like = `%${key}%`
 
-  const [genres, artistDocs, rows] = await Promise.all([
+  const [genres, artistDocs, infoDocs, rows] = await Promise.all([
     searchGenres(key, term),
     payload.find({ collection: 'artists', limit: 1000, depth: 1, pagination: false }),
+    payload.find({ collection: 'artist-info', limit: 5000, depth: 0, pagination: false }),
     db.drizzle.execute(sql`
       select id, track, artist_name, album, cover_url,
              ${sqlKey('track')} as kt, ${sqlKey('artist_name')} as ka, ${sqlKey('album')} as kb
@@ -186,11 +187,16 @@ export async function search(q: string) {
       limit 600`),
   ])
 
-  // 에디터가 만든 아티스트 페이지 (이름·다른 이름)
+  const hit = (ks: string[]) =>
+    ks.some((k) => k === key) ? 3 : ks.some((k) => k.startsWith(key)) ? 2 : key.length >= 2 && ks.some((k) => k.includes(key)) ? 1 : 0
+  const list = (v?: string | null) => String(v || '').split(/[,，、\n]/).map((x) => x.trim()).filter(Boolean)
+
+  // 에디터가 만든 아티스트 페이지 (이름·다른 이름·멤버 이름)
   const artists = artistDocs.docs
     .map((a) => {
       const ks = [a.name, (a as { nameAlt?: string | null }).nameAlt].map(searchKey).filter(Boolean)
-      const score = ks.some((k) => k === key) ? 3 : ks.some((k) => k.startsWith(key)) ? 2 : ks.some((k) => k.includes(key)) ? 1 : 0
+      const members = (a.members || []).map((m) => searchKey(m.name)).filter(Boolean)
+      const score = Math.max(hit(ks), hit(members) ? 2 : 0)
       return { a, score }
     })
     .filter((x) => x.score)
@@ -200,7 +206,7 @@ export async function search(q: string) {
   const pageNames = new Set(artists.flatMap((a) => [a.name, (a as { nameAlt?: string | null }).nameAlt].map(searchKey)))
 
   // 곡 기록에서 찾은 아티스트 (페이지가 없는 아티스트도)
-  const artistHit = new Map<string, { name: string; n: number; exact: boolean }>()
+  const artistHit = new Map<string, { name: string; n: number; exact: boolean; via?: string }>()
   const songs: (SearchSong & { s: number })[] = []
   const albums = new Map<string, SearchAlbum & { s: number }>()
   for (const r of rows.rows) {
@@ -225,6 +231,17 @@ export async function search(q: string) {
       al.n++
       albums.set(ck, al)
     }
+  }
+  // 아티스트 검색 정보: 다른 이름이나 멤버 이름으로 찾은 아티스트
+  for (const d of infoDocs.docs) {
+    const k0 = searchKey(d.name)
+    if (!k0 || pageNames.has(k0) || artistHit.has(k0)) continue
+    const member = list(d.members).find((m) => hit([searchKey(m)]))
+    const alias = !member && hit(list(d.aliases).map(searchKey))
+    if (!member && !alias) continue
+    const n = await payload.count({ collection: 'picks', where: { artistName: { like: d.name } } })
+    if (!n.totalDocs) continue
+    artistHit.set(k0, { name: d.name, n: n.totalDocs, exact: Boolean(member && searchKey(member) === key), via: member ? `멤버 ${member}` : undefined })
   }
   const pickArtists = [...artistHit.values()].sort((a, b) => Number(b.exact) - Number(a.exact) || b.n - a.n).slice(0, 20)
 

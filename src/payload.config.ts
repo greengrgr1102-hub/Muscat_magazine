@@ -15,6 +15,7 @@ import { Genres } from './collections/Genres'
 import { Picks } from './collections/Picks'
 import { Tags } from './collections/Tags'
 import { Artists } from './collections/Artists'
+import { ArtistInfo } from './collections/ArtistInfo'
 import { Articles } from './collections/Articles'
 import { Inquiries, Subscribers } from './collections/Inquiries'
 import { Stats } from './collections/Stats'
@@ -54,7 +55,7 @@ export default buildConfig({
     fallbackLanguage: 'ko',
     supportedLanguages: { ko, en },
   },
-  collections: [Articles, Picks, Playlists, Artists, Genres, Tags, Media, Inquiries, Subscribers, Users, Stats],
+  collections: [Articles, Picks, Playlists, Artists, ArtistInfo, Genres, Tags, Media, Inquiries, Subscribers, Users, Stats],
   globals: [SiteSettings, AboutPage, SpotifySync, YouTubeUsage],
   editor: lexicalEditor(),
   secret: SECRET,

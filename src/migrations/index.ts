@@ -25,6 +25,7 @@ import * as migration_20261119_140000_youtube_miss_reset from './20261119_140000
 import * as migration_20261119_161430_filters from './20261119_161430_filters';
 import * as migration_20261119_162147_english_names from './20261119_162147_english_names';
 import * as migration_20261120_051326_genre_aliases from './20261120_051326_genre_aliases';
+import * as migration_20261120_053108_artist_info from './20261120_053108_artist_info';
 
 export const migrations = [
   {
@@ -160,6 +161,11 @@ export const migrations = [
   {
     up: migration_20261120_051326_genre_aliases.up,
     down: migration_20261120_051326_genre_aliases.down,
-    name: '20261120_051326_genre_aliases'
+    name: '20261120_051326_genre_aliases',
+  },
+  {
+    up: migration_20261120_053108_artist_info.up,
+    down: migration_20261120_053108_artist_info.down,
+    name: '20261120_053108_artist_info'
   },
 ];

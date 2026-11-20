@@ -71,6 +71,7 @@ export interface Config {
     picks: Pick;
     playlists: Playlist;
     artists: Artist;
+    'artist-info': ArtistInfo;
     genres: Genre;
     tags: Tag;
     media: Media;
@@ -89,6 +90,7 @@ export interface Config {
     picks: PicksSelect<false> | PicksSelect<true>;
     playlists: PlaylistsSelect<false> | PlaylistsSelect<true>;
     artists: ArtistsSelect<false> | ArtistsSelect<true>;
+    'artist-info': ArtistInfoSelect<false> | ArtistInfoSelect<true>;
     genres: GenresSelect<false> | GenresSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -649,6 +651,27 @@ export interface Playlist {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * 곡 기록의 아티스트 이름 그대로 적고, 멤버·다른 이름을 쉼표로 적으면 검색에 걸려요.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "artist-info".
+ */
+export interface ArtistInfo {
+  id: number;
+  name: string;
+  /**
+   * 쉼표로 구분 (예: 김한주, 김건재, 최웅희)
+   */
+  members?: string | null;
+  /**
+   * 쉼표로 구분 (예: 영어 이름, 옛 이름)
+   */
+  aliases?: string | null;
+  checkedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "inquiries".
  */
@@ -721,6 +744,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'artists';
         value: number | Artist;
+      } | null)
+    | ({
+        relationTo: 'artist-info';
+        value: number | ArtistInfo;
       } | null)
     | ({
         relationTo: 'genres';
@@ -955,6 +982,18 @@ export interface ArtistsSelect<T extends boolean = true> {
         url?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "artist-info_select".
+ */
+export interface ArtistInfoSelect<T extends boolean = true> {
+  name?: T;
+  members?: T;
+  aliases?: T;
+  checkedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

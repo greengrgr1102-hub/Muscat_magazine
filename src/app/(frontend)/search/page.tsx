@@ -94,7 +94,7 @@ export default async function SearchPage({ searchParams }: { searchParams: SP })
                   {r.pickArtists.map((a) => (
                     <Chip key={a.name} href={`/picks?q=${encodeURIComponent(a.name)}`}>
                       {a.name}
-                      <span className="search-count">{a.n}곡</span>
+                      <span className="search-count">{a.via ? `${a.via} · ` : ''}{a.n}곡</span>
                     </Chip>
                   ))}
                 </div>
