@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { MyLink } from './MyLink'
 import { getSettings } from '@/lib/data'
 import { Icon } from './ui'
 import { MobileMenu } from './MobileMenu'
@@ -17,7 +18,7 @@ export function Logo() {
 export const NAV = [
   { href: '/articles', label: 'Articles' },
   // 곡·앨범·Essential·플레이리스트·내 플리는 Editor's Picks 안에 묶음
-  { href: '/picks', label: "Editor's Picks", also: ['/essential', '/playlists', '/my', '/share'] },
+  { href: '/picks', label: "Editor's Picks", also: ['/essential', '/playlists', '/share'] },
   // 장르 지도·거미줄·아무거나 틀어줘·취향 찾기는 Explore 안에 묶음
   { href: '/explore', label: 'Explore', also: ['/web', '/taste'] },
   { href: '/about', label: 'About' },
@@ -44,6 +45,7 @@ export async function Header() {
             <Icon name="search" />
             <span>Search</span>
           </Link>
+          <MyLink />
           {settings.instagramUrl ? (
             <a className="header__link header__link--ink" href={settings.instagramUrl} target="_blank" rel="noreferrer">
               <span>Instagram</span>
@@ -55,6 +57,7 @@ export async function Header() {
           <Link href="/search" className="icon-btn" aria-label="검색">
             <Icon name="search" size={22} />
           </Link>
+          <MyLink mobile />
           <MobileMenu instagramUrl={settings.instagramUrl || undefined} />
         </div>
       </div>

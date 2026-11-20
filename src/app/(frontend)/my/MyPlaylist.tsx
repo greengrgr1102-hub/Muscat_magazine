@@ -7,7 +7,7 @@ import { myPlaylist, shareUrl, useMyPlaylist } from '@/lib/myPlaylist'
 
 const small = (u?: string | null) => (u ? u.replace('ab67616d0000b273', 'ab67616d00004851') : null)
 
-export function MyPlaylist() {
+export function MyPlaylist({ asSection = false }: { asSection?: boolean }) {
   const { name, songs, player } = useMyPlaylist()
   const [mounted, setMounted] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -30,7 +30,7 @@ export function MyPlaylist() {
 
   return (
     <>
-      <section className="page-title wrap">
+      <section className={asSection ? 'wrap my-sec__title' : 'page-title wrap'} id="liked">
         <p className="label">Liked</p>
         {editing ? (
           <form
@@ -47,17 +47,15 @@ export function MyPlaylist() {
             </button>
           </form>
         ) : (
-          <h1 className="page-title__h">
-            <span className="display-lg">{mounted ? name : '좋아요한 곡'}</span>
+          <h2 className={asSection ? 'my-sec__h' : 'page-title__h'}>
+            <span className={asSection ? 'h-lg' : 'display-lg'}>{mounted ? name : '좋아요한 곡'}</span>
             <sup className="label">{mounted ? songs.length : 0}</sup>
-          </h1>
+          </h2>
         )}
-        <p className="muted page-title__desc">
-          곡 옆의 하트(♥)를 눌러 모은 곡들이에요. 이 브라우저에 저장돼서, 다른 기기에서 보려면 「다른 기기로 옮기기」 링크를 열면 돼요.
-        </p>
+        <p className="muted page-title__desc">곡 옆의 하트(♥)를 눌러 모은 곡들이에요.</p>
       </section>
 
-      <section className="wrap section">
+      <section className={asSection ? 'wrap my-sec__body' : 'wrap section'}>
         {mounted && songs.length ? (
           <>
             <div className="my-actions">

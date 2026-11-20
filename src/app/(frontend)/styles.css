@@ -3116,6 +3116,108 @@ body.has-mbar--sp .pl-toast--bar {
   }
 }
 
+/* ---------- My ---------- */
+.my-link {
+  position: relative;
+}
+.my-link__dot {
+  position: absolute;
+  top: 2px;
+  right: -6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.icon-btn.my-link .my-link__dot {
+  top: 8px;
+  right: 8px;
+}
+.my-sec {
+  padding-top: 40px;
+  padding-bottom: 8px;
+}
+.my-sec--last {
+  padding-bottom: 96px;
+}
+.my-sec__title {
+  padding-top: 56px;
+  padding-bottom: 16px;
+}
+.my-sec__h {
+  margin: 4px 0 6px;
+  font-weight: inherit;
+}
+.my-sec__body {
+  padding-bottom: 8px;
+}
+.my-sec__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.my-resume {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.my-resume img,
+.my-resume__ph {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--surface);
+  flex: none;
+}
+.my-resume__text,
+.my-recent__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.my-recent {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 6px 24px;
+}
+.my-recent li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.my-recent__cover {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface);
+  cursor: pointer;
+}
+.my-recent__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.my-taste {
+  margin: 8px 0 0;
+  font-size: 18px;
+}
+
 /* ---------- 내 플리 페이지 ---------- */
 .my-actions {
   display: flex;

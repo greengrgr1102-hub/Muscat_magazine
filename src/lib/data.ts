@@ -44,26 +44,42 @@ export async function getArticle(slug: string) {
 
 export async function getArtist(slug: string) {
   const payload = await getClient()
-  const res = await payload.find({ collection: 'artists', where: { slug: { equals: slug } }, limit: 1, depth: 1 })
+  const res = await payload.find({
+    collection: 'artists',
+    where: { slug: { equals: slug } },
+    limit: 1,
+    depth: 1,
+  })
   return res.docs[0] ?? null
 }
 
 export async function getGenre(slug: string) {
   const payload = await getClient()
-  const res = await payload.find({ collection: 'genres', where: { slug: { equals: slug } }, limit: 1 })
+  const res = await payload.find({
+    collection: 'genres',
+    where: { slug: { equals: slug } },
+    limit: 1,
+  })
   return res.docs[0] ?? null
 }
 
 export async function getGenres() {
   const payload = await getClient()
-  const res = await payload.find({ collection: 'genres', limit: 100, sort: 'order', pagination: false })
+  const res = await payload.find({
+    collection: 'genres',
+    limit: 100,
+    sort: 'order',
+    pagination: false,
+  })
   return res.docs
 }
 
 /** 곡·글에 많이 붙은 장르부터 (한 번도 안 쓰인 장르는 빼요) */
 export async function getGenresByUse() {
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const rows = (
     await db.drizzle.execute(sql`
       select g.id, g.name, g.slug, count(*)::int as n
@@ -75,7 +91,12 @@ export async function getGenresByUse() {
       group by g.id, g.name, g.slug
       order by n desc, g.name`)
   ).rows
-  return rows.map((r) => ({ id: Number(r.id), name: String(r.name), slug: String(r.slug), n: Number(r.n) }))
+  return rows.map((r) => ({
+    id: Number(r.id),
+    name: String(r.name),
+    slug: String(r.slug),
+    n: Number(r.n),
+  }))
 }
 
 // 공개된 글에 실제로 붙어 있는 장르만 (장르 고르기 목록이 너무 길어지지 않게)
@@ -91,7 +112,13 @@ export async function getArticleGenres() {
       select: { genres: true },
     }),
   ])
-  const ids = new Set(used.docs.flatMap((a) => ((a as { genres?: (number | { id: number })[] }).genres || []).map((g) => (typeof g === 'object' ? g.id : g))))
+  const ids = new Set(
+    used.docs.flatMap((a) =>
+      ((a as { genres?: (number | { id: number })[] }).genres || []).map((g) =>
+        typeof g === 'object' ? g.id : g,
+      ),
+    ),
+  )
   return ids.size ? all.filter((g) => ids.has(g.id)) : all
 }
 
@@ -141,7 +168,11 @@ async function searchGenres(key: string, term: string) {
   const n = new Map(used.map((g) => [g.id, g.n]))
   const hits: { id: number; name: string; slug: string; n: number; score: number }[] = []
   for (const g of all.docs) {
-    const keys = [g.name, g.slug, ...String((g as { aliases?: string | null }).aliases || '').split(/[,，、\n]/)]
+    const keys = [
+      g.name,
+      g.slug,
+      ...String((g as { aliases?: string | null }).aliases || '').split(/[,，、\n]/),
+    ]
       .map(searchKey)
       .filter(Boolean)
     let score = 0
@@ -152,15 +183,28 @@ async function searchGenres(key: string, term: string) {
     }
     const id = Number(g.id)
     if (score) hits.push({ id, name: g.name, slug: String(g.slug), n: n.get(id) || 0, score })
-    else if (words.length > 1 && keys.some((k) => words.includes(k))) loose.push({ id, name: g.name, slug: String(g.slug), n: n.get(id) || 0, score: 1 })
+    else if (words.length > 1 && keys.some((k) => words.includes(k)))
+      loose.push({ id, name: g.name, slug: String(g.slug), n: n.get(id) || 0, score: 1 })
   }
   // 「시티팝 추천」처럼 여러 낱말 중 하나가 장르 이름일 때 — 더 잘 맞는 장르가 없을 때만
   const out = hits.some((h) => h.score >= 2) ? hits : [...hits, ...loose]
   return out.sort((a, b) => b.score - a.score || b.n - a.n).slice(0, 12)
 }
 
-export type SearchSong = { id: number; track: string | null; artist: string; album: string | null; cover: string | null }
-export type SearchAlbum = { key: string; album: string; artist: string; cover: string | null; n: number }
+export type SearchSong = {
+  id: number
+  track: string | null
+  artist: string
+  album: string | null
+  cover: string | null
+}
+export type SearchAlbum = {
+  key: string
+  album: string
+  artist: string
+  cover: string | null
+  n: number
+}
 
 /**
  * 통합 검색: 장르 · 아티스트 · 앨범 · 곡 · 아티클.
@@ -170,9 +214,18 @@ export async function search(q: string) {
   const payload = await getClient()
   const term = q.trim()
   const key = searchKey(term)
-  const empty = { genres: [], artists: [], pickArtists: [], albums: [], songs: [], articles: [] as Article[] }
+  const empty = {
+    genres: [],
+    artists: [],
+    pickArtists: [],
+    albums: [],
+    songs: [],
+    articles: [] as Article[],
+  }
   if (!term || !key) return empty
-  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const like = `%${key}%`
 
   const [genres, artistDocs, infoDocs, rows] = await Promise.all([
@@ -189,8 +242,18 @@ export async function search(q: string) {
   ])
 
   const hit = (ks: string[]) =>
-    ks.some((k) => k === key) ? 3 : ks.some((k) => k.startsWith(key)) ? 2 : key.length >= 2 && ks.some((k) => k.includes(key)) ? 1 : 0
-  const list = (v?: string | null) => String(v || '').split(/[,，、\n]/).map((x) => x.trim()).filter(Boolean)
+    ks.some((k) => k === key)
+      ? 3
+      : ks.some((k) => k.startsWith(key))
+        ? 2
+        : key.length >= 2 && ks.some((k) => k.includes(key))
+          ? 1
+          : 0
+  const list = (v?: string | null) =>
+    String(v || '')
+      .split(/[,，、\n]/)
+      .map((x) => x.trim())
+      .filter(Boolean)
 
   // 에디터가 만든 아티스트 페이지 (이름·다른 이름·멤버 이름)
   const artists = artistDocs.docs
@@ -204,7 +267,9 @@ export async function search(q: string) {
     .sort((x, y) => y.score - x.score)
     .map((x) => x.a)
     .slice(0, 20)
-  const pageNames = new Set(artists.flatMap((a) => [a.name, (a as { nameAlt?: string | null }).nameAlt].map(searchKey)))
+  const pageNames = new Set(
+    artists.flatMap((a) => [a.name, (a as { nameAlt?: string | null }).nameAlt].map(searchKey)),
+  )
 
   // 곡 기록에서 찾은 아티스트 (페이지가 없는 아티스트도)
   const artistHit = new Map<string, { name: string; n: number; exact: boolean; via?: string }>()
@@ -216,7 +281,15 @@ export async function search(q: string) {
     const kb = String(r.kb || '')
     const artist = String(r.artist_name || '')
     const cover = (r.cover_url as string | null) || null
-    if (kt.includes(key)) songs.push({ id: Number(r.id), track: (r.track as string) || null, artist, album: (r.album as string) || null, cover, s: kt === key ? 2 : kt.startsWith(key) ? 1 : 0 })
+    if (kt.includes(key))
+      songs.push({
+        id: Number(r.id),
+        track: (r.track as string) || null,
+        artist,
+        album: (r.album as string) || null,
+        cover,
+        s: kt === key ? 2 : kt.startsWith(key) ? 1 : 0,
+      })
     if (ka.includes(key)) {
       for (const one of artist.split(', ')) {
         const k1 = searchKey(one)
@@ -228,7 +301,14 @@ export async function search(q: string) {
     }
     if (kb.includes(key) && r.album && cover && /\/image\//.test(cover)) {
       const ck = cover.slice(-24)
-      const al = albums.get(ck) || { key: ck, album: String(r.album), artist: artist.split(', ')[0], cover, n: 0, s: kb === key ? 2 : kb.startsWith(key) ? 1 : 0 }
+      const al = albums.get(ck) || {
+        key: ck,
+        album: String(r.album),
+        artist: artist.split(', ')[0],
+        cover,
+        n: 0,
+        s: kb === key ? 2 : kb.startsWith(key) ? 1 : 0,
+      }
       al.n++
       albums.set(ck, al)
     }
@@ -242,14 +322,26 @@ export async function search(q: string) {
     if (!member && !alias) continue
     const n = await payload.count({ collection: 'picks', where: { artistName: { like: d.name } } })
     if (!n.totalDocs) continue
-    artistHit.set(k0, { name: d.name, n: n.totalDocs, exact: Boolean(member && searchKey(member) === key), via: member ? `멤버 ${member}` : undefined })
+    artistHit.set(k0, {
+      name: d.name,
+      n: n.totalDocs,
+      exact: Boolean(member && searchKey(member) === key),
+      via: member ? `멤버 ${member}` : undefined,
+    })
   }
-  const pickArtists = [...artistHit.values()].sort((a, b) => Number(b.exact) - Number(a.exact) || b.n - a.n).slice(0, 20)
+  const pickArtists = [...artistHit.values()]
+    .sort((a, b) => Number(b.exact) - Number(a.exact) || b.n - a.n)
+    .slice(0, 20)
 
   // 아티클: 제목·요약·태그 + 찾은 아티스트·장르가 붙은 글
-  const or: Where[] = [{ title: { like: term } }, { excerpt: { like: term } }, { tags: { like: term } }]
+  const or: Where[] = [
+    { title: { like: term } },
+    { excerpt: { like: term } },
+    { tags: { like: term } },
+  ]
   if (artists.length) or.push({ artists: { in: artists.map((a) => a.id) } })
-  if (genres.length && genres[0].score >= 2) or.push({ genres: { in: genres.filter((g) => g.score >= 2).map((g) => g.id) } })
+  if (genres.length && genres[0].score >= 2)
+    or.push({ genres: { in: genres.filter((g) => g.score >= 2).map((g) => g.id) } })
   const articles = await findArticles({ where: { or }, limit: 24 })
 
   return {
@@ -293,12 +385,21 @@ export async function findPlaylists(limit = 24) {
 }
 export async function getPlaylist(slug: string) {
   const payload = await getClient()
-  const r = await payload.find({ collection: 'playlists', where: { slug: { equals: slug } }, limit: 1, depth: 1 })
+  const r = await payload.find({
+    collection: 'playlists',
+    where: { slug: { equals: slug } },
+    limit: 1,
+    depth: 1,
+  })
   return r.docs[0] || null
 }
 
 /* ---------- Editor's Picks ---------- */
-export async function findPicks({ where, limit = 24, page = 1 }: { where?: Where; limit?: number; page?: number } = {}) {
+export async function findPicks({
+  where,
+  limit = 24,
+  page = 1,
+}: { where?: Where; limit?: number; page?: number } = {}) {
   const payload = await getClient()
   return payload.find({ collection: 'picks', where, limit, page, sort: '-pickedAt', depth: 1 })
 }
@@ -318,7 +419,16 @@ export async function findPickRows({
     page,
     sort,
     depth: 0,
-    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, youtubeId: true },
+    select: {
+      track: true,
+      artistName: true,
+      coverUrl: true,
+      pickedAt: true,
+      releaseDate: true,
+      comment: true,
+      spotifyUrl: true,
+      youtubeId: true,
+    },
   })
 }
 
@@ -335,16 +445,71 @@ function seeded(seed: number) {
 }
 
 /** 랜덤 순서로 한 페이지 가져오기 (seed가 같으면 같은 순서) */
-export async function findPickRowsRandom({ where, seed, page = 1, limit = 100 }: { where?: Where; seed: number; page?: number; limit?: number }) {
-  const payload = await getClient()
-  const ids = (
-    await payload.find({ collection: 'picks', where, pagination: false, depth: 0, sort: 'id', select: { spotifyUrl: true } })
-  ).docs.map((d) => d.id as number)
-  const rnd = seeded(seed)
-  for (let i = ids.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1))
-    ;[ids[i], ids[j]] = [ids[j], ids[i]]
+// 랜덤 목록을 "고르게" 섞기:
+// 1) 앨범마다 대표곡 1곡을 먼저 늘어놓고, 같은 앨범의 나머지 곡은 그 뒤로 미뤄요.
+// 2) 같은 아티스트가 가까이(앞 12곡 안) 붙지 않도록 순서를 벌려요. (웬만하면 — 곡이 모자라면 붙을 수도 있어요)
+function spreadByArtist<T extends { artist: string }>(list: T[], gap = 12): T[] {
+  const out: T[] = []
+  const pending = [...list]
+  const recent: string[] = []
+  while (pending.length) {
+    let k = pending.findIndex((x, i) => i < 80 && !recent.includes(x.artist))
+    if (k < 0) k = 0
+    const [x] = pending.splice(k, 1)
+    out.push(x)
+    recent.push(x.artist)
+    if (recent.length > gap) recent.shift()
   }
+  return out
+}
+
+export async function findPickRowsRandom({
+  where,
+  seed,
+  page = 1,
+  limit = 100,
+}: {
+  where?: Where
+  seed: number
+  page?: number
+  limit?: number
+}) {
+  const payload = await getClient()
+  const all = (
+    await payload.find({
+      collection: 'picks',
+      where,
+      pagination: false,
+      depth: 0,
+      sort: 'id',
+      select: { artistName: true, album: true },
+    })
+  ).docs.map((d) => {
+    const artist = String((d as { artistName?: string }).artistName || '')
+      .split(',')[0]
+      .trim()
+      .toLowerCase()
+    const album = String((d as { album?: string }).album || '')
+      .trim()
+      .toLowerCase()
+    return { id: d.id as number, artist, album: album ? `${artist}|${album}` : `#${d.id}` }
+  })
+  const rnd = seeded(seed)
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1))
+    ;[all[i], all[j]] = [all[j], all[i]]
+  }
+  const seenAlbum = new Set<string>()
+  const reps: typeof all = []
+  const rest: typeof all = []
+  for (const x of all) {
+    if (seenAlbum.has(x.album)) rest.push(x)
+    else {
+      seenAlbum.add(x.album)
+      reps.push(x)
+    }
+  }
+  const ids = [...spreadByArtist(reps), ...spreadByArtist(rest)].map((x) => x.id)
   const slice = ids.slice((page - 1) * limit, page * limit)
   const docs = slice.length
     ? (
@@ -353,14 +518,29 @@ export async function findPickRowsRandom({ where, seed, page = 1, limit = 100 }:
           where: { id: { in: slice } },
           limit: slice.length,
           depth: 0,
-          select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, youtubeId: true },
+          select: {
+            track: true,
+            artistName: true,
+            coverUrl: true,
+            pickedAt: true,
+            releaseDate: true,
+            comment: true,
+            spotifyUrl: true,
+            youtubeId: true,
+          },
         })
       ).docs
     : []
   const order = new Map(slice.map((id, i) => [id, i]))
   docs.sort((a, b) => (order.get(a.id as number) ?? 0) - (order.get(b.id as number) ?? 0))
   const totalPages = Math.max(1, Math.ceil(ids.length / limit))
-  return { docs, totalDocs: ids.length, totalPages, hasPrevPage: page > 1, hasNextPage: page < totalPages }
+  return {
+    docs,
+    totalDocs: ids.length,
+    totalPages,
+    hasPrevPage: page > 1,
+    hasNextPage: page < totalPages,
+  }
 }
 
 export async function getPick(id: string) {
@@ -375,12 +555,18 @@ export async function getPick(id: string) {
 
 export async function getTag(slug: string) {
   const payload = await getClient()
-  const res = await payload.find({ collection: 'tags', where: { slug: { equals: slug } }, limit: 1 })
+  const res = await payload.find({
+    collection: 'tags',
+    where: { slug: { equals: slug } },
+    limit: 1,
+  })
   return res.docs[0] || null
 }
 
 const ids = (list: unknown) =>
-  (Array.isArray(list) ? list : []).map((x) => (typeof x === 'object' && x ? (x as { id: number }).id : (x as number)))
+  (Array.isArray(list) ? list : []).map((x) =>
+    typeof x === 'object' && x ? (x as { id: number }).id : (x as number),
+  )
 
 /** 같은 취향 태그·장르·아티스트를 많이 공유할수록 위로 오는 '비슷한 곡'. */
 /**
@@ -389,7 +575,9 @@ const ids = (list: unknown) =>
  */
 export const genreWeights = cache(async () => {
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const rows = (
     await db.drizzle.execute(sql`
       select genres_id as g, 1 + ln((select count(distinct parent_id) from picks_rels where path = 'genres')::float / count(*)) as w
@@ -401,14 +589,18 @@ export const genreWeights = cache(async () => {
 /** 장르 이름 → 구체성 점수 (거미줄에서 선 굵기를 정할 때 써요) */
 export const genreWeightsByName = cache(async () => {
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const rows = (
     await db.drizzle.execute(sql`
       select g.name as n, 1 + ln((select count(distinct parent_id) from picks_rels where path = 'genres')::float / count(*)) as w
       from picks_rels r join genres g on g.id = r.genres_id
       where r.path = 'genres' group by g.name`)
   ).rows
-  return Object.fromEntries(rows.map((r) => [String(r.n), Math.round(Number(r.w) * 100) / 100])) as Record<string, number>
+  return Object.fromEntries(
+    rows.map((r) => [String(r.n), Math.round(Number(r.w) * 100) / 100]),
+  ) as Record<string, number>
 })
 
 export async function similarPicks(pick: import('@/payload-types').Pick, limit = 12) {
@@ -428,8 +620,12 @@ export async function similarPicks(pick: import('@/payload-types').Pick, limit =
       select: { genres: true },
     })
     const count = new Map<number, number>()
-    for (const d of same.docs) for (const g of ids((d as Row).genres as never)) count.set(g, (count.get(g) || 0) + 1)
-    genreIds = [...count.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([g]) => g)
+    for (const d of same.docs)
+      for (const g of ids((d as Row).genres as never)) count.set(g, (count.get(g) || 0) + 1)
+    genreIds = [...count.entries()]
+      .sort((x, y) => y[1] - x[1])
+      .slice(0, 3)
+      .map(([g]) => g)
   }
   const or: Where[] = []
   if (tagIds.length) or.push({ tags: { in: tagIds } })
@@ -458,7 +654,8 @@ export async function similarPicks(pick: import('@/payload-types').Pick, limit =
     // 드문(구체적인) 장르가 겹칠수록 점수가 커요
     const g = shared.reduce((sum, x) => sum + (gw.get(x) || 1), 0)
     // 장르가 딱 겹칠수록(덜 섞일수록) 더 비슷하다고 봐요.
-    const exact = shared.length && shared.length === gs.length && shared.length === genreIds.length ? 2 : 0
+    const exact =
+      shared.length && shared.length === gs.length && shared.length === genreIds.length ? 2 : 0
     return t * 3 + g + exact
   }
   const ranked = pool
@@ -478,7 +675,14 @@ export async function similarPicks(pick: import('@/payload-types').Pick, limit =
   let filled = false
   if (chosen.length < limit) {
     // 그래도 모자라면 아무 곡이나 랜덤으로 채워요.
-    const all = (await payload.find({ collection: 'picks', pagination: false, depth: 0, select: { artistName: true } })).docs
+    const all = (
+      await payload.find({
+        collection: 'picks',
+        pagination: false,
+        depth: 0,
+        select: { artistName: true },
+      })
+    ).docs
     const rest = all.filter((d) => d.id !== pick.id && !chosen.includes(d.id as number))
     const need = limit - chosen.length
     for (let i = 0; i < need && rest.length; i++) {
@@ -488,7 +692,14 @@ export async function similarPicks(pick: import('@/payload-types').Pick, limit =
     filled = ranked.length === 0
   }
   const docs = chosen.length
-    ? (await payload.find({ collection: 'picks', where: { id: { in: chosen } }, limit: chosen.length, depth: 1 })).docs
+    ? (
+        await payload.find({
+          collection: 'picks',
+          where: { id: { in: chosen } },
+          limit: chosen.length,
+          depth: 1,
+        })
+      ).docs
     : []
   const order = new Map(chosen.map((id, i) => [id, i]))
   docs.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
@@ -512,7 +723,9 @@ export async function findEssentialAlbums(): Promise<EssentialAlbum[]> {
   const payload = await getClient()
   const res = await payload.find({
     collection: 'articles',
-    where: { and: [published, { type: { equals: 'review' } }, { 'albums.essential': { equals: true } }] },
+    where: {
+      and: [published, { type: { equals: 'review' } }, { 'albums.essential': { equals: true } }],
+    },
     pagination: false,
     sort: '-publishedAt',
     depth: 1,
@@ -562,14 +775,29 @@ export async function findPickAlbums({
   q = '',
   f = {},
   genreId,
-}: { page?: number; limit?: number; sort?: 'most' | 'new' | 'old'; q?: string; f?: PickFilter; genreId?: number }) {
+}: {
+  page?: number
+  limit?: number
+  sort?: 'most' | 'new' | 'old'
+  q?: string
+  f?: PickFilter
+  genreId?: number
+}) {
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const like = q.trim() ? `%${q.trim()}%` : null
-  const conds = [...(like ? [sql`(alb ilike ${like} or artist_name ilike ${like} or track ilike ${like})`] : []), ...pickFilterSql(f)]
+  const conds = [
+    ...(like ? [sql`(alb ilike ${like} or artist_name ilike ${like} or track ilike ${like})`] : []),
+    ...pickFilterSql(f),
+  ]
   if (sort === 'new' || sort === 'old') conds.push(sql`release_date is not null`)
   // 이 장르가 붙은 곡이 하나라도 있는 앨범
-  if (genreId) conds.push(sql`id in (select parent_id from picks_rels where path = 'genres' and genres_id = ${genreId})`)
+  if (genreId)
+    conds.push(
+      sql`id in (select parent_id from picks_rels where path = 'genres' and genres_id = ${genreId})`,
+    )
   const filter = conds.length ? sql`where ${sql.join(conds, sql` and `)}` : sql``
   const order =
     sort === 'new'
@@ -620,7 +848,9 @@ export async function findPickAlbums({
 export async function findAlbumPicks(key: string) {
   if (!/^[a-z0-9]{24}$/i.test(key)) return null
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   // 이 커버의 곡 + 같은 앨범 이름·같은 아티스트로 묶인 다른 커버의 곡까지
   const ids = (
     await db.drizzle.execute(sql`
@@ -640,7 +870,19 @@ export async function findAlbumPicks(key: string) {
     pagination: false,
     sort: 'createdAt',
     depth: 1,
-    select: { track: true, artistName: true, coverUrl: true, pickedAt: true, releaseDate: true, comment: true, spotifyUrl: true, album: true, genres: true, youtubeId: true, releaseType: true },
+    select: {
+      track: true,
+      artistName: true,
+      coverUrl: true,
+      pickedAt: true,
+      releaseDate: true,
+      comment: true,
+      spotifyUrl: true,
+      album: true,
+      genres: true,
+      youtubeId: true,
+      releaseType: true,
+    },
   })
   return res.docs.length ? res.docs : null
 }
@@ -655,7 +897,14 @@ export type WebAlbumSong = {
   spotifyUrl: string
   youtubeId: string | null
 }
-export type WebAlbum = { key: string; album: string | null; artist: string; cover: string | null; genres: string[]; songs: WebAlbumSong[] }
+export type WebAlbum = {
+  key: string
+  album: string | null
+  artist: string
+  cover: string | null
+  genres: string[]
+  songs: WebAlbumSong[]
+}
 
 // 앨범 묶는 방법은 findPickAlbums와 같아요 (앨범 이름 + 첫 아티스트, 모르면 커버).
 const albumCte = sql`
@@ -676,11 +925,18 @@ const albumCte = sql`
  * 앨범에 담긴 곡들의 장르·태그를 모아서, 같은 장르·태그를 가진 곡이 있는 다른 앨범을 찾아요.
  * 겹치는 태그는 3점, 장르는 2점. 한 아티스트는 한 앨범까지만.
  */
-export async function similarAlbums(key: string, limit = 8): Promise<{ center: WebAlbum; neighbors: WebAlbum[]; random: boolean } | null> {
+export async function similarAlbums(
+  key: string,
+  limit = 8,
+): Promise<{ center: WebAlbum; neighbors: WebAlbum[]; random: boolean } | null> {
   if (!/^[a-z0-9]{24}$/i.test(key)) return null
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
-  const me = (await db.drizzle.execute(sql`${albumCte} select gk, a1 from t2 where ck = ${key} limit 1`)).rows[0]
+  const db = payload.db as unknown as {
+    drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
+  const me = (
+    await db.drizzle.execute(sql`${albumCte} select gk, a1 from t2 where ck = ${key} limit 1`)
+  ).rows[0]
   if (!me) return null
   const gk = String(me.gk)
   const a1 = String(me.a1 || '')
@@ -734,7 +990,10 @@ export async function similarAlbums(key: string, limit = 8): Promise<{ center: W
     const skip = [gk, ...chosen.map((c) => c.gk)]
     const extra = (
       await db.drizzle.execute(sql`${albumCte}
-        select gk, min(ck) as key from t2 where gk not in (${sql.join(skip.map((g) => sql`${g}`), sql`, `)})
+        select gk, min(ck) as key from t2 where gk not in (${sql.join(
+          skip.map((g) => sql`${g}`),
+          sql`, `,
+        )})
         group by gk order by random() limit ${limit - chosen.length}`)
     ).rows
     if (extra.length) random = true
@@ -742,7 +1001,10 @@ export async function similarAlbums(key: string, limit = 8): Promise<{ center: W
   }
 
   const all = [{ gk, key }, ...chosen]
-  const list = sql.join(all.map((a) => sql`${a.gk}`), sql`, `)
+  const list = sql.join(
+    all.map((a) => sql`${a.gk}`),
+    sql`, `,
+  )
   const [songRows, genreRows] = await Promise.all([
     db.drizzle.execute(sql`${albumCte}
       select t2.gk, p.id, p.track, p.artist_name, p.cover_url, p.spotify_url, p.youtube_id, p.album
@@ -756,7 +1018,8 @@ export async function similarAlbums(key: string, limit = 8): Promise<{ center: W
     const rows = songRows.rows.filter((r) => r.gk === g)
     if (!rows.length) return null
     const count = new Map<string, number>()
-    for (const r of rows) count.set(String(r.artist_name), (count.get(String(r.artist_name)) || 0) + 1)
+    for (const r of rows)
+      count.set(String(r.artist_name), (count.get(String(r.artist_name)) || 0) + 1)
     const artist = [...count.entries()].sort((x, y) => y[1] - x[1])[0][0]
     const album = (rows.find((r) => r.album)?.album as string) || null
     return {
@@ -764,7 +1027,10 @@ export async function similarAlbums(key: string, limit = 8): Promise<{ center: W
       album: album || `「${rows[0].track || '곡'}」 수록 앨범`,
       artist,
       cover: (rows[0].cover_url as string) || null,
-      genres: genreRows.rows.filter((r) => r.gk === g).slice(0, 3).map((r) => String(r.name)),
+      genres: genreRows.rows
+        .filter((r) => r.gk === g)
+        .slice(0, 3)
+        .map((r) => String(r.name)),
       songs: rows.map((r) => ({
         id: Number(r.id),
         track: (r.track as string) || null,
@@ -834,7 +1100,8 @@ export function pickFilterWhere(f: PickFilter): Where[] {
     if (r[0]) out.push({ releaseDate: { greater_than_equal: r[0] } })
     if (r[1]) out.push({ releaseDate: { less_than: r[1] } })
   }
-  if (f.c === 'etc') out.push({ and: [{ country: { exists: true } }, { country: { not_in: BIG } }] })
+  if (f.c === 'etc')
+    out.push({ and: [{ country: { exists: true } }, { country: { not_in: BIG } }] })
   else if (f.c) out.push({ country: { equals: f.c } })
   if (f.type) out.push({ releaseType: { equals: f.type } })
   return out
@@ -854,7 +1121,9 @@ function pickFilterSql(f: PickFilter) {
 /** 이 장르와 같은 곡에 자주 같이 붙는 장르 (많이 겹치는 순) */
 export async function relatedGenres(genreId: number, limit = 16) {
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const rows = (
     await db.drizzle.execute(sql`
       select g.id, g.name, g.slug, count(*)::int as n
@@ -866,7 +1135,12 @@ export async function relatedGenres(genreId: number, limit = 16) {
       order by n desc, g.name
       limit ${limit}`)
   ).rows
-  return rows.map((r) => ({ id: Number(r.id), name: String(r.name), slug: String(r.slug), n: Number(r.n) }))
+  return rows.map((r) => ({
+    id: Number(r.id),
+    name: String(r.name),
+    slug: String(r.slug),
+    n: Number(r.n),
+  }))
 }
 
 /**
@@ -878,7 +1152,9 @@ export async function genreWeb(slug: string, limit = 9) {
   if (!center) return null
   const related = await relatedGenres(center.id, limit)
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const ids = [center.id, ...related.map((r) => r.id)]
   const [songRows, countRows] = await Promise.all([
     db.drizzle.execute(sql`
@@ -886,13 +1162,29 @@ export async function genreWeb(slug: string, limit = 9) {
         select r.genres_id as gid, p.id, p.track, p.artist_name, p.cover_url, p.spotify_url, p.youtube_id,
                row_number() over (partition by r.genres_id order by md5(p.id::text || current_date::text)) as rn
         from picks_rels r join picks p on p.id = r.parent_id
-        where r.path = 'genres' and r.genres_id in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)}) and p.cover_url is not null
+        where r.path = 'genres' and r.genres_id in (${sql.join(
+          ids.map((i) => sql`${i}`),
+          sql`, `,
+        )}) and p.cover_url is not null
       ) x where rn <= 8`),
     db.drizzle.execute(sql`
       select genres_id as gid, count(distinct parent_id)::int as n from picks_rels
-      where path = 'genres' and genres_id in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)}) group by genres_id`),
+      where path = 'genres' and genres_id in (${sql.join(
+        ids.map((i) => sql`${i}`),
+        sql`, `,
+      )}) group by genres_id`),
   ])
-  const songs = new Map<number, { id: number; track: string | null; artistName: string; coverUrl: string | null; spotifyUrl: string; youtubeId: string | null }[]>()
+  const songs = new Map<
+    number,
+    {
+      id: number
+      track: string | null
+      artistName: string
+      coverUrl: string | null
+      spotifyUrl: string
+      youtubeId: string | null
+    }[]
+  >()
   for (const r of songRows.rows) {
     const g = Number(r.gid)
     const list = songs.get(g) || []
@@ -907,7 +1199,11 @@ export async function genreWeb(slug: string, limit = 9) {
     songs.set(g, list)
   }
   const count = new Map(countRows.rows.map((r) => [Number(r.gid), Number(r.n)]))
-  const node = (g: { id: number; name: string; slug: string }) => ({ ...g, n: count.get(g.id) || 0, songs: songs.get(g.id) || [] })
+  const node = (g: { id: number; name: string; slug: string }) => ({
+    ...g,
+    n: count.get(g.id) || 0,
+    songs: songs.get(g.id) || [],
+  })
   return {
     center: node({ id: center.id, name: center.name, slug: String(center.slug) }),
     neighbors: related.map((r) => ({ ...node(r), together: r.n })),
@@ -917,8 +1213,12 @@ export async function genreWeb(slug: string, limit = 9) {
 /** 이 장르가 붙은 Editor's Picks 곡 수 */
 export async function pickCountForGenre(genreId: number) {
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
-  const r = await db.drizzle.execute(sql`select count(distinct parent_id)::int as c from picks_rels where path = 'genres' and genres_id = ${genreId}`)
+  const db = payload.db as unknown as {
+    drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
+  const r = await db.drizzle.execute(
+    sql`select count(distinct parent_id)::int as c from picks_rels where path = 'genres' and genres_id = ${genreId}`,
+  )
   return Number(r.rows[0]?.c || 0)
 }
 
@@ -926,18 +1226,38 @@ export async function pickCountForGenre(genreId: number) {
  * 아무거나 틀어줘: 조건에 맞는 곡 하나를 무작위로. 최근에 들은 곡(exclude)은 빼고,
  * 다 들었으면 들은 곡 중에서라도 골라요.
  */
-export async function randomPick({ genreId, f = {}, exclude = [] }: { genreId?: number; f?: PickFilter; exclude?: number[] }) {
+export async function randomPick({
+  genreId,
+  f = {},
+  exclude = [],
+}: {
+  genreId?: number
+  f?: PickFilter
+  exclude?: number[]
+}) {
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const conds = [sql`spotify_url is not null`, ...pickFilterSql(f)]
-  if (genreId) conds.push(sql`id in (select parent_id from picks_rels where path = 'genres' and genres_id = ${genreId})`)
+  if (genreId)
+    conds.push(
+      sql`id in (select parent_id from picks_rels where path = 'genres' and genres_id = ${genreId})`,
+    )
   const base = sql.join(conds, sql` and `)
   const ex = exclude.filter((x) => Number.isInteger(x) && x > 0).slice(0, 500)
   const pickOne = async (withEx: boolean) =>
     (
       await db.drizzle.execute(sql`
         select id from picks where ${base}
-        ${withEx && ex.length ? sql`and id not in (${sql.join(ex.map((x) => sql`${x}`), sql`, `)})` : sql``}
+        ${
+          withEx && ex.length
+            ? sql`and id not in (${sql.join(
+                ex.map((x) => sql`${x}`),
+                sql`, `,
+              )})`
+            : sql``
+        }
         order by random() limit 1`)
     ).rows[0]
   const [row, left] = await Promise.all([
@@ -953,7 +1273,9 @@ export async function randomPick({ genreId, f = {}, exclude = [] }: { genreId?: 
 /** 탐험 첫 화면에서 거미줄을 시작할 곡·앨범 하나씩 (날마다 바뀌어요) */
 export async function exploreSeeds() {
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const pick = (
     await db.drizzle.execute(sql`
       select p.id, p.track, p.artist_name, p.album, p.cover_url from picks p
@@ -963,9 +1285,21 @@ export async function exploreSeeds() {
   const song = pick[0]
   const alb = pick[1]
   return {
-    song: song ? { id: Number(song.id), track: String(song.track || ''), artist: String(song.artist_name || ''), cover: (song.cover_url as string) || null } : null,
+    song: song
+      ? {
+          id: Number(song.id),
+          track: String(song.track || ''),
+          artist: String(song.artist_name || ''),
+          cover: (song.cover_url as string) || null,
+        }
+      : null,
     album: alb
-      ? { key: String(alb.cover_url).slice(-24), album: String(alb.album || ''), artist: String(alb.artist_name || '').split(', ')[0], cover: (alb.cover_url as string) || null }
+      ? {
+          key: String(alb.cover_url).slice(-24),
+          album: String(alb.album || ''),
+          artist: String(alb.artist_name || '').split(', ')[0],
+          cover: (alb.cover_url as string) || null,
+        }
       : null,
   }
 }
@@ -974,7 +1308,9 @@ export type { GenreGraph } from './genreLayout'
 
 export async function genreGraph(): Promise<GenreGraph> {
   const payload = await getClient()
-  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const [nodeRows, pairRows] = await Promise.all([
     db.drizzle.execute(sql`
       select g.id, g.name, g.slug, count(distinct r.parent_id)::int as n
@@ -987,7 +1323,12 @@ export async function genreGraph(): Promise<GenreGraph> {
       group by 1, 2 having count(*) >= 2`),
   ])
   return layoutGenres(
-    nodeRows.rows.map((r) => ({ id: Number(r.id), name: String(r.name), slug: String(r.slug), n: Number(r.n) })),
+    nodeRows.rows.map((r) => ({
+      id: Number(r.id),
+      name: String(r.name),
+      slug: String(r.slug),
+      n: Number(r.n),
+    })),
     pairRows.rows.map((r) => ({ a: Number(r.x), b: Number(r.y), c: Number(r.c) })),
   )
 }

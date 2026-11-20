@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { myPlaylist, savedTime, useMyPlaylist } from '@/lib/myPlaylist'
 import { reportBadVideo, setSource, useSource, youtubeFor } from '@/lib/listenSource'
-import { markPlayed } from '@/lib/played'
+import { markPlayed, pushRecent } from '@/lib/played'
 import type { Toast } from '@/lib/toast'
 import { AddButton } from './AddButton'
 import { SpotifyEmbed } from './SpotifyEmbed'
@@ -216,6 +216,7 @@ export function PlaylistBar() {
     if (!songKey || !now) return
     sendTrack({ kind: 'play', id: now.id })
     markPlayed(now.id)
+    pushRecent(now)
     window.dispatchEvent(new Event('mm-bar-play'))
     setPos({ t: 0, d: 0 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
