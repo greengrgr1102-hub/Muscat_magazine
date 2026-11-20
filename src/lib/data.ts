@@ -287,6 +287,19 @@ export const genreWeights = cache(async () => {
   return new Map(rows.map((r) => [Number(r.g), Number(r.w)]))
 })
 
+/** 장르 이름 → 구체성 점수 (거미줄에서 선 굵기를 정할 때 써요) */
+export const genreWeightsByName = cache(async () => {
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const rows = (
+    await db.drizzle.execute(sql`
+      select g.name as n, 1 + ln((select count(distinct parent_id) from picks_rels where path = 'genres')::float / count(*)) as w
+      from picks_rels r join genres g on g.id = r.genres_id
+      where r.path = 'genres' group by g.name`)
+  ).rows
+  return Object.fromEntries(rows.map((r) => [String(r.n), Math.round(Number(r.w) * 100) / 100])) as Record<string, number>
+})
+
 export async function similarPicks(pick: import('@/payload-types').Pick, limit = 12) {
   const payload = await getClient()
   type Row = { id: number; artistName?: string; genres?: unknown; tags?: unknown }

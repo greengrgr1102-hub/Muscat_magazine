@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { asGenres, getPick, similarAlbums, similarPicks, type WebAlbum } from '@/lib/data'
+import { asGenres, genreWeightsByName, getPick, similarAlbums, similarPicks, type WebAlbum } from '@/lib/data'
 import type { Pick } from '@/payload-types'
 
 function spotifyEmbed(url: string) {
@@ -28,6 +28,14 @@ const albumNode = (a: WebAlbum) => ({
   songs: a.songs.map((s) => ({ id: s.id, track: s.track, artistName: s.artistName, coverUrl: s.coverUrl, embed: spotifyEmbed(s.spotifyUrl), youtubeId: s.youtubeId })),
 })
 
+// 이번 응답에 나온 장르들의 구체성 점수만 골라 보내요.
+async function weightsFor(items: { genres: string[] }[]) {
+  const all = await genreWeightsByName()
+  const out: Record<string, number> = {}
+  for (const it of items) for (const g of it.genres) if (all[g] !== undefined) out[g] = all[g]
+  return out
+}
+
 // ?id=곡번호 → 곡 하나와 비슷한 곡 8개 / ?album=앨범키 → 앨범 하나와 비슷한 앨범 8개
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams
@@ -35,10 +43,14 @@ export async function GET(req: Request) {
   if (album) {
     const res = await similarAlbums(album, 8)
     if (!res) return NextResponse.json({ error: 'not found' }, { status: 404 })
-    return NextResponse.json({ center: albumNode(res.center), neighbors: res.neighbors.map(albumNode), random: res.random })
+    const center = albumNode(res.center)
+    const neighbors = res.neighbors.map(albumNode)
+    return NextResponse.json({ center, neighbors, random: res.random, weights: await weightsFor([center, ...neighbors]) })
   }
   const pick = await getPick(q.get('id') || '')
   if (!pick) return NextResponse.json({ error: 'not found' }, { status: 404 })
   const sim = await similarPicks(pick, 8)
-  return NextResponse.json({ center: songNode(pick), neighbors: sim.docs.map((p) => songNode(p as Pick)), random: sim.filled })
+  const center = songNode(pick)
+  const neighbors = sim.docs.map((p) => songNode(p as Pick))
+  return NextResponse.json({ center, neighbors, random: sim.filled, weights: await weightsFor([center, ...neighbors]) })
 }

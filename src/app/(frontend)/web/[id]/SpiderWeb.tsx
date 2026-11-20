@@ -34,6 +34,10 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
   const [songIdx, setSongIdx] = useState(0)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [trail, setTrail] = useState<string[]>([startId])
+  // 장르마다 구체성 점수 (드문 장르일수록 높아요) — 선 굵기에 써요
+  const [gw, setGw] = useState<Record<string, number>>({})
+  // 눌러서 「왜 연결됐는지」 보고 있는 칸
+  const [peek, setPeek] = useState<string | null>(null)
   const nodesRef = useRef(nodes)
   nodesRef.current = nodes
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean; k: number } | null>(null)
@@ -118,7 +122,8 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
     try {
       const res = await fetch(isAlbum ? `/web/data?album=${id}` : `/web/data?id=${id}`)
       if (!res.ok) return
-      const data = (await res.json()) as { center: WebItem; neighbors: WebItem[] }
+      const data = (await res.json()) as { center: WebItem; neighbors: WebItem[]; weights?: Record<string, number> }
+      if (data.weights) setGw((w) => ({ ...w, ...data.weights }))
       setNodes((prev) => {
         const next = new Map(prev)
         const c: Node = next.get(id) || { ...data.center, x: 0, y: 0, parent: null, expanded: false }
@@ -175,6 +180,7 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
 
   const choose = (id: string, idx = 0) => {
     if (drag.current?.moved) return
+    setPeek(null)
     setFocus(id)
     setPlayed(id)
     setSongIdx(idx)
@@ -185,11 +191,32 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
     expand(id)
   }
 
+  // 가운데 칸을 누르면 듣기, 다른 칸을 누르면 먼저 연결 이유를 보여주고 한 번 더 누르면 이동
+  const tap = (id: string) => {
+    if (drag.current?.moved) return
+    if (id === focus || peek === id) choose(id)
+    else setPeek(id)
+  }
+
+  // 두 칸이 같이 가진 장르 (드문 장르부터)
+  const sharedOf = (a: Node, b: Node) =>
+    a.genres.filter((g) => b.genres.includes(g)).sort((x, y) => (gw[y] ?? 1) - (gw[x] ?? 1))
+  // 연결 강도 0~1: 겹치는 장르의 점수 합
+  const strengthOf = (a: Node, b: Node) => Math.min(1, sharedOf(a, b).reduce((t, g) => t + (gw[g] ?? 1), 0) / 14)
+
   const neighborsOfFocus = new Set(edges.filter(([a, b]) => a === focus || b === focus).flatMap(([a, b]) => [a, b]))
   const trailSet = new Set(trail)
   const visibleEdges = edges.filter(([a, b]) => nodes.has(a) && nodes.has(b))
   const playing = played !== null ? nodes.get(played) : null
   const current = f && played === f.id ? f.songs[Math.min(songIdx, f.songs.length - 1)] : null
+  // 연결 이유 카드: 고른 칸과 이어진 칸(가운데 칸이 우선, 없으면 그 칸을 펼친 칸)
+  const pk = peek ? nodes.get(peek) : null
+  const linked = (x: string) => edges.some(([a, b]) => (a === peek && b === x) || (b === peek && a === x))
+  const partnerId = pk ? (linked(focus) ? focus : pk.parent && nodes.has(pk.parent) ? pk.parent : edges.find(([a, b]) => a === peek || b === peek)?.find((x) => x !== peek)) : null
+  const partner = partnerId ? nodes.get(partnerId) : null
+  const shared = pk && partner ? sharedOf(pk, partner) : []
+  const sharedSet = new Set(shared)
+  const peekStrength = pk && partner ? strengthOf(pk, partner) : 0
 
   return (
     <div className="web">
@@ -262,6 +289,9 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
               const B = nodes.get(b)!
               const on = a === focus || b === focus
               const path = trailSet.has(a) && trailSet.has(b)
+              const peeked = !!peek && !!partnerId && ((a === peek && b === partnerId) || (b === peek && a === partnerId))
+              // 겹치는 장르가 많고 드물수록 굵고 진하게, 하나도 없으면(빈자리 채운 추천) 점선
+              const t = strengthOf(A, B)
               return (
                 <line
                   key={`${a}-${b}`}
@@ -269,7 +299,8 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
                   y1={A.y}
                   x2={B.x}
                   y2={B.y}
-                  className={`web__edge${on ? ' is-on' : ''}${path ? ' is-path' : ''}`}
+                  className={`web__edge${on ? ' is-on' : ''}${path ? ' is-path' : ''}${peeked ? ' is-peek' : ''}${t === 0 ? ' is-weak' : ''}`}
+                  style={{ strokeWidth: (0.8 + 3.6 * t) * (peeked ? 1.6 : 1), opacity: peeked ? 1 : 0.35 + 0.65 * t }}
                 />
               )
             })}
@@ -281,14 +312,14 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
               return (
                 <g
                   key={n.id}
-                  className={`web__node${isFocus ? ' is-focus' : ''}${near || isFocus ? '' : ' is-far'}${loading === n.id ? ' is-loading' : ''}`}
+                  className={`web__node${isFocus ? ' is-focus' : ''}${near || isFocus || n.id === peek ? '' : ' is-far'}${loading === n.id ? ' is-loading' : ''}${n.id === peek ? ' is-peek' : ''}`}
                   transform={`translate(${n.x} ${n.y})`}
-                  onClick={() => choose(n.id)}
+                  onClick={() => tap(n.id)}
                   role="button"
                   tabIndex={0}
                   aria-label={`${n.title} — ${n.sub}`}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') choose(n.id)
+                    if (e.key === 'Enter' || e.key === ' ') tap(n.id)
                   }}
                 >
                   <circle r={r + 4} className="web__ring" />
@@ -328,6 +359,47 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
             {Math.round(zoom * 100)}%
           </button>
         </div>
+        {pk ? (
+          <div className="web__why" onPointerDown={(e) => e.stopPropagation()}>
+            <button type="button" className="web__why-close" aria-label="닫기" onClick={() => setPeek(null)}>
+              ×
+            </button>
+            <p className="label">왜 연결됐을까</p>
+            <p className="web__why-pair">
+              {partner ? <span>{partner.title}</span> : null}
+              {partner ? <span className="muted"> ↔ </span> : null}
+              <span>{pk.title}</span>
+            </p>
+            {shared.length ? (
+              <>
+                <p className="small muted">같이 가진 장르</p>
+                <ul className="web__why-genres">
+                  {shared.map((g) => (
+                    <li key={g} className="is-shared">
+                      {g}
+                    </li>
+                  ))}
+                  {pk.genres
+                    .filter((g) => !sharedSet.has(g))
+                    .map((g) => (
+                      <li key={g}>{g}</li>
+                    ))}
+                </ul>
+                <p className="web__why-meter small muted">
+                  <span className="web__why-bar">
+                    <span style={{ width: `${Math.max(8, Math.round(peekStrength * 100))}%` }} />
+                  </span>
+                  {peekStrength > 0.66 ? '아주 가까워요' : peekStrength > 0.33 ? '꽤 비슷해요' : '살짝 닮았어요'}
+                </p>
+              </>
+            ) : (
+              <p className="small muted">겹치는 장르는 없어요. 비슷한 {word}이 모자라서 함께 들어볼 만한 {word}을 채워 넣은 자리예요.</p>
+            )}
+            <button type="button" className="btn btn--filled web__why-go" onClick={() => choose(pk.id)}>
+              <span>▶ 이 {word}으로 이동</span>
+            </button>
+          </div>
+        ) : null}
         {!nodes.size ? <p className="web__wait muted">거미줄을 펼치는 중…</p> : null}
       </div>
 
