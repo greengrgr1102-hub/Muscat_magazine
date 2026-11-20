@@ -4,6 +4,8 @@ import { searchKey } from './searchKey'
 
 type DB = { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
 const MB_UA = 'MuscatMagazine/1.0 ( https://muscat-magazine.vercel.app )'
+// 한국어·영어·일본어·한자로만 된 이름만 남겨요 (키릴·아랍 문자 등은 검색에 안 쓰여서)
+const readable = (x: string) => /^[\p{Script=Latin}\p{Script=Hangul}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{N}\p{P}\p{Zs}\p{S}ー]+$/u.test(x)
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 type MbArtist = {
@@ -17,7 +19,16 @@ type MbArtist = {
 }
 type MbRel = { type?: string; direction?: string; artist?: { name?: string } }
 
-async function mb<T>(path: string): Promise<T | 'busy' | null> {
+// MusicBrainz가 바쁘다고 하면 조금 쉬었다가 두 번까지 다시 물어봐요
+async function mb<T>(path: string, deadline: number): Promise<T | 'busy' | null> {
+  for (let k = 0; ; k++) {
+    const r = await mbOnce<T>(path)
+    if (r !== 'busy' || k >= 2 || Date.now() > deadline - 6000) return r
+    await wait(2500)
+  }
+}
+
+async function mbOnce<T>(path: string): Promise<T | 'busy' | null> {
   const res = await fetch(`https://musicbrainz.org/ws/2/${path}`, {
     headers: { 'User-Agent': MB_UA, Accept: 'application/json' },
     cache: 'no-store',
@@ -48,7 +59,7 @@ export async function fillArtistInfo(payload: Payload, deadline: number) {
   for (const name of rows) {
     if (Date.now() > deadline - 4000) break
     const want = searchKey(name)
-    const res = await mb<{ artists?: MbArtist[] }>(`artist?query=${encodeURIComponent(`artist:"${name.replace(/"/g, '')}"`)}&fmt=json&limit=5`)
+    const res = await mb<{ artists?: MbArtist[] }>(`artist?query=${encodeURIComponent(`artist:"${name.replace(/"/g, '')}"`)}&fmt=json&limit=5`, deadline)
     if (res === 'busy') {
       busy = true
       break
@@ -63,6 +74,7 @@ export async function fillArtistInfo(payload: Payload, deadline: number) {
       await wait(1100)
       const full = await mb<{ relations?: MbRel[]; aliases?: { name?: string }[]; name: string; 'sort-name'?: string }>(
         `artist/${same[0].id}?inc=artist-rels+aliases&fmt=json`,
+        deadline,
       )
       if (full === 'busy') {
         busy = true
@@ -78,7 +90,7 @@ export async function fillArtistInfo(payload: Payload, deadline: number) {
         ]
         const sortName = full['sort-name'] && !full['sort-name'].includes(',') ? full['sort-name'] : null
         aliases = [...new Set([full.name, sortName, ...(full.aliases || []).map((x) => x.name)].filter((x): x is string => Boolean(x)).map((x) => x.trim()))]
-          .filter((x) => searchKey(x) !== want && !/[,，、]/.test(x))
+          .filter((x) => searchKey(x) !== want && !/[,，、]/.test(x) && readable(x))
           .slice(0, 12)
         if (members.length || aliases.length) found++
       }
