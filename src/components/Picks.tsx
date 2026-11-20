@@ -32,7 +32,7 @@ export function PickCard({ pick }: { pick: Pick }) {
   const genres = asGenres(pick.genres).filter((g, i, a) => a.findIndex((x) => x.id === g.id) === i)
   return (
     <article className="epick">
-      <SpotifyPlayer embed={embed} cover={pick.coverUrl} title={`${pick.track || ''} — ${pick.artistName}`} pickId={pick.id} youtubeId={pick.youtubeId} />
+      <SpotifyPlayer embed={embed} cover={pick.coverUrl} title={`${pick.track || ''} — ${pick.artistName}`} pickId={pick.id} youtubeId={pick.youtubeId} song={toRow(pick)} />
       <div className="epick__body">
         <p className="epick__meta small muted">
           {pick.releaseDate ? <span>{releaseShort(pick.releaseDate)}</span> : null}

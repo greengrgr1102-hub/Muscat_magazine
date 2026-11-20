@@ -51,7 +51,12 @@ function load() {
     if (rawP) {
       const p = JSON.parse(rawP) as { queue?: Song[]; index?: number; label?: string }
       if (Array.isArray(p.queue) && p.queue.length) {
-        state.player = { queue: p.queue, index: Math.min(Math.max(0, p.index || 0), p.queue.length - 1), label: p.label || DEFAULT_NAME, idle: true }
+        state.player = {
+          queue: p.queue,
+          index: Math.min(Math.max(0, p.index || 0), p.queue.length - 1),
+          label: p.label || DEFAULT_NAME,
+          idle: true,
+        }
       }
     }
   } catch {
@@ -72,7 +77,12 @@ function set(next: Partial<State>, resetTime = false) {
         const t = resetTime ? 0 : savedTime()
         window.localStorage.setItem(
           PKEY,
-          JSON.stringify({ queue: p.queue.slice(from, from + 200), index: p.index - from, label: p.label, t }),
+          JSON.stringify({
+            queue: p.queue.slice(from, from + 200),
+            index: p.index - from,
+            label: p.label,
+            t,
+          }),
         )
       }
     }
@@ -93,14 +103,23 @@ export function savedTime(): number {
 }
 function saveTime(t: number) {
   try {
-    const p = JSON.parse(window.localStorage.getItem(PKEY) || 'null') as Record<string, unknown> | null
+    const p = JSON.parse(window.localStorage.getItem(PKEY) || 'null') as Record<
+      string,
+      unknown
+    > | null
     if (p) window.localStorage.setItem(PKEY, JSON.stringify({ ...p, t: Math.floor(t) }))
   } catch {
     /* 무시 */
   }
 }
 
-const clean = (s: Song): Song => ({ id: s.id, track: s.track, artistName: s.artistName, coverUrl: s.coverUrl, embed: s.embed })
+const clean = (s: Song): Song => ({
+  id: s.id,
+  track: s.track,
+  artistName: s.artistName,
+  coverUrl: s.coverUrl,
+  embed: s.embed,
+})
 
 export const myPlaylist = {
   get: () => (load(), state),
@@ -148,10 +167,36 @@ export const myPlaylist = {
     const target = queue[index]
     const q = queue
       .filter((s) => s.embed)
-      .map((s) => ({ id: s.id, track: s.track, artistName: s.artistName, coverUrl: s.coverUrl, embed: s.embed, youtubeId: s.youtubeId }))
+      .map((s) => ({
+        id: s.id,
+        track: s.track,
+        artistName: s.artistName,
+        coverUrl: s.coverUrl,
+        embed: s.embed,
+        youtubeId: s.youtubeId,
+      }))
     if (!q.length) return
-    const i = target ? Math.max(0, q.findIndex((s) => s.id === target.id)) : 0
+    const i = target
+      ? Math.max(
+          0,
+          q.findIndex((s) => s.id === target.id),
+        )
+      : 0
     set({ player: { queue: q, index: Math.min(i, q.length - 1), label, idle: false } }, true)
+  },
+  /** 대기열 끝에 한 곡 붙이고 바로 그 곡으로 (목록이 끝나면 랜덤으로 이어 듣기) */
+  appendAndPlay(song: Song) {
+    const p = state.player
+    if (!p) return
+    const s2 = {
+      id: song.id,
+      track: song.track,
+      artistName: song.artistName,
+      coverUrl: song.coverUrl,
+      embed: song.embed,
+      youtubeId: song.youtubeId,
+    }
+    set({ player: { ...p, queue: [...p.queue, s2], index: p.queue.length, idle: false } }, true)
   },
   /** 내려 둔 재생바를 다시 재생 */
   resume() {
@@ -171,11 +216,26 @@ export const myPlaylist = {
     if (!p || index < 0 || index >= p.queue.length) return
     set({ player: { ...p, index, idle: false } }, true)
   },
-  /** 대기열에서 한 곡 빼기 (지금 곡은 못 빼요) */
+  /** 대기열에서 한 곡 빼기 — 지금 재생 중인 곡을 빼면 다음 곡으로 넘어가요(마지막이면 멈춤, 하나뿐이면 재생바를 닫아요). */
   dequeue(index: number) {
     const p = state.player
-    if (!p || index === p.index) return
+    if (!p || index < 0 || index >= p.queue.length) return
     const queue = p.queue.filter((_, i) => i !== index)
+    if (!queue.length) return set({ player: null })
+    if (index === p.index) {
+      const last = index >= queue.length
+      return set(
+        {
+          player: {
+            ...p,
+            queue,
+            index: last ? queue.length - 1 : index,
+            idle: last ? true : p.idle,
+          },
+        },
+        true,
+      )
+    }
     set({ player: { ...p, queue, index: index < p.index ? p.index - 1 : p.index } })
   },
   /** 다른 플레이어가 소리를 내기 시작할 때 등: 재생바는 남기고 플레이어만 내려요 */

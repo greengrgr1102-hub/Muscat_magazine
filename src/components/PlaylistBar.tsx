@@ -39,6 +39,7 @@ const I = {
   queue: 'M4 7h12M4 12h12M4 17h8',
   close: 'M6 6l12 12M18 6L6 18',
   down: 'M6 9l6 6 6-6',
+  hide: 'M9 6v12M15 6v12',
   big: 'M4 10V4h6M20 14v6h-6',
   smallW: 'M10 4v6H4M14 20v-6h6',
 }
@@ -53,7 +54,113 @@ export function PlaylistBar() {
   const [mounted, setMounted] = useState(false)
   const [note, setNote] = useState<Toast | null>(null)
   const [queueOpen, setQueueOpen] = useState(false)
-  const [bigVideo, setBigVideo] = useState(false)
+  // 영상 창 너비 — 오른쪽 위 모서리를 끌어서 조절 (YouTube 규정상 높이 200px = 너비 356px이 최소)
+  const [videoW, setVideoW] = useState(356)
+  useEffect(() => {
+    try {
+      const w = Number(localStorage.getItem('mm_video_w'))
+      if (w >= 356) setVideoW(w)
+    } catch {
+      /* 무시 */
+    }
+  }, [])
+  const resizeVideo = (w: number, save = false) => {
+    const max = Math.max(356, Math.min(1280, window.innerWidth - 48))
+    const next = Math.round(Math.min(max, Math.max(356, w)))
+    setVideoW(next)
+    setVideoPos((p) =>
+      p ? { left: Math.min(p.left, window.innerWidth - next - 8), bottom: p.bottom } : p,
+    )
+    if (save)
+      try {
+        localStorage.setItem('mm_video_w', String(next))
+      } catch {
+        /* 무시 */
+      }
+  }
+  // 영상 창 위치 — 윗줄을 잡고 끌어서 옮겨요 (데스크톱). 다음에 와도 그 자리.
+  const [videoPos, setVideoPos] = useState<{ left: number; bottom: number } | null>(null)
+  const videoBox = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem('mm_video_pos') || 'null') as {
+        left?: number
+        bottom?: number
+      } | null
+      if (v && Number.isFinite(v.left) && Number.isFinite(v.bottom))
+        setVideoPos({ left: v.left!, bottom: v.bottom! })
+    } catch {
+      /* 무시 */
+    }
+  }, [])
+  const clampPos = (left: number, bottom: number) => {
+    const el = videoBox.current
+    const w = el?.offsetWidth || 356
+    const h = el?.offsetHeight || 234
+    return {
+      left: Math.round(Math.min(Math.max(8, left), window.innerWidth - w - 8)),
+      bottom: Math.round(Math.min(Math.max(84, bottom), window.innerHeight - h - 8)),
+    }
+  }
+  const startMove = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button') || window.innerWidth <= 768) return
+    e.preventDefault()
+    const el = videoBox.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const l0 = r.left
+    const b0 = window.innerHeight - r.bottom
+    const x0 = e.clientX
+    const y0 = e.clientY
+    let last = { left: l0, bottom: b0 }
+    const move = (ev: PointerEvent) => {
+      last = clampPos(l0 + ev.clientX - x0, b0 - (ev.clientY - y0))
+      setVideoPos(last)
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      document.body.classList.remove('is-moving')
+      try {
+        localStorage.setItem('mm_video_pos', JSON.stringify(last))
+      } catch {
+        /* 무시 */
+      }
+    }
+    document.body.classList.add('is-moving')
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+  // 창 크기가 바뀌면 화면 밖으로 나가지 않게
+  useEffect(() => {
+    const fit = () => setVideoPos((p) => (p ? clampPos(p.left, p.bottom) : p))
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [])
+
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault()
+    const x0 = e.clientX
+    const y0 = e.clientY
+    const w0 = videoW
+    let last = w0
+    const move = (ev: PointerEvent) => {
+      // 오른쪽·위로 끌면 커지고, 왼쪽·아래로 끌면 작아져요 (16:9 비율 유지)
+      const dx = ev.clientX - x0
+      const dy = (y0 - ev.clientY) * (16 / 9)
+      last = w0 + (Math.abs(dx) > Math.abs(dy) ? dx : dy)
+      resizeVideo(last)
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      document.body.classList.remove('is-resizing')
+      resizeVideo(last, true)
+    }
+    document.body.classList.add('is-resizing')
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
   const [playing, setPlaying] = useState(false)
   const [pos, setPos] = useState({ t: 0, d: 0 })
   const yt = useRef<YTPlayer | null>(null)
@@ -142,6 +249,32 @@ export function PlaylistBar() {
     }
   }, [mounted, now, live, kind])
 
+  // 다음 곡 — 목록이 끝나면 Editor's Picks에서 아직 안 나온 곡을 랜덤으로 골라 계속 틀어요
+  const nextBusy = useRef(false)
+  const next = useCallback(async () => {
+    const p = myPlaylist.get().player
+    if (!p) return
+    if (p.index < p.queue.length - 1) return myPlaylist.step(1)
+    if (nextBusy.current) return
+    nextBusy.current = true
+    try {
+      const x = p.queue
+        .slice(-200)
+        .map((s) => s.id)
+        .join(',')
+      const r = await fetch(`/explore/shuffle/next?x=${x}`).then((res) =>
+        res.ok ? res.json() : null,
+      )
+      const song = r?.song
+      if (song?.embed) myPlaylist.appendAndPlay(song)
+      else myPlaylist.step(1)
+    } catch {
+      myPlaylist.step(1)
+    } finally {
+      nextBusy.current = false
+    }
+  }, [])
+
   const toggle = useCallback(() => {
     if (!player) return
     if (player.idle) return myPlaylist.resume()
@@ -169,16 +302,21 @@ export function PlaylistBar() {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return
       const el = document.activeElement as HTMLElement | null
-      if (el && el !== document.body && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A|IFRAME)$/.test(el.tagName))) return
+      if (
+        el &&
+        el !== document.body &&
+        (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A|IFRAME)$/.test(el.tagName))
+      )
+        return
       if (e.code === 'Space' && (kind === 'yt' || player?.idle)) {
         e.preventDefault()
         toggle()
-      } else if (e.key === 'ArrowRight') myPlaylist.step(1)
+      } else if (e.key === 'ArrowRight') void next()
       else if (e.key === 'ArrowLeft') myPlaylist.step(-1)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [now, kind, player, toggle])
+  }, [now, kind, player, toggle, next])
 
   if (!mounted) return null
   const pct = pos.d ? Math.min(100, (pos.t / pos.d) * 100) : 0
@@ -205,31 +343,98 @@ export function PlaylistBar() {
       ) : null}
 
       {now && live && kind !== 'sp' ? (
-        <div className={`mbar-video${bigVideo ? ' mbar-video--big' : ''}`} role="region" aria-label="영상">
-          <div className="mbar-video__head">
+        <div
+          ref={videoBox}
+          className="mbar-video"
+          role="region"
+          aria-label="영상"
+          style={{
+            ['--vw' as string]: `${videoW}px`,
+            ...(videoPos
+              ? {
+                  ['--vl' as string]: `${videoPos.left}px`,
+                  ['--vb' as string]: `${videoPos.bottom}px`,
+                }
+              : {}),
+          }}
+        >
+          <span
+            className="mbar-video__grip"
+            role="separator"
+            aria-label="영상 크기 조절 (끌어서 크게·작게, 두 번 누르면 처음 크기)"
+            onPointerDown={startResize}
+            onDoubleClick={() => resizeVideo(356, true)}
+          />
+          <div
+            className="mbar-video__head"
+            onPointerDown={startMove}
+            title="끌어서 옮기기 · 두 번 누르면 처음 자리"
+            onDoubleClick={(e) => {
+              if ((e.target as HTMLElement).closest('button')) return
+              setVideoPos(null)
+              try {
+                localStorage.removeItem('mm_video_pos')
+              } catch {
+                /* 무시 */
+              }
+            }}
+          >
             <span>YouTube로 듣는 중</span>
             <span className="mbar-video__tools">
-              <button type="button" className="mbar-video__sp" title="Spotify로 들으면 영상 없이 미니바만으로 들을 수 있어요" onClick={() => setSource('spotify')}>
+              <button
+                type="button"
+                className="mbar-video__sp"
+                title="Spotify로 들으면 영상 없이 미니바만으로 들을 수 있어요"
+                onClick={() => setSource('spotify')}
+              >
                 Spotify로 듣기
               </button>
-              <button type="button" className="mbar-video__size" aria-label={bigVideo ? '영상 작게' : '영상 크게'} onClick={() => setBigVideo((b) => !b)}>
-                <Icon d={bigVideo ? I.smallW : I.big} size={16} fill={false} />
+              <button
+                type="button"
+                className="mbar-video__size"
+                aria-label={videoW > 356 ? '영상 가장 작게' : '영상 크게'}
+                onClick={() => resizeVideo(videoW > 356 ? 356 : 640, true)}
+              >
+                <Icon d={videoW > 356 ? I.smallW : I.big} size={16} fill={false} />
               </button>
-              <button type="button" aria-label="영상 접기 (재생 멈춤)" title="접으면 재생이 멈춰요" onClick={fold}>
+              <button
+                type="button"
+                className="mbar-video__dock"
+                aria-label="영상 가장 작게 내려놓기 (계속 재생)"
+                title="가장 작게 줄여 왼쪽 아래에 내려놔요 — 음악은 계속 나와요"
+                onClick={() => {
+                  resizeVideo(356, true)
+                  setVideoPos(null)
+                  try {
+                    localStorage.removeItem('mm_video_pos')
+                  } catch {
+                    /* 무시 */
+                  }
+                }}
+              >
                 <Icon d={I.down} size={18} fill={false} />
+              </button>
+              <button
+                type="button"
+                aria-label="멈추고 숨기기"
+                title="재생을 멈추고 영상 창을 숨겨요 — 재생바의 ▶로 이어 듣기"
+                onClick={fold}
+              >
+                <Icon d={I.hide} size={16} fill={false} />
               </button>
             </span>
           </div>
           {kind === 'yt' ? (
             <YouTubeEmbed
-              key={`${now.id}-${player!.index}-${vid}`}
+              key="bar-yt"
+              reloadKey={`${now.id}:${player!.index}`}
               videoId={vid!}
               title={`${now.track || ''} — ${now.artistName}`}
               autoPlay
               start={startAt}
               onPlayer={(p) => (yt.current = p)}
               onPlaying={setPlaying}
-              onEnded={() => myPlaylist.step(1)}
+              onEnded={() => void next()}
               onBlocked={() => {
                 setBlocked(true)
                 reportBadVideo(now.id, vid!)
@@ -242,12 +447,21 @@ export function PlaylistBar() {
       ) : null}
 
       {now ? (
-        <div className={`mbar${live && kind === 'sp' ? ' mbar--sp' : ''}${live ? '' : ' mbar--idle'}`} role="region" aria-label="재생바">
+        <div
+          className={`mbar${live && kind === 'sp' ? ' mbar--sp' : ''}${live ? '' : ' mbar--idle'}`}
+          role="region"
+          aria-label="재생바"
+        >
           <div className="mbar__line" aria-hidden="true">
             <span style={{ width: `${pct}%` }} />
           </div>
           <div className="mbar__now">
-            <Link href={`/picks/${now.id}`} className="mbar__cover" tabIndex={-1} aria-hidden="true">
+            <Link
+              href={`/picks/${now.id}`}
+              className="mbar__cover"
+              tabIndex={-1}
+              aria-hidden="true"
+            >
               {now.coverUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={small(now.coverUrl) || ''} alt="" width={48} height={48} />
@@ -269,13 +483,29 @@ export function PlaylistBar() {
             {showCtrl ? (
               <>
                 <div className="mbar__ctrl">
-                  <button type="button" className="mbar__prev" aria-label="이전 곡" disabled={player!.index === 0} onClick={() => myPlaylist.step(-1)}>
+                  <button
+                    type="button"
+                    className="mbar__prev"
+                    aria-label="이전 곡"
+                    disabled={player!.index === 0}
+                    onClick={() => myPlaylist.step(-1)}
+                  >
                     <Icon d={I.prev} />
                   </button>
-                  <button type="button" className="mbar__toggle" aria-label={live && playing ? '일시정지' : '재생'} onClick={toggle}>
+                  <button
+                    type="button"
+                    className="mbar__toggle"
+                    aria-label={live && playing ? '일시정지' : '재생'}
+                    onClick={toggle}
+                  >
                     <Icon d={live && playing ? I.pause : I.play} />
                   </button>
-                  <button type="button" className="mbar__next" aria-label="다음 곡" disabled={player!.index >= player!.queue.length - 1} onClick={() => myPlaylist.step(1)}>
+                  <button
+                    type="button"
+                    className="mbar__next"
+                    aria-label="다음 곡"
+                    onClick={() => void next()}
+                  >
                     <Icon d={I.next} />
                   </button>
                 </div>
@@ -307,7 +537,7 @@ export function PlaylistBar() {
                   title={`${now.track || ''} — ${now.artistName}`}
                   height={80}
                   autoPlay
-                  onEnded={() => myPlaylist.step(1)}
+                  onEnded={() => void next()}
                 />
               </div>
             )}
@@ -315,10 +545,18 @@ export function PlaylistBar() {
 
           <div className="mbar__tools">
             <div className="mbar__src" role="group" aria-label="듣는 곳">
-              <button type="button" className={source === 'youtube' ? 'is-on' : ''} onClick={() => setSource('youtube')}>
+              <button
+                type="button"
+                className={source === 'youtube' ? 'is-on' : ''}
+                onClick={() => setSource('youtube')}
+              >
                 YouTube
               </button>
-              <button type="button" className={source === 'spotify' ? 'is-on' : ''} onClick={() => setSource('spotify')}>
+              <button
+                type="button"
+                className={source === 'spotify' ? 'is-on' : ''}
+                onClick={() => setSource('spotify')}
+              >
                 Spotify
               </button>
             </div>
@@ -354,11 +592,24 @@ export function PlaylistBar() {
           </div>
           <ol>
             {player!.queue.map((s, i) => (
-              <li key={`${s.id}-${i}`} className={i === player!.index ? 'is-now' : i < player!.index ? 'is-past' : ''}>
-                <button type="button" className="mbar-queue__item" onClick={() => myPlaylist.jump(i)}>
+              <li
+                key={`${s.id}-${i}`}
+                className={i === player!.index ? 'is-now' : i < player!.index ? 'is-past' : ''}
+              >
+                <button
+                  type="button"
+                  className="mbar-queue__item"
+                  onClick={() => myPlaylist.jump(i)}
+                >
                   {s.coverUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={small(s.coverUrl) || ''} alt="" width={36} height={36} loading="lazy" />
+                    <img
+                      src={small(s.coverUrl) || ''}
+                      alt=""
+                      width={36}
+                      height={36}
+                      loading="lazy"
+                    />
                   ) : (
                     <span className="mbar-queue__ph" />
                   )}
@@ -368,15 +619,34 @@ export function PlaylistBar() {
                   </span>
                   {i === player!.index ? <span className="mbar-queue__now">재생 중</span> : null}
                 </button>
-                {i !== player!.index ? (
-                  <button type="button" className="mbar-queue__x" aria-label={`${s.track} 목록에서 빼기`} onClick={() => myPlaylist.dequeue(i)}>
-                    <Icon d={I.close} size={14} fill={false} />
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  className="mbar-queue__x"
+                  aria-label={
+                    i === player!.index
+                      ? `${s.track} 빼고 다음 곡 듣기`
+                      : `${s.track} 목록에서 빼기`
+                  }
+                  title={i === player!.index ? '빼고 다음 곡으로' : '목록에서 빼기'}
+                  onClick={async () => {
+                    // 마지막 곡(지금 곡)을 빼면 랜덤으로 다음 곡을 먼저 불러온 뒤 빼요
+                    if (i === player!.index && i === player!.queue.length - 1) {
+                      await next()
+                      const p = myPlaylist.get().player
+                      if (p && p.index !== i) return myPlaylist.dequeue(i)
+                    }
+                    myPlaylist.dequeue(i)
+                  }}
+                >
+                  <Icon d={I.close} size={14} fill={false} />
+                </button>
               </li>
             ))}
           </ol>
-          <p className="mbar-queue__foot">곡이 끝나면 다음 곡으로 넘어가요 · 스페이스 재생/정지 · ←→ 이전/다음</p>
+          <p className="mbar-queue__foot">
+            곡이 끝나면 다음 곡으로, 목록이 끝나면 Editor&apos;s Picks에서 랜덤으로 이어서 틀어요 ·
+            스페이스 재생/정지 · ←→ 이전/다음
+          </p>
         </div>
       ) : null}
     </>

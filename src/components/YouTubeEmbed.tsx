@@ -10,6 +10,7 @@ export type YTPlayer = {
   seekTo: (s: number, allowSeekAhead: boolean) => void
   getCurrentTime: () => number
   getDuration: () => number
+  loadVideoById: (o: { videoId: string; startSeconds?: number }) => void
   destroy: () => void
 }
 type YTNamespace = {
@@ -68,6 +69,7 @@ export function YouTubeEmbed({
   start = 0,
   onPlayer,
   onPlaying,
+  reloadKey,
 }: {
   videoId: string
   title: string
@@ -78,6 +80,8 @@ export function YouTubeEmbed({
   /** 재생바가 직접 멈추고·넘기도록 플레이어를 넘겨줘요 */
   onPlayer?: (p: YTPlayer | null) => void
   onPlaying?: (playing: boolean) => void
+  /** 같은 영상이라도 이 값이 바뀌면 처음부터 다시 (재생바의 곡 바뀜) */
+  reloadKey?: string
   onEnded?: () => void
   /** 다른 사이트에서 재생이 막힌 영상일 때 */
   onBlocked?: () => void
@@ -92,6 +96,27 @@ export function YouTubeEmbed({
   const playingRef = useRef(onPlaying)
   playingRef.current = onPlaying
   const startRef = useRef(start)
+  startRef.current = start
+  // 영상만 바뀔 때는 플레이어를 새로 만들지 않고 이어서 불러와요 (다음 곡 자동 재생이 막히지 않게)
+  const vidRef = useRef(videoId)
+  vidRef.current = videoId
+  const keyRef = useRef(reloadKey)
+  keyRef.current = reloadKey
+  const live = useRef<{ player: YTPlayer | null; loaded: string }>({
+    player: null,
+    loaded: videoId,
+  })
+  useEffect(() => {
+    const l = live.current
+    if (l.player && l.loaded !== videoId) {
+      l.loaded = videoId
+      try {
+        l.player.loadVideoById({ videoId, startSeconds: Math.floor(startRef.current) || 0 })
+      } catch {
+        /* 플레이어가 사라진 경우 */
+      }
+    }
+  }, [videoId, reloadKey])
 
   useEffect(() => {
     if (!box.current) return
@@ -102,15 +127,28 @@ export function YouTubeEmbed({
     loadYT()
       .then((YT) => {
         if (cancelled) return
+        const first = vidRef.current
+        live.current.loaded = `${first}|${keyRef.current}`
         player = new YT.Player(slot, {
-          videoId,
+          videoId: first,
           width: '100%',
           height: '100%',
-          playerVars: { autoplay: autoPlay ? 1 : 0, playsinline: 1, rel: 0, modestbranding: 1, start: Math.floor(startRef.current) || 0 },
+          playerVars: {
+            autoplay: autoPlay ? 1 : 0,
+            playsinline: 1,
+            rel: 0,
+            modestbranding: 1,
+            start: Math.floor(startRef.current) || 0,
+          },
           events: {
             onReady: (e) => {
+              live.current.player = e.target
               playerRef.current?.(e.target)
-              if (autoPlay) e.target.playVideo()
+              // 준비되는 사이에 곡이 바뀌었으면 새 곡으로
+              if (`${vidRef.current}|${keyRef.current}` !== live.current.loaded) {
+                live.current.loaded = `${vidRef.current}|${keyRef.current}`
+                e.target.loadVideoById({ videoId: vidRef.current })
+              } else if (autoPlay) e.target.playVideo()
             },
             onStateChange: (e) => {
               // 1 재생 · 2 멈춤 · 0 끝
@@ -128,13 +166,14 @@ export function YouTubeEmbed({
       .catch(() => blockedRef.current?.())
     return () => {
       cancelled = true
+      live.current.player = null
       playerRef.current?.(null)
       try {
         player?.destroy()
       } catch {}
       slot.remove()
     }
-  }, [videoId, autoPlay])
+  }, [autoPlay])
 
   return <div ref={box} className={`yt-embed ${className}`} title={title} />
 }
