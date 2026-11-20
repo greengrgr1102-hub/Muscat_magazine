@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { ListenTabs } from '@/components/ListenTabs'
+import { ExploreTabs } from '@/components/ExploreTabs'
 import { TasteFinder } from './TasteFinder'
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export default function TastePage() {
   return (
     <>
       <div className="listen-tabs-top">
-        <ListenTabs />
+        <ExploreTabs />
       </div>
       <TasteFinder />
     </>

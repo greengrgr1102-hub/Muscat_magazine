@@ -22,9 +22,15 @@ const small = (u?: string | null) => (u ? u.replace('ab67616d0000b273', 'ab67616
 const MAX_NODES = 90
 const R = 190 // 가운데 곡에서 비슷한 곡까지 거리
 
-export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 'song' | 'album' }) {
-  const isAlbum = kind === 'album'
-  const word = isAlbum ? '앨범' : '곡'
+export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 'song' | 'album' | 'genre' }) {
+  const isGenre = kind === 'genre'
+  // 여러 곡을 가진 칸 (앨범 수록곡, 장르 대표곡)
+  const isAlbum = kind === 'album' || isGenre
+  const word = isGenre ? '장르' : kind === 'album' ? '앨범' : '곡'
+  // 받침에 맞는 조사 (곡이/앨범이/장르가)
+  const ga = isGenre ? '가' : '이'
+  const eul = isGenre ? '를' : '을'
+  const ro = isGenre ? '로' : '으로'
   const [nodes, setNodes] = useState<Map<string, Node>>(new Map())
   const [edges, setEdges] = useState<[string, string][]>([])
   const [focus, setFocus] = useState<string>(startId)
@@ -36,6 +42,8 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
   const [trail, setTrail] = useState<string[]>([startId])
   // 장르마다 구체성 점수 (드문 장르일수록 높아요) — 선 굵기에 써요
   const [gw, setGw] = useState<Record<string, number>>({})
+  // 장르 지도: 두 장르가 함께 붙은 곡 수
+  const [pairN, setPairN] = useState<Record<string, number>>({})
   // 눌러서 「왜 연결됐는지」 보고 있는 칸
   const [peek, setPeek] = useState<string | null>(null)
   const nodesRef = useRef(nodes)
@@ -120,10 +128,16 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
     busy.current.add(id)
     setLoading(id)
     try {
-      const res = await fetch(isAlbum ? `/web/data?album=${id}` : `/web/data?id=${id}`)
+      const res = await fetch(isGenre ? `/web/data?genre=${encodeURIComponent(id)}` : isAlbum ? `/web/data?album=${id}` : `/web/data?id=${id}`)
       if (!res.ok) return
-      const data = (await res.json()) as { center: WebItem; neighbors: WebItem[]; weights?: Record<string, number> }
+      const data = (await res.json()) as { center: WebItem; neighbors: WebItem[]; weights?: Record<string, number>; links?: Record<string, number> }
       if (data.weights) setGw((w) => ({ ...w, ...data.weights }))
+      if (data.links)
+        setPairN((p) => {
+          const next = { ...p }
+          for (const [other, n] of Object.entries(data.links!)) next[id < other ? `${id}|${other}` : `${other}|${id}`] = n
+          return next
+        })
       setNodes((prev) => {
         const next = new Map(prev)
         const c: Node = next.get(id) || { ...data.center, x: 0, y: 0, parent: null, expanded: false }
@@ -166,7 +180,7 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
     } finally {
       setLoading(null)
     }
-  }, [isAlbum])
+  }, [isAlbum, isGenre])
 
   useEffect(() => {
     expand(startId)
@@ -202,7 +216,11 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
   const sharedOf = (a: Node, b: Node) =>
     a.genres.filter((g) => b.genres.includes(g)).sort((x, y) => (gw[y] ?? 1) - (gw[x] ?? 1))
   // 연결 강도 0~1: 겹치는 장르의 점수 합
-  const strengthOf = (a: Node, b: Node) => Math.min(1, sharedOf(a, b).reduce((t, g) => t + (gw[g] ?? 1), 0) / 30)
+  const together = (a: Node, b: Node) => pairN[a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`] || 0
+  const strengthOf = (a: Node, b: Node) =>
+    isGenre
+      ? Math.min(1, Math.log1p(together(a, b)) / Math.log1p(120))
+      : Math.min(1, sharedOf(a, b).reduce((t, g) => t + (gw[g] ?? 1), 0) / 30)
 
   const neighborsOfFocus = new Set(edges.filter(([a, b]) => a === focus || b === focus).flatMap(([a, b]) => [a, b]))
   const trailSet = new Set(trail)
@@ -370,7 +388,18 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
               {partner ? <span className="muted"> ↔ </span> : null}
               <span>{pk.title}</span>
             </p>
-            {shared.length ? (
+            {isGenre && partner ? (
+              <>
+                <p className="small muted">두 장르가 함께 붙은 곡</p>
+                <p className="h-md">{together(pk, partner)}곡</p>
+                <p className="web__why-meter small muted">
+                  <span className="web__why-bar">
+                    <span style={{ width: `${Math.max(8, Math.round(peekStrength * 100))}%` }} />
+                  </span>
+                  {peekStrength > 0.6 ? '늘 붙어 다녀요' : peekStrength > 0.3 ? '자주 같이 나와요' : '가끔 같이 나와요'}
+                </p>
+              </>
+            ) : shared.length ? (
               <>
                 <p className="small muted">같이 가진 장르</p>
                 <ul className="web__why-genres">
@@ -393,10 +422,10 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
                 </p>
               </>
             ) : (
-              <p className="small muted">겹치는 장르는 없어요. 비슷한 {word}이 모자라서 함께 들어볼 만한 {word}을 채워 넣은 자리예요.</p>
+              <p className="small muted">겹치는 장르는 없어요. 비슷한 {word}{ga} 모자라서 함께 들어볼 만한 {word}{eul} 채워 넣은 자리예요.</p>
             )}
             <button type="button" className="btn btn--filled web__why-go" onClick={() => choose(pk.id)}>
-              <span>▶ 이 {word}으로 이동</span>
+              <span>▶ 이 {word}{ro} 이동</span>
             </button>
           </div>
         ) : null}
@@ -436,6 +465,7 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
                       disabled={!s.embed}
                     >
                       {s.track || '곡'}
+                      {isGenre ? <span className="muted"> — {s.artistName}</span> : null}
                     </button>
                   </li>
                 ))}
@@ -443,7 +473,7 @@ export function SpiderWeb({ startId, kind = 'song' }: { startId: string; kind?: 
             ) : null}
             <div className="web__panel-actions">
               {isAlbum ? (
-                f.songs.length > 1 ? <AddAllButton songs={f.songs} label="수록곡 담기" /> : f.songs[0] ? <AddButton song={f.songs[0]} /> : null
+                f.songs.length > 1 ? <AddAllButton songs={f.songs} label={isGenre ? '대표곡 담기' : '수록곡 담기'} /> : f.songs[0] ? <AddButton song={f.songs[0]} /> : null
               ) : f.songs[0] ? (
                 <AddButton song={f.songs[0]} />
               ) : null}

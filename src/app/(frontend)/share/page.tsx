@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { toRow } from '@/components/Picks'
 import { PickList } from '@/components/PickList'
 import { AddAllButton, PlayAllButton } from '@/components/AddButton'
+import { ExportPlaylist } from '@/components/ExportPlaylist'
 import { getClient } from '@/lib/data'
 import type { Pick } from '@/payload-types'
 
@@ -40,6 +41,7 @@ export default async function SharePage({ searchParams }: { searchParams: Promis
             <div className="my-actions">
               <PlayAllButton songs={rows} label={name} />
               <AddAllButton songs={rows} label="내 플리에 통째로 담기" />
+              <ExportPlaylist songs={rows} name={name} />
             </div>
             <PickList rows={rows} groupByMonth={false} />
           </>

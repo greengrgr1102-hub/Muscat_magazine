@@ -16,8 +16,10 @@ export function Logo() {
 
 export const NAV = [
   { href: '/articles', label: 'Articles' },
-  // 곡·앨범·Essential·플레이리스트·취향 찾기·내 플리는 Editor's Picks 안에 묶음
-  { href: '/picks', label: "Editor's Picks", also: ['/essential', '/playlists', '/taste', '/my', '/web', '/share'] },
+  // 곡·앨범·Essential·플레이리스트·내 플리는 Editor's Picks 안에 묶음
+  { href: '/picks', label: "Editor's Picks", also: ['/essential', '/playlists', '/my', '/share'] },
+  // 장르 지도·거미줄·아무거나 틀어줘·취향 찾기는 Explore 안에 묶음
+  { href: '/explore', label: 'Explore', also: ['/web', '/taste'] },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
 ]

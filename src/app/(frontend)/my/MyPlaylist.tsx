@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { copyText } from '@/lib/copy'
+import { ExportPlaylist } from '@/components/ExportPlaylist'
 import { myPlaylist, shareUrl, useMyPlaylist } from '@/lib/myPlaylist'
 
 const small = (u?: string | null) => (u ? u.replace('ab67616d0000b273', 'ab67616d00004851') : null)
@@ -75,6 +76,7 @@ export function MyPlaylist() {
               >
                 <span>{copied === 'text' ? '목록을 복사했어요' : '곡 목록 복사'}</span>
               </button>
+              <ExportPlaylist songs={songs} name={name} />
               <button className="text-btn" onClick={() => setEditing(true)}>
                 이름 바꾸기
               </button>

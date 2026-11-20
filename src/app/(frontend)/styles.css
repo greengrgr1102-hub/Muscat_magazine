@@ -3986,3 +3986,112 @@ a.ess-badge:hover svg {
 .search-item:hover strong {
   color: var(--accent-ink);
 }
+
+/* ---------- Explore(탐험) ---------- */
+.explore-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--gutter);
+}
+.explore-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+a.explore-card:hover {
+  border-color: var(--accent-ink);
+  background: var(--tint);
+}
+.explore-card .arrow-link {
+  margin-top: auto;
+}
+.explore-seeds {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.explore-seed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.explore-seed:hover {
+  background: var(--tint);
+}
+.explore-seed img {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex: 0 0 48px;
+}
+.explore-seed > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.explore-seed .muted {
+  font-size: 13px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.shuffle {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.shuffle__opts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.shuffle__row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.shuffle__row > .label {
+  flex: 0 0 48px;
+}
+.shuffle__row select {
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  font: inherit;
+  font-size: 14px;
+  min-width: 200px;
+}
+.shuffle__now {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+.shuffle__info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (max-width: 760px) {
+  .shuffle__now {
+    grid-template-columns: 1fr;
+  }
+}

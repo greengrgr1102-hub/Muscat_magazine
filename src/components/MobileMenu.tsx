@@ -8,6 +8,7 @@ import { Icon } from './ui'
 const ITEMS = [
   { href: '/articles', label: 'Articles' },
   { href: '/picks', label: "Editor's Picks" },
+  { href: '/explore', label: 'Explore' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
 ]
@@ -16,8 +17,10 @@ const SUB = [
   { href: '/picks/albums', label: '앨범' },
   { href: '/essential', label: 'Essential' },
   { href: '/playlists', label: '플레이리스트' },
-  { href: '/taste', label: '취향 찾기' },
   { href: '/my', label: '내 플리' },
+  { href: '/explore/genres', label: '장르 지도' },
+  { href: '/explore/shuffle', label: '아무거나 틀어줘' },
+  { href: '/taste', label: '취향 찾기' },
 ]
 
 export function MobileMenu({ instagramUrl }: { instagramUrl?: string }) {

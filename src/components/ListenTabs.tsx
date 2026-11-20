@@ -8,7 +8,6 @@ const TABS = [
   { href: '/picks/albums', label: '앨범' },
   { href: '/essential', label: 'Essential' },
   { href: '/playlists', label: '플레이리스트' },
-  { href: '/taste', label: '취향 찾기' },
   { href: '/my', label: '내 플리' },
 ]
 

@@ -68,6 +68,9 @@ export default async function GenrePage({ params, searchParams }: { params: Para
                 </Chip>
               ))}
             </div>
+            <p>
+              <ArrowLink href={`/explore/genres?g=${genre.slug}`}>장르 지도에서 보기</ArrowLink>
+            </p>
           </div>
         ) : null}
       </section>

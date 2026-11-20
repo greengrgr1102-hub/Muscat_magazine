@@ -868,10 +868,103 @@ export async function relatedGenres(genreId: number, limit = 16) {
   return rows.map((r) => ({ id: Number(r.id), name: String(r.name), slug: String(r.slug), n: Number(r.n) }))
 }
 
+/**
+ * 장르 지도: 장르 하나와 같이 자주 붙는 장르들, 각 장르의 대표 곡(커버·들어볼 곡).
+ * 대표 곡은 날마다 조금씩 바뀌게 섞어요.
+ */
+export async function genreWeb(slug: string, limit = 9) {
+  const center = await getGenre(slug)
+  if (!center) return null
+  const related = await relatedGenres(center.id, limit)
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const ids = [center.id, ...related.map((r) => r.id)]
+  const [songRows, countRows] = await Promise.all([
+    db.drizzle.execute(sql`
+      select * from (
+        select r.genres_id as gid, p.id, p.track, p.artist_name, p.cover_url, p.spotify_url, p.youtube_id,
+               row_number() over (partition by r.genres_id order by md5(p.id::text || current_date::text)) as rn
+        from picks_rels r join picks p on p.id = r.parent_id
+        where r.path = 'genres' and r.genres_id in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)}) and p.cover_url is not null
+      ) x where rn <= 8`),
+    db.drizzle.execute(sql`
+      select genres_id as gid, count(distinct parent_id)::int as n from picks_rels
+      where path = 'genres' and genres_id in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)}) group by genres_id`),
+  ])
+  const songs = new Map<number, { id: number; track: string | null; artistName: string; coverUrl: string | null; spotifyUrl: string; youtubeId: string | null }[]>()
+  for (const r of songRows.rows) {
+    const g = Number(r.gid)
+    const list = songs.get(g) || []
+    list.push({
+      id: Number(r.id),
+      track: (r.track as string) || null,
+      artistName: String(r.artist_name || ''),
+      coverUrl: (r.cover_url as string) || null,
+      spotifyUrl: String(r.spotify_url || ''),
+      youtubeId: (r.youtube_id as string) || null,
+    })
+    songs.set(g, list)
+  }
+  const count = new Map(countRows.rows.map((r) => [Number(r.gid), Number(r.n)]))
+  const node = (g: { id: number; name: string; slug: string }) => ({ ...g, n: count.get(g.id) || 0, songs: songs.get(g.id) || [] })
+  return {
+    center: node({ id: center.id, name: center.name, slug: String(center.slug) }),
+    neighbors: related.map((r) => ({ ...node(r), together: r.n })),
+  }
+}
+
 /** 이 장르가 붙은 Editor's Picks 곡 수 */
 export async function pickCountForGenre(genreId: number) {
   const payload = await getClient()
   const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
   const r = await db.drizzle.execute(sql`select count(distinct parent_id)::int as c from picks_rels where path = 'genres' and genres_id = ${genreId}`)
   return Number(r.rows[0]?.c || 0)
+}
+
+/**
+ * 아무거나 틀어줘: 조건에 맞는 곡 하나를 무작위로. 최근에 들은 곡(exclude)은 빼고,
+ * 다 들었으면 들은 곡 중에서라도 골라요.
+ */
+export async function randomPick({ genreId, f = {}, exclude = [] }: { genreId?: number; f?: PickFilter; exclude?: number[] }) {
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const conds = [sql`spotify_url is not null`, ...pickFilterSql(f)]
+  if (genreId) conds.push(sql`id in (select parent_id from picks_rels where path = 'genres' and genres_id = ${genreId})`)
+  const base = sql.join(conds, sql` and `)
+  const ex = exclude.filter((x) => Number.isInteger(x) && x > 0).slice(0, 500)
+  const pickOne = async (withEx: boolean) =>
+    (
+      await db.drizzle.execute(sql`
+        select id from picks where ${base}
+        ${withEx && ex.length ? sql`and id not in (${sql.join(ex.map((x) => sql`${x}`), sql`, `)})` : sql``}
+        order by random() limit 1`)
+    ).rows[0]
+  const [row, left] = await Promise.all([
+    pickOne(true),
+    db.drizzle.execute(sql`select count(*)::int as n from picks where ${base}`),
+  ])
+  const r = row || (await pickOne(false))
+  if (!r) return null
+  const pick = await payload.findByID({ collection: 'picks', id: Number(r.id), depth: 1 })
+  return { pick, total: Number(left.rows[0]?.n || 0), fresh: Boolean(row) }
+}
+
+/** 탐험 첫 화면에서 거미줄을 시작할 곡·앨범 하나씩 (날마다 바뀌어요) */
+export async function exploreSeeds() {
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const pick = (
+    await db.drizzle.execute(sql`
+      select p.id, p.track, p.artist_name, p.album, p.cover_url from picks p
+      where p.cover_url like '%/image/%' and exists (select 1 from picks_rels r where r.parent_id = p.id and r.path = 'genres')
+      order by md5(p.id::text || current_date::text) limit 2`)
+  ).rows
+  const song = pick[0]
+  const alb = pick[1]
+  return {
+    song: song ? { id: Number(song.id), track: String(song.track || ''), artist: String(song.artist_name || ''), cover: (song.cover_url as string) || null } : null,
+    album: alb
+      ? { key: String(alb.cover_url).slice(-24), album: String(alb.album || ''), artist: String(alb.artist_name || '').split(', ')[0], cover: (alb.cover_url as string) || null }
+      : null,
+  }
 }

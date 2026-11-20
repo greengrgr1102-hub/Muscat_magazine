@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { AddAllButton, AddButton, PlayAllButton } from '@/components/AddButton'
+import { ExportPlaylist } from '@/components/ExportPlaylist'
 import { PickList } from '@/components/PickList'
 import { SongPlayer } from '@/components/SongPlayer'
 import { myPlaylist } from '@/lib/myPlaylist'
@@ -255,6 +256,7 @@ export function TasteFinder() {
         <div className="my-actions">
           <PlayAllButton songs={taste.recs} label="내 취향 추천" />
           <AddAllButton songs={taste.recs} label="추천곡 통째로 담기" />
+          <ExportPlaylist songs={taste.recs} name="내 취향 추천" />
           <button
             className="text-btn"
             onClick={() => {

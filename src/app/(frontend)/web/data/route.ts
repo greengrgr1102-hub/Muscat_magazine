@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { asGenres, genreWeightsByName, getPick, similarAlbums, similarPicks, type WebAlbum } from '@/lib/data'
+import { asGenres, genreWeb, genreWeightsByName, getPick, similarAlbums, similarPicks, type WebAlbum } from '@/lib/data'
 import type { Pick } from '@/payload-types'
 
 function spotifyEmbed(url: string) {
@@ -28,6 +28,17 @@ const albumNode = (a: WebAlbum) => ({
   songs: a.songs.map((s) => ({ id: s.id, track: s.track, artistName: s.artistName, coverUrl: s.coverUrl, embed: spotifyEmbed(s.spotifyUrl), youtubeId: s.youtubeId })),
 })
 
+type GenreNode = NonNullable<Awaited<ReturnType<typeof genreWeb>>>['center']
+const genreNode = (g: GenreNode) => ({
+  id: g.slug,
+  title: g.name,
+  sub: `${g.n}곡`,
+  coverUrl: g.songs[0]?.coverUrl || null,
+  genres: [] as string[],
+  href: `/genres/${g.slug}`,
+  songs: g.songs.map((s) => ({ id: s.id, track: s.track, artistName: s.artistName, coverUrl: s.coverUrl, embed: spotifyEmbed(s.spotifyUrl), youtubeId: s.youtubeId })),
+})
+
 // 이번 응답에 나온 장르들의 구체성 점수만 골라 보내요.
 async function weightsFor(items: { genres: string[] }[]) {
   const all = await genreWeightsByName()
@@ -39,6 +50,17 @@ async function weightsFor(items: { genres: string[] }[]) {
 // ?id=곡번호 → 곡 하나와 비슷한 곡 8개 / ?album=앨범키 → 앨범 하나와 비슷한 앨범 8개
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams
+  // ?genre=장르주소 → 장르 하나와 같이 자주 붙는 장르들 (links: 함께 붙은 곡 수)
+  const genre = q.get('genre')
+  if (genre) {
+    const res = await genreWeb(genre)
+    if (!res) return NextResponse.json({ error: 'not found' }, { status: 404 })
+    return NextResponse.json({
+      center: genreNode(res.center),
+      neighbors: res.neighbors.map(genreNode),
+      links: Object.fromEntries(res.neighbors.map((n) => [n.slug, n.together])),
+    })
+  }
   const album = q.get('album')
   if (album) {
     const res = await similarAlbums(album, 8)
