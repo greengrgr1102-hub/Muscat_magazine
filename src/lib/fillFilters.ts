@@ -443,7 +443,9 @@ export async function fillFilters(payload: Payload, budgetMs = 45_000) {
   const deadline = Date.now() + budgetMs
   const albumsCleaned = await cleanAlbumNames(payload)
   // 나라는 일본어 이름(가나)으로도 찾으니까, 이름을 영어로 바꾸기 전에 빠른 단계부터 끝내요.
-  const countriesP = fillCountries(payload, deadline)
+  // MusicBrainz는 1초에 한 번만 → 나라 채우기와 아티스트 멤버·다른 이름 채우기를 15분마다 번갈아 해요
+  const infoTurn = Math.floor(Date.now() / 900_000) % 2 === 1
+  const countriesP = fillCountries(payload, infoTurn ? Date.now() + 2000 : deadline)
   await new Promise((r) => setTimeout(r, 1500))
   // Spotify가 몇십 번 만에 쉬어 가자고 해서, 번갈아 가며 먼저 해요 (한쪽만 계속 밀리지 않게)
   const typesFirst = Math.floor(Date.now() / 600_000) % 2 === 0
@@ -459,10 +461,10 @@ export async function fillFilters(payload: Payload, budgetMs = 45_000) {
     const types = en.busy ? skippedT : await fillReleaseTypes(payload, deadline)
     return { en, types }
   }
-  const [{ en, types }, countries] = await Promise.all([spotifySide(), countriesP])
+  const noInfo = { done: 0, found: 0, busy: false, left: -1 }
+  const infoP = infoTurn ? countriesP.then(() => fillArtistInfo(payload, deadline)) : Promise.resolve(noInfo)
+  const [{ en, types }, countries, info] = await Promise.all([spotifySide(), countriesP, infoP])
   const roman = Date.now() < deadline - 5000 ? await romanizeNames(payload, deadline) : { changed: 0, scanned: 0 }
-  // 나라 채우기가 MusicBrainz를 다 쓴 뒤에 (1초에 한 번 규칙)
-  const info = Date.now() < deadline - 6000 ? await fillArtistInfo(payload, deadline) : { done: 0, found: 0, busy: false, left: -1 }
   const parts = [
     ...(albumsCleaned ? [`앨범 이름 ${albumsCleaned}개 정리`] : []),
     `영어 이름이 없는 ${roman.changed}곡은 로마자 발음으로`,
