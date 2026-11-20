@@ -9,6 +9,10 @@ export async function POST(req: Request) {
   const ua = req.headers.get('user-agent') || ''
   if (!ua || BOT.test(ua)) return new NextResponse(null, { status: 204 })
   try {
+    const payload = await getClient()
+    // 관리자로 로그인한 브라우저(에디터 본인)는 세지 않고, 브라우저에 「나는 빼 줘」 표시를 남기라고 알려줘요.
+    const { user } = await payload.auth({ headers: req.headers }).catch(() => ({ user: null }))
+    if (user) return NextResponse.json({ me: true })
     const body = (await req.json()) as { kind?: string; id?: number; first?: boolean }
     const keys: string[] = []
     if (body.kind === 'page') {
@@ -17,7 +21,7 @@ export async function POST(req: Request) {
     } else if ((body.kind === 'article' || body.kind === 'pick' || body.kind === 'play') && Number.isInteger(body.id)) {
       keys.push(`${body.kind}:${body.id}`)
     }
-    if (keys.length) await bump(await getClient(), keys)
+    if (keys.length) await bump(payload, keys)
   } catch {
     // 잘못된 신호는 조용히 무시해요.
   }

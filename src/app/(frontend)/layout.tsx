@@ -5,7 +5,7 @@ import '@fontsource/instrument-serif/400-italic.css'
 import './styles.css'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
-import { Analytics } from '@vercel/analytics/next'
+import { SiteAnalytics } from '@/components/SiteAnalytics'
 import { PageTracker } from '@/components/Track'
 import { PlaylistBar } from '@/components/PlaylistBar'
 import { getSettings } from '@/lib/data'
@@ -63,7 +63,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <main id="main">{children}</main>
         <Footer />
         <PlaylistBar />
-        <Analytics />
+        <SiteAnalytics />
         <PageTracker />
       </body>
     </html>
