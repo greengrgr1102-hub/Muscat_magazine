@@ -40,10 +40,10 @@ export default async function SharePage({ searchParams }: { searchParams: Promis
           <>
             <div className="my-actions">
               <PlayAllButton songs={rows} label={name} />
-              <AddAllButton songs={rows} label="내 플리에 통째로 담기" />
+              <AddAllButton songs={rows} label="좋아요한 곡에 통째로 담기" />
               <ExportPlaylist songs={rows} name={name} />
             </div>
-            <PickList rows={rows} groupByMonth={false} />
+            <PickList rows={rows} groupByMonth={false} label="공유받은 플리" />
           </>
         ) : (
           <p className="muted">

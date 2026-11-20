@@ -17,7 +17,7 @@ const SUB = [
   { href: '/picks/albums', label: '앨범' },
   { href: '/essential', label: 'Essential' },
   { href: '/playlists', label: '플레이리스트' },
-  { href: '/my', label: '내 플리' },
+  { href: '/my', label: '좋아요한 곡' },
   { href: '/explore/genres', label: '장르 지도' },
   { href: '/explore/shuffle', label: '아무거나 틀어줘' },
   { href: '/taste', label: '취향 찾기' },

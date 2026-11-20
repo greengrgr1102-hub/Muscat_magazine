@@ -97,7 +97,7 @@ export default async function PickAlbumPage({ params }: Props) {
       </section>
       <ListenTabs />
       <section className="wrap section">
-        <PickList rows={rows} groupByMonth={false} />
+        <PickList rows={rows} groupByMonth={false} label={title} />
       </section>
     </>
   )

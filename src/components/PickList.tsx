@@ -1,10 +1,8 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { myPlaylist, useMyPlaylist } from '@/lib/myPlaylist'
+import { usePlayed } from '@/lib/played'
 import { AddButton } from './AddButton'
-import { SongPlayer } from './SongPlayer'
-import { sendTrack } from './Track'
 import { releaseShort } from '@/lib/format'
 
 export type PickRow = {
@@ -28,14 +26,21 @@ const monthOf = (d?: string | null) => {
   return `${k.getUTCFullYear()}년 ${k.getUTCMonth() + 1}월`
 }
 
-// 한 줄에 한 곡씩: 작은 커버(누르면 바로 아래에서 재생) · 곡 · 아티스트 · 날짜
-export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; groupByMonth?: boolean }) {
-  const [open, setOpen] = useState<number | null>(null)
-  // 아래 플리 플레이어가 재생을 시작하면, 줄 안의 작은 플레이어는 닫아요 (두 곡이 겹치지 않게).
+// 한 줄에 한 곡씩: 작은 커버 · 곡 · 아티스트 · 날짜 · 하트
+// 커버를 누르면 아래 재생바에서 재생되고, 이 목록이 그대로 대기열이 돼요.
+export function PickList({
+  rows,
+  groupByMonth = true,
+  label = "Editor's Picks",
+}: {
+  rows: PickRow[]
+  groupByMonth?: boolean
+  /** 재생바에 보일 대기열 이름 */
+  label?: string
+}) {
   const { player } = useMyPlaylist()
-  useEffect(() => {
-    if (player) setOpen(null)
-  }, [player])
+  const played = usePlayed()
+  const nowId = player && !player.idle ? player.queue[player.index]?.id : null
   const groups: { title: string; rows: PickRow[] }[] = []
   for (const r of rows) {
     const t = groupByMonth ? monthOf(r.pickedAt) : ''
@@ -50,22 +55,19 @@ export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; group
           {g.title ? <h3 className="label plist__month">{g.title}</h3> : null}
           <ul className="plist__rows">
             {g.rows.map((r) => {
-              const isOpen = open === r.id
+              const isNow = nowId === r.id
               const title = `${r.track || 'Untitled'} — ${r.artistName}`
               return (
-                <li key={r.id} className={`plist__row${isOpen ? ' plist__row--open' : ''}`}>
+                <li key={r.id} className={`plist__row${isNow ? ' plist__row--open plist__row--now' : ''}`}>
                   <div className="plist__line">
                     <button
                       type="button"
                       className="plist__cover"
                       disabled={!r.embed}
-                      aria-label={isOpen ? `${title} 플레이어 닫기` : `${title} 듣기`}
+                      aria-label={isNow ? `${title} 재생 중` : `${title} 듣기`}
                       onClick={() => {
-                        setOpen(isOpen ? null : r.id)
-                        if (!isOpen) {
-                          myPlaylist.stop()
-                          sendTrack({ kind: 'play', id: r.id })
-                        }
+                        if (isNow) return
+                        myPlaylist.play(rows, rows.indexOf(r), label)
                       }}
                     >
                       {r.coverUrl ? (
@@ -73,9 +75,9 @@ export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; group
                         <img src={small(r.coverUrl) || ''} alt="" loading="lazy" width={48} height={48} />
                       ) : null}
                       <span className="plist__play" aria-hidden="true">
-                        {isOpen ? (
+                        {isNow ? (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M7 5h4v14H7zM13 5h4v14h-4z" />
+                            <path d="M4 10h3v10H4zM10.5 5h3v15h-3zM17 12h3v8h-3z" />
                           </svg>
                         ) : (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -87,6 +89,7 @@ export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; group
                     <div className="plist__text">
                       <Link href={`/picks/${r.id}`} className="plist__track">
                         {r.track || 'Untitled'}
+                        {played.has(r.id) && !isNow ? <span className="plist__heard" title="들은 곡" aria-label="들은 곡" /> : null}
                       </Link>
                       <span className="plist__artist">{r.artistName}</span>
                       {r.comment ? <span className="plist__comment">{r.comment}</span> : null}
@@ -96,9 +99,6 @@ export function PickList({ rows, groupByMonth = true }: { rows: PickRow[]; group
                     </span>
                     <AddButton song={r} compact />
                   </div>
-                  {isOpen && r.embed ? (
-                    <SongPlayer className="plist__player" pickId={r.id} embed={r.embed} youtubeId={r.youtubeId} title={title} autoPlay />
-                  ) : null}
                 </li>
               )
             })}

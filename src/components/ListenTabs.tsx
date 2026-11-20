@@ -8,7 +8,7 @@ const TABS = [
   { href: '/picks/albums', label: '앨범' },
   { href: '/essential', label: 'Essential' },
   { href: '/playlists', label: '플레이리스트' },
-  { href: '/my', label: '내 플리' },
+  { href: '/my', label: '좋아요한 곡' },
 ]
 
 function isOn(pathname: string, href: string) {

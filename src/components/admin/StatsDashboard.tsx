@@ -20,10 +20,16 @@ export async function StatsDashboard({ payload }: Props) {
   let people: { day: string; count: number }[] = []
   let articles: { id: number; count: number; title: string }[] = []
   let plays: { id: number; count: number; title: string }[] = []
+  let likes: { id: number; count: number; title: string }[] = []
   try {
     const since7 = kstDay(new Date(Date.now() - 6 * 86400_000))
     ;[pages, people] = await Promise.all([dailySeries(payload, 'site', 14), dailySeries(payload, 'visitors', 14)])
-    const [topA, topP] = await Promise.all([topKeys(payload, 'article:', since7), topKeys(payload, 'play:', since7)])
+    const [topA, topP, topL0] = await Promise.all([
+      topKeys(payload, 'article:', since7),
+      topKeys(payload, 'play:', since7),
+      topKeys(payload, 'like:', since7),
+    ])
+    const topL = topL0.filter((x) => x.count > 0)
     const nameOf = async (collection: 'articles' | 'picks', ids: number[]) => {
       if (!ids.length) return new Map<number, string>()
       const r = await payload.find({
@@ -43,10 +49,11 @@ export async function StatsDashboard({ payload }: Props) {
     }
     const [aNames, pNames] = await Promise.all([
       nameOf('articles', topA.map((x) => x.id)),
-      nameOf('picks', topP.map((x) => x.id)),
+      nameOf('picks', [...new Set([...topP, ...topL].map((x) => x.id))]),
     ])
     articles = topA.map((x) => ({ ...x, title: aNames.get(x.id) || `삭제된 글 #${x.id}` }))
     plays = topP.map((x) => ({ ...x, title: pNames.get(x.id) || `삭제된 곡 #${x.id}` }))
+    likes = topL.map((x) => ({ ...x, title: pNames.get(x.id) || `삭제된 곡 #${x.id}` }))
   } catch {
     return (
       <div style={{ ...box, marginBottom: 24 }}>
@@ -119,9 +126,10 @@ export async function StatsDashboard({ payload }: Props) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginTop: 12 }}>
         <TopList title="이번 주 많이 본 글" unit="회" rows={articles} href={(id) => `/admin/collections/articles/${id}`} empty="아직 기록이 없어요" />
         <TopList title="이번 주 많이 재생한 Editor's Pick" unit="회" rows={plays} href={(id) => `/admin/collections/picks/${id}`} empty="아직 재생 기록이 없어요" />
+        <TopList title="이번 주 많이 좋아요 받은 곡 ♥" unit="명" rows={likes} href={(id) => `/admin/collections/picks/${id}`} empty="아직 좋아요가 없어요" />
       </div>
       <p style={{ ...small, marginTop: 10 }}>
-        한국 시간 기준 · 검색엔진 로봇은 빼고 세요 · 방문자는 브라우저 하나를 하루 한 명으로 셉니다 (개인정보는 저장하지 않아요)
+        한국 시간 기준 · 검색엔진 로봇은 빼고 세요 · 방문자는 브라우저 하나를 하루 한 명으로 셉니다 · 좋아요는 누른 수에서 취소한 수를 뺀 값이고 사이트엔 보이지 않아요 (개인정보는 저장하지 않아요)
       </p>
     </section>
   )

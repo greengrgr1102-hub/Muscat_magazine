@@ -50,7 +50,12 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export const viewport: Viewport = { themeColor: '#FAFAFA' }
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FAFAFA' },
+    { media: '(prefers-color-scheme: dark)', color: '#121211' },
+  ],
+}
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

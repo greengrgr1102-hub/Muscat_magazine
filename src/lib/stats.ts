@@ -18,6 +18,14 @@ export async function bump(payload: Payload, keys: string[]) {
   }
 }
 
+/** 한 키를 delta만큼 (좋아요 취소처럼 빼기도 해요) */
+export async function bumpBy(payload: Payload, key: string, delta: number) {
+  const day = kstDay()
+  await db(payload).drizzle.execute(sql`
+    INSERT INTO "stats" ("day", "key", "count") VALUES (${day}, ${key}, ${delta})
+    ON CONFLICT ("day", "key") DO UPDATE SET "count" = COALESCE("stats"."count", 0) + ${delta}`)
+}
+
 export async function totalFor(payload: Payload, key: string, sinceDay?: string) {
   const r = await db(payload).drizzle.execute(
     sinceDay

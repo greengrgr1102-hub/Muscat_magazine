@@ -272,7 +272,7 @@ export function TasteFinder() {
       </section>
       <section className="wrap section">
         <h2 className="h-lg taste__sub">내 취향 추천</h2>
-        <PickList rows={taste.recs} groupByMonth={false} />
+        <PickList rows={taste.recs} groupByMonth={false} label="취향 추천" />
       </section>
       {taste.liked.length ? (
         <section className="wrap section">

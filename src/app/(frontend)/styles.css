@@ -26,6 +26,34 @@
   --header-h: 78px;
 }
 
+/* 다크 모드 — 버튼 없이 휴대폰·컴퓨터 설정을 그대로 따라가요 */
+:root {
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121211;
+    --surface: #1d1d1b;
+    --tint: #10291b;
+    --ink: #ecece8;
+    --ink-muted: #a3a39d;
+    --ink-subtle: #6f6f6b;
+    --line: #2b2b29;
+    --accent: #00bf63;
+    --accent-ink: #3ad884;
+    --inverse-bg: #1b1b19;
+    --inverse-ink: #ecece8;
+    --inverse-muted: #8d8d88;
+    --inverse-line: #2f2f2d;
+  }
+  img {
+    filter: brightness(0.94);
+  }
+  .header {
+    background: rgba(18, 18, 17, 0.9) !important;
+  }
+}
+
 @media (max-width: 1024px) {
   :root {
     --pad: 32px;
@@ -2448,120 +2476,599 @@ figure {
   flex-wrap: wrap;
 }
 
-/* ---------- 내 플리: 아래 바 ---------- */
-body.has-plbar {
-  padding-bottom: 72px;
+/* ---------- 좋아요(하트) ---------- */
+.heart-btn svg {
+  transition: transform 0.2s ease;
 }
-body.has-plbar--player {
-  padding-bottom: 168px;
+.heart-btn:active svg {
+  transform: scale(1.25);
 }
-.plbar {
+.heart-btn.add-btn--on {
+  color: var(--accent);
+  background: transparent;
+  border-color: var(--line);
+}
+.heart-btn.add-btn--compact {
+  width: 44px; /* 손가락으로 누르기 쉬운 크기 — 곡 재생과 겹치지 않게 */
+  height: 44px;
+  border: 0;
+  color: var(--ink-subtle);
+}
+.heart-btn.add-btn--compact:hover {
+  color: var(--accent-ink);
+}
+.heart-btn.add-btn--compact.add-btn--on {
+  color: var(--accent);
+}
+.heart-btn--dark.add-btn--compact {
+  color: #8d8d88;
+}
+.heart-btn--dark.add-btn--compact:hover {
+  color: #fafafa;
+}
+.heart-btn--dark.add-btn--on {
+  color: var(--accent);
+}
+.epick__head .heart-btn.add-btn--compact {
+  width: 36px;
+  height: 36px;
+  margin-top: -6px;
+}
+/* 들은 곡 점 · 지금 재생 중인 줄 */
+.plist__heard {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--ink-subtle);
+  vertical-align: 2px;
+  opacity: 0.7;
+}
+.plist__row--now .plist__track {
+  color: var(--accent-ink);
+}
+.song-player__resume {
+  width: 100%;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* ---------- 아래 재생바 (사이트 전체) ---------- */
+body.has-mbar {
+  padding-bottom: 76px;
+}
+body.has-mbar--sp {
+  padding-bottom: 104px;
+}
+.mbar {
   position: fixed;
-  left: 50%;
-  bottom: 16px;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 60;
-  width: min(720px, calc(100% - 24px));
-  background: var(--ink);
-  color: #fff;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-  overflow: hidden;
+  height: 76px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  background: #111;
+  color: #fafafa;
+  border-top: 1px solid #2b2b29;
+  animation: mbar-in 0.25s ease-out;
 }
-.plbar__player {
-  padding: 10px 10px 0;
+@keyframes mbar-in {
+  from {
+    transform: translateY(100%);
+  }
 }
-.plbar__ctrl {
+.mbar--sp {
+  height: 104px;
+}
+.mbar__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  background: #2b2b29;
+}
+.mbar__line span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.5s linear;
+}
+.mbar__now {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 4px 0;
+  gap: 14px;
+  min-width: 0;
 }
-.plbar__label {
-  flex: 1;
-  color: rgba(255, 255, 255, 0.6) !important;
+.mbar__cover {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #2b2b29;
+}
+.mbar__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.mbar__meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+.mbar__track {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fafafa;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.plbar__ctrl button {
-  width: 32px;
-  height: 28px;
+.mbar__track:hover {
+  color: var(--accent);
+}
+.mbar__sub {
+  font-size: 13px;
+  color: #8d8d88;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mbar__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.mbar__ctrl {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.mbar__ctrl button,
+.mbar__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
-  color: #fff;
-  font-size: 14px;
+  color: #fafafa;
   cursor: pointer;
-  border-radius: 6px;
 }
-.plbar__ctrl button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+.mbar__ctrl button:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
-.plbar__ctrl button:disabled {
-  opacity: 0.35;
+.mbar__ctrl button:hover:not(:disabled),
+.mbar__icon:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
-.plbar__row {
+.mbar .mbar__toggle {
+  width: 40px;
+  height: 40px;
+  background: var(--accent);
+  color: #111;
+}
+.mbar .mbar__toggle:hover {
+  background: var(--accent);
+  filter: brightness(1.08);
+}
+.mbar__seek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #8d8d88;
+}
+.mbar__seek input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: min(440px, 32vw);
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) var(--p, 0%), #2b2b29 var(--p, 0%));
+  cursor: pointer;
+}
+.mbar__seek input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fafafa;
+}
+.mbar__seek input::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 50%;
+  background: #fafafa;
+}
+.mbar__sp {
+  width: min(600px, 44vw);
+}
+.mbar__sp .spotify-embed {
+  border-radius: 12px;
+  overflow: hidden;
+}
+.mbar__tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.mbar__icon.is-on {
+  color: var(--accent);
+}
+.mbar__close {
+  color: #8d8d88;
+}
+.mbar__src {
+  display: flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: #1f1f1d;
+}
+.mbar__src button {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #8d8d88;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mbar__src button.is-on {
+  background: #fafafa;
+  color: #111;
+}
+/* 영상 창 — 왼쪽 아래, 재생바 바로 위 */
+.mbar-video {
+  position: fixed;
+  left: 24px;
+  bottom: 92px;
+  z-index: 59;
+  width: 356px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #111;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+.mbar-video--big {
+  width: 640px;
+}
+.mbar-video__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px 10px 14px;
+  height: 34px;
+  padding: 0 8px 0 14px;
+  font-size: 12px;
+  color: #8d8d88;
 }
-.plbar__me {
+.mbar-video__tools {
+  display: flex;
+  gap: 2px;
+}
+.mbar-video__tools button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #8d8d88;
+  cursor: pointer;
+}
+.mbar-video__tools .mbar-video__sp {
+  display: none;
+  width: auto;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fafafa;
+}
+.mbar-video__tools button:hover {
+  color: #fafafa;
+  background: rgba(255, 255, 255, 0.1);
+}
+.mbar-video .yt-embed {
+  border-radius: 0;
+  min-width: 0;
+}
+.mbar-video__wait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  min-height: 200px;
+  color: #8d8d88;
+  font-size: 13px;
+}
+/* 다음 곡 목록 */
+.mbar-queue {
+  position: fixed;
+  right: 24px;
+  bottom: 92px;
+  z-index: 61;
+  width: 400px;
+  max-height: min(520px, calc(100vh - 140px));
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+.mbar-queue__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 16px 18px 8px;
+}
+.mbar-queue__head span {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.mbar-queue ol {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px;
+  overflow-y: auto;
+}
+.mbar-queue li {
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+}
+.mbar-queue li.is-now {
+  background: var(--tint);
+}
+.mbar-queue li.is-past {
+  opacity: 0.5;
+}
+.mbar-queue__item {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 0;
-  font-size: 14px;
-}
-.plbar__me .muted {
-  color: rgba(255, 255, 255, 0.6);
-}
-.plbar__me:hover strong {
-  color: var(--accent);
-}
-.plbar__covers {
-  display: flex;
-}
-.plbar__covers > * {
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  border: 2px solid var(--ink);
-  background: #333;
-  object-fit: cover;
-}
-.plbar__covers > * + * {
-  margin-left: -10px;
-}
-.plbar__play {
-  height: 36px;
-  padding: 0 16px;
+  padding: 8px 10px;
   border: 0;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #06210f;
+  background: none;
   font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mbar-queue__item img,
+.mbar-queue__ph {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--surface);
+}
+.mbar-queue__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.mbar-queue__track {
   font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.plbar__play:hover {
-  filter: brightness(1.08);
+.mbar-queue li.is-now .mbar-queue__track,
+.mbar-queue__now {
+  color: var(--accent-ink);
 }
+.mbar-queue__artist {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.mbar-queue__now {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mbar-queue__x {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-subtle);
+  cursor: pointer;
+}
+.mbar-queue__x:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+.mbar-queue__foot {
+  margin: 0;
+  padding: 8px 18px 12px;
+  font-size: 12px;
+  color: var(--ink-subtle);
+}
+@media (max-width: 900px) {
+  .mbar__label,
+  .mbar__src {
+    display: none;
+  }
+}
+/* 모바일: 둥근 미니바 + 위에 영상 카드 */
+@media (max-width: 768px) {
+  body.has-mbar {
+    padding-bottom: 84px;
+  }
+  body.has-mbar--sp {
+    padding-bottom: 168px;
+  }
+  .mbar {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    height: 64px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 4px;
+    padding: 0 4px 0 10px;
+    border: 0;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .mbar__line {
+    top: 0;
+  }
+  .mbar--sp {
+    height: auto;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    row-gap: 6px;
+  }
+  .mbar__cover {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+  }
+  .mbar__heart {
+    display: none;
+  }
+  .mbar__center {
+    flex-direction: row;
+  }
+  .mbar__ctrl {
+    gap: 4px;
+  }
+  .mbar__prev,
+  .mbar__seek {
+    display: none !important;
+  }
+  .mbar--sp .mbar__center {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .mbar__sp {
+    width: 100%;
+  }
+  .mbar__tools {
+    gap: 0;
+  }
+  .mbar__tools .mbar__icon:not(.mbar__close) {
+    display: none;
+  }
+  .mbar--sp .mbar__tools .mbar__icon:not(.mbar__close) {
+    display: inline-flex;
+  }
+  .mbar-video {
+    left: 16px;
+    right: 16px;
+    bottom: 84px;
+    width: auto;
+  }
+  .mbar-video--big {
+    width: auto;
+  }
+  .mbar-video__size {
+    display: none !important;
+  }
+  .mbar-video__sp {
+    display: inline-flex !important;
+  }
+  .mbar-queue {
+    left: 8px;
+    right: 8px;
+    bottom: 80px;
+    width: auto;
+  }
+}
+/* 알림 */
 .pl-toast {
   position: fixed;
   left: 50%;
-  bottom: 96px;
+  bottom: 24px;
   transform: translateX(-50%);
-  z-index: 61;
-  padding: 10px 18px;
+  z-index: 62;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 18px;
   border-radius: 999px;
-  background: var(--accent-ink);
-  color: #fff;
-  font-size: 14px;
+  background: #111;
+  color: #fafafa;
+  font-size: 13px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+}
+.pl-toast:not(:has(button)) {
+  padding-right: 18px;
+}
+.pl-toast--bar {
+  left: auto;
+  right: 24px;
+  bottom: 92px;
+  transform: none;
+}
+body.has-mbar--sp .pl-toast--bar {
+  bottom: 120px;
+}
+@media (prefers-color-scheme: dark) {
+  .pl-toast,
+  .mbar-video {
+    border: 1px solid #2b2b29;
+  }
+}
+.pl-toast button {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #2b2b29;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+@media (max-width: 768px) {
+  .pl-toast--bar {
+    left: 50%;
+    right: auto;
+    bottom: 84px;
+    transform: translateX(-50%);
+  }
+  body.has-mbar--sp .pl-toast--bar {
+    bottom: 176px;
+  }
 }
 
 /* ---------- 내 플리 페이지 ---------- */
@@ -2698,9 +3205,6 @@ body.has-plbar--player {
   }
   .my-list__tools button {
     width: 28px;
-  }
-  .plbar {
-    bottom: 8px;
   }
 }
 
@@ -3571,7 +4075,7 @@ body.has-plbar--player {
   padding: 0 7px;
   border-radius: 999px;
   background: var(--ink);
-  color: var(--inverse-ink);
+  color: var(--bg);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -3899,17 +4403,6 @@ a.ess-badge:hover svg {
 }
 .song-player__note {
   margin-left: 6px;
-}
-/* 아래 바(검은 배경) 안에서는 밝은 글씨로 */
-.plbar .song-player__src {
-  color: rgba(255, 255, 255, 0.55);
-}
-.plbar .song-player__src button.is-on {
-  color: #fff;
-}
-.plbar .song-player__wait {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.6);
 }
 .epick__media--player .song-player .yt-embed {
   max-width: none;

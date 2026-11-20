@@ -26,12 +26,12 @@ export function MyPlaylist() {
       setSheet({ text, title: what === 'link' ? '공유 링크' : '곡 목록' })
     }
   }
-  const nowId = player ? player.queue[player.index]?.id : null
+  const nowId = player && !player.idle ? player.queue[player.index]?.id : null
 
   return (
     <>
       <section className="page-title wrap">
-        <p className="label">My Playlist</p>
+        <p className="label">Liked</p>
         {editing ? (
           <form
             className="my-name"
@@ -48,12 +48,12 @@ export function MyPlaylist() {
           </form>
         ) : (
           <h1 className="page-title__h">
-            <span className="display-lg">{mounted ? name : '내 플리'}</span>
+            <span className="display-lg">{mounted ? name : '좋아요한 곡'}</span>
             <sup className="label">{mounted ? songs.length : 0}</sup>
           </h1>
         )}
         <p className="muted page-title__desc">
-          Editor&apos;s Picks에서 「+ 담기」로 고른 곡들이에요. 이 브라우저에 저장돼요.
+          곡 옆의 하트(♥)를 눌러 모은 곡들이에요. 이 브라우저에 저장돼서, 다른 기기에서 보려면 「다른 기기로 옮기기」 링크를 열면 돼요.
         </p>
       </section>
 
@@ -68,7 +68,7 @@ export function MyPlaylist() {
                 <span>섞어서 듣기</span>
               </button>
               <button className="btn btn--outline" onClick={() => copy(shareUrl(name, songs), 'link')}>
-                <span>{copied === 'link' ? '링크를 복사했어요' : '공유 링크 복사'}</span>
+                <span>{copied === 'link' ? '링크를 복사했어요' : '공유 · 다른 기기로 옮기기'}</span>
               </button>
               <button
                 className="btn btn--outline"
@@ -106,7 +106,7 @@ export function MyPlaylist() {
                     <button onClick={() => myPlaylist.move(s.id, 1)} disabled={i === songs.length - 1} aria-label="아래로">
                       ↓
                     </button>
-                    <button onClick={() => myPlaylist.remove(s.id)} aria-label={`${s.track} 빼기`}>
+                    <button onClick={() => myPlaylist.remove(s.id)} aria-label={`${s.track} 좋아요 취소`}>
                       ✕
                     </button>
                   </span>
@@ -119,7 +119,7 @@ export function MyPlaylist() {
               <button
                 className="text-btn"
                 onClick={() => {
-                  if (window.confirm('내 플리를 모두 비울까요?')) myPlaylist.clear()
+                  if (window.confirm('좋아요한 곡을 모두 비울까요?')) myPlaylist.clear()
                 }}
               >
                 모두 비우기
@@ -128,8 +128,8 @@ export function MyPlaylist() {
           </>
         ) : mounted ? (
           <div className="my-empty">
-            <p>아직 담은 곡이 없어요.</p>
-            <p className="muted">Editor&apos;s Picks에서 마음에 드는 곡 옆의 「+」를 누르면 여기에 모여요.</p>
+            <p>아직 좋아요한 곡이 없어요.</p>
+            <p className="muted">Editor&apos;s Picks에서 마음에 드는 곡 옆의 하트(♥)를 누르면 여기에 모여요.</p>
             <Link href="/picks" className="btn btn--filled">
               <span>Editor&apos;s Picks 둘러보기</span>
             </Link>

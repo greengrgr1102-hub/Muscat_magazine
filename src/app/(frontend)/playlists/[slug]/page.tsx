@@ -36,7 +36,7 @@ export default async function PlaylistPage({ params }: { params: Promise<{ slug:
         </div>
       </section>
       <section className="wrap section">
-        <PickList rows={rows} groupByMonth={false} />
+        <PickList rows={rows} groupByMonth={false} label={pl.title} />
       </section>
     </>
   )

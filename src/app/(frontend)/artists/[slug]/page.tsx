@@ -152,7 +152,7 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
       {picks.docs.length ? (
         <section className="wrap section">
           <SectionHeader title="Editor's Picks" right={<span className="muted">{picks.totalDocs}</span>} />
-          <PickList rows={picks.docs.map(toRow)} groupByMonth={false} />
+          <PickList rows={picks.docs.map(toRow)} groupByMonth={false} label={artist.name} />
         </section>
       ) : null}
     </>

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { reportBadVideo, setSource, useSource, youtubeFor } from '@/lib/listenSource'
+import { markPlayed } from '@/lib/played'
 import { SpotifyEmbed } from './SpotifyEmbed'
 import { YouTubeEmbed } from './YouTubeEmbed'
 
@@ -30,6 +31,16 @@ export function SongPlayer({
   const source = useSource()
   const [vid, setVid] = useState<string | null | undefined>(youtubeId ?? undefined) // undefined = 찾는 중
   const [blocked, setBlocked] = useState(false)
+  // 아래 재생바가 재생을 시작하면, 여기 있던 플레이어는 꺼서 두 곡이 겹치지 않게 해요.
+  const [silenced, setSilenced] = useState(false)
+  useEffect(() => {
+    const off = () => setSilenced(true)
+    window.addEventListener('mm-bar-play', off)
+    return () => window.removeEventListener('mm-bar-play', off)
+  }, [])
+  useEffect(() => {
+    if (autoPlay) markPlayed(pickId)
+  }, [autoPlay, pickId])
 
   useEffect(() => {
     if (source !== 'youtube') return
@@ -50,6 +61,14 @@ export function SongPlayer({
   const searching = source === 'youtube' && vid === undefined
   const fellBack = source === 'youtube' && !searching && !useYT
 
+  if (silenced)
+    return (
+      <div className={`song-player song-player--${size} ${className}`}>
+        <button type="button" className="song-player__wait small muted song-player__resume" onClick={() => setSilenced(false)}>
+          아래 재생바에서 듣는 중 · 여기서 다시 듣기
+        </button>
+      </div>
+    )
   return (
     <div className={`song-player song-player--${size} ${className}`}>
       {useYT ? (
