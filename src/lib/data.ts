@@ -5,6 +5,7 @@ import { getPayload, type Where } from 'payload'
 import config from '@payload-config'
 import type { Article } from '@/payload-types'
 import { ACCENT_FROM, ACCENT_TO, KEEP, searchKey } from './searchKey'
+import { layoutGenres, type GenreGraph } from './genreLayout'
 
 export const getClient = cache(async () => getPayload({ config: await config }))
 
@@ -967,4 +968,26 @@ export async function exploreSeeds() {
       ? { key: String(alb.cover_url).slice(-24), album: String(alb.album || ''), artist: String(alb.artist_name || '').split(', ')[0], cover: (alb.cover_url as string) || null }
       : null,
   }
+}
+
+export type { GenreGraph } from './genreLayout'
+
+export async function genreGraph(): Promise<GenreGraph> {
+  const payload = await getClient()
+  const db = payload.db as unknown as { drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const [nodeRows, pairRows] = await Promise.all([
+    db.drizzle.execute(sql`
+      select g.id, g.name, g.slug, count(distinct r.parent_id)::int as n
+      from picks_rels r join genres g on g.id = r.genres_id
+      where r.path = 'genres' group by g.id, g.name, g.slug having count(distinct r.parent_id) >= 2`),
+    db.drizzle.execute(sql`
+      select a.genres_id as x, b.genres_id as y, count(*)::int as c
+      from picks_rels a join picks_rels b on b.parent_id = a.parent_id and b.path = 'genres' and a.genres_id < b.genres_id
+      where a.path = 'genres' and a.genres_id is not null and b.genres_id is not null
+      group by 1, 2 having count(*) >= 2`),
+  ])
+  return layoutGenres(
+    nodeRows.rows.map((r) => ({ id: Number(r.id), name: String(r.name), slug: String(r.slug), n: Number(r.n) })),
+    pairRows.rows.map((r) => ({ a: Number(r.x), b: Number(r.y), c: Number(r.c) })),
+  )
 }

@@ -4095,3 +4095,81 @@ a.explore-card:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- 장르 지도 (전체 펼침) ---------- */
+.gmap .web__stage {
+  height: min(78vh, 760px);
+}
+.gmap__edge {
+  stroke: var(--ink-subtle);
+  opacity: 0.35;
+  transition: opacity 0.2s, stroke 0.2s;
+}
+.gmap__edge.is-on {
+  stroke: var(--accent-ink);
+  opacity: 0.9;
+}
+.gmap__edge.is-dim {
+  opacity: 0.08;
+}
+.gmap__node {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.gmap__node circle {
+  fill: var(--tint);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  transition: fill 0.2s;
+}
+.gmap__node:hover circle,
+.gmap__node.is-near circle {
+  fill: #c6ebd4;
+}
+.gmap__node.is-sel circle {
+  fill: var(--accent);
+  stroke: var(--accent-ink);
+  stroke-width: 3;
+}
+.gmap__node.is-dim {
+  opacity: 0.25;
+}
+.gmap__node text {
+  text-anchor: middle;
+  dominant-baseline: hanging;
+  fill: var(--ink);
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.gmap__node.is-sel text {
+  fill: var(--accent-ink);
+}
+.gmap__links ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.gmap__links button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+.gmap__links button:hover span:first-child {
+  color: var(--accent-ink);
+}
