@@ -46,7 +46,7 @@ if (!users.totalDocs) {
   userId = (await payload.find({ collection: 'users', limit: 1 })).docs[0]?.id
 }
 
-const GENRES = ['Shoegaze', 'Dream Pop', 'Indie Rock', 'Indie Pop', 'Post-Punk', 'Electronic', 'Folk', 'R&B', 'Hip-Hop', 'K-Pop']
+const GENRES = ['Shoegaze', 'Dream Pop', 'Indie Rock', 'Indie Pop', 'Post-Punk', 'Electronic', 'Folk', 'R&B', 'Hip-Hop']
 const genre: Record<string, number> = {}
 for (const [i, name] of GENRES.entries()) {
   const g = await payload.create({ collection: 'genres', data: { name, order: i } })
