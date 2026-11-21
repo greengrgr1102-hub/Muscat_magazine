@@ -796,7 +796,7 @@ const splitNames = (v?: string | null) =>
     .map((x) => x.trim())
     .filter(Boolean)
 
-export const aliasTargets = cache(async (term: string): Promise<string[]> => {
+export const aliasTargets = cache(async (term: string, partial = false): Promise<string[]> => {
   const key = searchKey(term)
   if (!key) return []
   const payload = await getClient()
@@ -805,17 +805,19 @@ export const aliasTargets = cache(async (term: string): Promise<string[]> => {
     payload.find({ collection: 'artists', limit: 1000, depth: 0, pagination: false }),
   ])
   const out = new Set<string>()
+  // partial: '올리비아'처럼 앞부분만 쳐도 (올리비아 딘·올리비아 로드리고)
+  const match = (ks: string[]) => (partial ? ks.some((k) => k.startsWith(key)) : ks.includes(key))
   // 이름·다른 이름·멤버 중 하나라도 맞으면 그 아티스트의 모든 표기로 곡을 찾아요
   // (곡 기록에 영어로 적혀 있든 한국어로 적혀 있든)
   for (const d of info.docs) {
     const forms = [d.name, ...splitNames(d.aliases)]
     const ks = [...forms, ...splitNames(d.members)].map(searchKey)
-    if (ks.includes(key)) forms.forEach((f) => out.add(f))
+    if (match(ks)) forms.forEach((f) => out.add(f))
   }
   for (const a of pages.docs) {
     const forms = [a.name, ...splitNames((a as { nameAlt?: string | null }).nameAlt)]
     const members = (a.members || []).map((m) => m.name)
-    if ([...forms, ...members].map(searchKey).includes(key)) forms.forEach((f) => out.add(f))
+    if (match([...forms, ...members].map(searchKey))) forms.forEach((f) => out.add(f))
   }
   return [...out]
 })
@@ -854,6 +856,15 @@ export async function pickTextCond(
     )} limit 1`,
   )
   if (hit.rows.length) return exactCond
+  // 한국어로 이름 앞부분만 친 경우(예: '올리비아') — 제목 검색 + 그 이름으로 시작하는 아티스트
+  if (!/^[\x20-\x7e]+$/.test(term) && searchKey(term).length >= 2) {
+    const part = await aliasTargets(term, true)
+    if (part.length)
+      return sql`(${text} or ${sql.join(
+        part.map((n) => sql`${c('artist')} ~* ${`(^|,\\s*)${reEsc(n)}(\\s*,|$)`}`),
+        sql` or `,
+      )})`
+  }
   return text
 }
 
