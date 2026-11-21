@@ -15,6 +15,7 @@ import { Genres } from './collections/Genres'
 import { Picks } from './collections/Picks'
 import { Tags } from './collections/Tags'
 import { Artists } from './collections/Artists'
+import { Festivals } from './collections/Festivals'
 import { ArtistInfo } from './collections/ArtistInfo'
 import { Articles } from './collections/Articles'
 import { Inquiries, Subscribers } from './collections/Inquiries'
@@ -31,10 +32,17 @@ const DB_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || ''
 // Vercel이 자동으로 넣어 주는 운영 주소를 기본값으로 씁니다.
 const SERVER_URL =
   process.env.NEXT_PUBLIC_SERVER_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '')
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : '')
 // PAYLOAD_SECRET을 따로 넣지 않으면 DB 주소에서 만든 값을 씁니다. (직접 넣으면 그 값이 우선)
 const SECRET =
-  process.env.PAYLOAD_SECRET || (DB_URL ? createHash('sha256').update('muscat:' + DB_URL).digest('hex') : '')
+  process.env.PAYLOAD_SECRET ||
+  (DB_URL
+    ? createHash('sha256')
+        .update('muscat:' + DB_URL)
+        .digest('hex')
+    : '')
 
 export default buildConfig({
   serverURL: SERVER_URL,
@@ -55,7 +63,21 @@ export default buildConfig({
     fallbackLanguage: 'ko',
     supportedLanguages: { ko, en },
   },
-  collections: [Articles, Picks, Playlists, Artists, ArtistInfo, Genres, Tags, Media, Inquiries, Subscribers, Users, Stats],
+  collections: [
+    Articles,
+    Picks,
+    Playlists,
+    Artists,
+    ArtistInfo,
+    Festivals,
+    Genres,
+    Tags,
+    Media,
+    Inquiries,
+    Subscribers,
+    Users,
+    Stats,
+  ],
   globals: [SiteSettings, AboutPage, SpotifySync, YouTubeUsage],
   editor: lexicalEditor(),
   secret: SECRET,

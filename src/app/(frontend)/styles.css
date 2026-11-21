@@ -4932,3 +4932,127 @@ mark.hl {
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
+
+/* ── 페스티벌 출연진 ── */
+.fest-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 0.12em;
+  margin-right: 5px;
+}
+.fest__filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+.fest__list {
+  grid-template-columns: minmax(0, 1fr);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+.fest-card {
+  min-width: 0;
+  padding: 32px 0;
+  border-top: 1px solid var(--line);
+}
+.fest-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.fest-card__head h2 {
+  margin: 6px 0 0;
+}
+.fest-card__head h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+.fest-card__head h2 a:hover {
+  text-decoration: underline;
+}
+.fest-card__all {
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.fest-card__all:hover {
+  border-color: var(--ink);
+}
+.fest-day + .fest-day {
+  margin-top: 14px;
+}
+.fest-day__label {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  margin: 0 0 6px;
+}
+.fest-day__acts {
+  margin: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.9;
+  font-size: 15px;
+}
+.fest-act:not(:last-child)::after {
+  content: '·';
+  margin: 0 8px;
+  color: var(--ink-subtle);
+}
+.fest-act > span {
+  color: var(--ink-muted);
+}
+.fest-act__on {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.fest-act__on:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fest-act__on:disabled {
+  opacity: 0.5;
+}
+.fest-card__foot {
+  margin-top: 16px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.fest-card__more {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (max-width: 768px) {
+  .fest-card__head {
+    flex-direction: column;
+  }
+  .fest-day__acts {
+    font-size: 14px;
+  }
+}

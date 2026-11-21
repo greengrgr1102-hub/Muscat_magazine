@@ -5,7 +5,8 @@ import { exploreSeeds } from '@/lib/data'
 
 export const metadata: Metadata = {
   title: 'Explore',
-  description: '장르 지도, 거미줄, 아무거나 틀어줘, 취향 찾기 — 에디터가 들은 수천 곡 사이를 헤매 보세요.',
+  description:
+    '장르 지도, 거미줄, 아무거나 틀어줘, 취향 찾기 — 에디터가 들은 수천 곡 사이를 헤매 보세요.',
 }
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +33,12 @@ export default async function ExplorePage() {
       kicker: 'Taste Finder',
       title: '취향 찾기',
       desc: '질문 네 개에 답하고 몇 곡만 들어 보면, 내 취향에 맞는 곡을 골라 드려요.',
+    },
+    {
+      href: '/explore/festivals',
+      kicker: 'Festivals',
+      title: '페스티벌',
+      desc: '올해 페스티벌 무대에 선 팀들. 에디터가 들은 아티스트는 바로 들어볼 수 있어요.',
     },
   ]
   return (
@@ -62,7 +69,10 @@ export default async function ExplorePage() {
             <div className="explore-card">
               <p className="label">Web</p>
               <h2 className="h-md">거미줄</h2>
-              <p className="muted">곡이나 앨범 하나에서 비슷한 음악이 거미줄처럼 펼쳐져요. 오늘의 출발점에서 시작해 보세요.</p>
+              <p className="muted">
+                곡이나 앨범 하나에서 비슷한 음악이 거미줄처럼 펼쳐져요. 오늘의 출발점에서 시작해
+                보세요.
+              </p>
               <div className="explore-seeds">
                 {seeds.song ? (
                   <Link href={`/web/${seeds.song.id}`} className="explore-seed">

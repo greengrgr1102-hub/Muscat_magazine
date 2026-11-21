@@ -72,6 +72,7 @@ export interface Config {
     playlists: Playlist;
     artists: Artist;
     'artist-info': ArtistInfo;
+    festivals: Festival;
     genres: Genre;
     tags: Tag;
     media: Media;
@@ -91,6 +92,7 @@ export interface Config {
     playlists: PlaylistsSelect<false> | PlaylistsSelect<true>;
     artists: ArtistsSelect<false> | ArtistsSelect<true>;
     'artist-info': ArtistInfoSelect<false> | ArtistInfoSelect<true>;
+    festivals: FestivalsSelect<false> | FestivalsSelect<true>;
     genres: GenresSelect<false> | GenresSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -673,6 +675,45 @@ export interface ArtistInfo {
   createdAt: string;
 }
 /**
+ * 올해 페스티벌 출연진. 출연진은 한 줄에 한 팀, "## 날짜"로 날짜를 나눠요.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "festivals".
+ */
+export interface Festival {
+  id: number;
+  name: string;
+  nameAlt?: string | null;
+  /**
+   * 예: 2026-07-31
+   */
+  startDate: string;
+  /**
+   * 예: 2026-08-02
+   */
+  endDate?: string | null;
+  /**
+   * KR, JP, TW…
+   */
+  country?: string | null;
+  place?: string | null;
+  url?: string | null;
+  /**
+   * 한 줄에 한 팀. "## 7/31 (금)"처럼 ##로 시작하면 날짜 제목.
+   */
+  lineup?: string | null;
+  /**
+   * 켜 두면 페이지에 "공개된 기사 기준 일부"라고 표시돼요.
+   */
+  partial?: boolean | null;
+  /**
+   * 라인업을 확인한 곳 (페이지엔 안 보여요)
+   */
+  source?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "inquiries".
  */
@@ -749,6 +790,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'artist-info';
         value: number | ArtistInfo;
+      } | null)
+    | ({
+        relationTo: 'festivals';
+        value: number | Festival;
       } | null)
     | ({
         relationTo: 'genres';
@@ -996,6 +1041,24 @@ export interface ArtistInfoSelect<T extends boolean = true> {
   members?: T;
   aliases?: T;
   checkedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "festivals_select".
+ */
+export interface FestivalsSelect<T extends boolean = true> {
+  name?: T;
+  nameAlt?: T;
+  startDate?: T;
+  endDate?: T;
+  country?: T;
+  place?: T;
+  url?: T;
+  lineup?: T;
+  partial?: T;
+  source?: T;
   updatedAt?: T;
   createdAt?: T;
 }
