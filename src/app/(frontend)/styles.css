@@ -948,6 +948,7 @@ button {
 }
 .page-title__h sup {
   margin-top: 14px;
+  font-size: 14px;
 }
 .page-title__desc {
   width: 432px;
