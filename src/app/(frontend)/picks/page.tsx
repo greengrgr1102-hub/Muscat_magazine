@@ -8,7 +8,17 @@ import { PickList } from '@/components/PickList'
 import { PlaylistCards } from '@/components/Playlists'
 import { TasteBanner } from '@/components/TasteBanner'
 import { PickFilters } from '@/components/PickFilters'
-import { cleanFilter, findPickRows, findPickRowsRandom, findPicks, findPlaylists, getClient, getTag, pickFilterWhere } from '@/lib/data'
+import {
+  cleanFilter,
+  findPickRows,
+  findPickRowsRandom,
+  findPicks,
+  findPlaylists,
+  getClient,
+  getTag,
+  pickFilterWhere,
+  pickIdsForQuery,
+} from '@/lib/data'
 import { syncPlaylist } from '@/lib/spotify'
 import type { Pick } from '@/payload-types'
 
@@ -23,7 +33,16 @@ const hasComment: Where = { and: [{ comment: { exists: true } }, { comment: { no
 export default async function PicksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; tag?: string; q?: string; sort?: string; seed?: string; era?: string; c?: string; type?: string }>
+  searchParams: Promise<{
+    page?: string
+    tag?: string
+    q?: string
+    sort?: string
+    seed?: string
+    era?: string
+    c?: string
+    type?: string
+  }>
 }) {
   const sp = await searchParams
   // 페이지를 연 뒤에, 한 시간 넘게 지났으면 Spotify 플레이리스트에서 새 곡을 확인해요.
@@ -37,10 +56,14 @@ export default async function PicksPage({
   const f = cleanFilter(sp)
   const filtered = Boolean(f.era || f.c || f.type)
   // 정렬: 랜덤(기본) · 담은 순(new) · 발매 최신순(rel) · 발매 오래된 순(old)
-  const order = sp.sort === 'new' || sp.sort === 'rel' || sp.sort === 'old' ? sp.sort : q ? 'new' : 'random'
+  const order =
+    sp.sort === 'new' || sp.sort === 'rel' || sp.sort === 'old' ? sp.sort : q ? 'new' : 'random'
   const filters: Where[] = [...pickFilterWhere(f)]
   if (tag) filters.push({ tags: { in: [tag.id] } })
-  if (q) filters.push({ or: [{ track: { like: q } }, { artistName: { like: q } }] })
+  if (q) {
+    const ids = await pickIdsForQuery(q)
+    filters.push({ id: { in: ids.length ? ids : [0] } })
+  }
   if (order === 'rel' || order === 'old') filters.push({ releaseDate: { exists: true } })
   const where: Where | undefined = filters.length ? { and: filters } : undefined
   const plain = !q && !tag && !filtered && page === 1
@@ -49,7 +72,9 @@ export default async function PicksPage({
   const seed = Number(sp.seed) || Math.floor(Math.random() * 1_000_000) + 1
 
   const [list, featured] = await Promise.all([
-    latest ? findPickRows({ where, page, limit: PER_PAGE, sort: sortBy }) : findPickRowsRandom({ where, seed, page, limit: PER_PAGE }),
+    latest
+      ? findPickRows({ where, page, limit: PER_PAGE, sort: sortBy })
+      : findPickRowsRandom({ where, seed, page, limit: PER_PAGE }),
     plain ? findPickRowsRandom({ where: hasComment, seed, limit: 6 }) : Promise.resolve(null),
   ])
   const playlists = plain ? await findPlaylists(4) : null
@@ -57,16 +82,29 @@ export default async function PicksPage({
     ? await findPicks({ where: { id: { in: featured.docs.map((d) => d.id) } }, limit: 6 })
     : null
   const rows = list.docs.map((d) => toRow(d as Pick))
-  const fkeep: Record<string, string> = { ...(f.era ? { era: f.era } : {}), ...(f.c ? { c: f.c } : {}), ...(f.type ? { type: f.type } : {}) }
-  const keep: Record<string, string> = { ...(tag?.slug ? { tag: tag.slug } : {}), ...(q ? { q } : {}), ...fkeep }
-  const sortKeep: Record<string, string> = latest && order !== 'new' ? { sort: order } : latest && !q ? { sort: 'new' } : {}
+  const fkeep: Record<string, string> = {
+    ...(f.era ? { era: f.era } : {}),
+    ...(f.c ? { c: f.c } : {}),
+    ...(f.type ? { type: f.type } : {}),
+  }
+  const keep: Record<string, string> = {
+    ...(tag?.slug ? { tag: tag.slug } : {}),
+    ...(q ? { q } : {}),
+    ...fkeep,
+  }
+  const sortKeep: Record<string, string> =
+    latest && order !== 'new' ? { sort: order } : latest && !q ? { sort: 'new' } : {}
   const href = (p: number) =>
     `/picks?${new URLSearchParams({ ...keep, ...sortKeep, ...(!latest ? { seed: String(seed) } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`
   const orderLink = (o: string, label: string) =>
     order === o ? (
       <span aria-current="true">{label}</span>
     ) : (
-      <Link href={`/picks?${new URLSearchParams({ ...keep, ...(o === 'random' ? {} : { sort: o }) })}#log`}>{label}</Link>
+      <Link
+        href={`/picks?${new URLSearchParams({ ...keep, ...(o === 'random' ? {} : { sort: o }) })}#log`}
+      >
+        {label}
+      </Link>
     )
   const from = (page - 1) * PER_PAGE + 1
   const to = from + list.docs.length - 1
@@ -115,19 +153,32 @@ export default async function PicksPage({
 
       <section className="wrap section" id="log">
         <div className="plist-head">
-          <h2 className="h-lg">{q ? `‘${q}’ 검색 결과` : tag ? `#${tag.name}` : filtered ? '골라 보기' : '전체 기록'}</h2>
+          <h2 className="h-lg">
+            {q ? `‘${q}’ 검색 결과` : tag ? `#${tag.name}` : filtered ? '골라 보기' : '전체 기록'}
+          </h2>
           <form action="/picks#log" className="plist-search" role="search">
             {tag?.slug ? <input type="hidden" name="tag" value={tag.slug} /> : null}
             {Object.entries(fkeep).map(([k, v]) => (
               <input key={k} type="hidden" name={k} value={v} />
             ))}
-            <input type="search" name="q" defaultValue={q} placeholder="곡 또는 아티스트 검색" aria-label="곡 또는 아티스트 검색" />
+            <input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="곡 또는 아티스트 검색"
+              aria-label="곡 또는 아티스트 검색"
+            />
             <button type="submit" className="btn btn--outline">
               <span>찾기</span>
             </button>
           </form>
         </div>
-        <PickFilters base="/picks" keep={{ ...(tag?.slug ? { tag: tag.slug } : {}), ...(q ? { q } : {}), ...sortKeep }} f={f} anchor="#log" />
+        <PickFilters
+          base="/picks"
+          keep={{ ...(tag?.slug ? { tag: tag.slug } : {}), ...(q ? { q } : {}), ...sortKeep }}
+          f={f}
+          anchor="#log"
+        />
         {!q ? (
           <p className="small plist-order">
             {orderLink('random', '랜덤')}
@@ -135,7 +186,10 @@ export default async function PicksPage({
             {orderLink('rel', '발매 최신순')}
             {orderLink('old', '오래된 순')}
             {order === 'random' ? (
-              <Link href={`/picks?${new URLSearchParams(keep)}#log`} className="plist-order__shuffle">
+              <Link
+                href={`/picks?${new URLSearchParams(keep)}#log`}
+                className="plist-order__shuffle"
+              >
                 다시 섞기 ↻
               </Link>
             ) : null}
@@ -153,7 +207,9 @@ export default async function PicksPage({
         {rows.length ? (
           <PickList rows={rows} groupByMonth={order === 'new'} />
         ) : (
-          <p className="muted">{q || tag || filtered ? '조건에 맞는 곡이 없어요.' : '첫 번째 곡을 준비하고 있어요.'}</p>
+          <p className="muted">
+            {q || tag || filtered ? '조건에 맞는 곡이 없어요.' : '첫 번째 곡을 준비하고 있어요.'}
+          </p>
         )}
 
         {list.totalPages > 1 ? (

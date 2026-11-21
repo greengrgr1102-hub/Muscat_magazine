@@ -160,6 +160,8 @@ const sqlKey = (col: string) =>
 // 장르 이름·주소·다른 이름(한국어 등)으로 찾기. 딱 맞을수록 앞에.
 async function searchGenres(key: string, term: string) {
   const words = term.split(/\s+/).map(searchKey).filter(Boolean)
+  // 짧은 영어 검색(IVE 등)은 장르 이름 중간에 걸리지 않게 (alternative ← ive)
+  const minPart = /^[\x20-\x7e]+$/.test(term) ? 4 : 2
   const loose: { id: number; name: string; slug: string; n: number; score: number }[] = []
   const payload = await getClient()
   const [all, used] = await Promise.all([
@@ -180,7 +182,7 @@ async function searchGenres(key: string, term: string) {
     for (const k of keys) {
       if (k === key) score = Math.max(score, 3)
       else if (k.startsWith(key)) score = Math.max(score, 2)
-      else if (key.length >= 2 && k.includes(key)) score = Math.max(score, 1)
+      else if (key.length >= minPart && k.includes(key)) score = Math.max(score, 1)
     }
     const id = Number(g.id)
     if (score) hits.push({ id, name: g.name, slug: String(g.slug), n: n.get(id) || 0, score })
@@ -276,10 +278,21 @@ export async function search(q: string) {
   const artistHit = new Map<string, { name: string; n: number; exact: boolean; via?: string }>()
   const songs: (SearchSong & { s: number })[] = []
   const albums = new Map<string, SearchAlbum & { s: number }>()
+  // 영어 검색은 단어 시작에서만 (IVE가 Live·Five에 걸리지 않게). 3글자 이하는 단어 전체.
+  const ascii = /^[\x20-\x7e]+$/.test(term)
+  const short = term.replace(/[^a-z0-9]/gi, '').length <= 3
+  const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const wordRe = new RegExp(`(^|[^\\p{L}\\p{N}])${esc}${short ? '([^\\p{L}\\p{N}]|$)' : ''}`, 'iu')
   for (const r of rows.rows) {
     const kt = String(r.kt || '')
     const ka = String(r.ka || '')
     const kb = String(r.kb || '')
+    if (
+      ascii &&
+      ![r.track, r.artist_name, r.album].some((v) => wordRe.test(String(v || ''))) &&
+      ![kt, ka, kb].some((k) => k === key || (!short && k.startsWith(key)))
+    )
+      continue
     const artist = String(r.artist_name || '')
     const cover = (r.cover_url as string | null) || null
     if (kt.includes(key))
@@ -321,7 +334,10 @@ export async function search(q: string) {
     const member = list(d.members).find((m) => hit([searchKey(m)]))
     const alias = !member && hit(list(d.aliases).map(searchKey))
     if (!member && !alias) continue
-    const n = await payload.count({ collection: 'picks', where: { artistName: { like: d.name } } })
+    const nr = await db.drizzle.execute(
+      sql`select count(*)::int as n from picks where artist_name ~* ${`(^|,\\s*)${d.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s*,|$)`}`,
+    )
+    const n = { totalDocs: Number(nr.rows[0]?.n || 0) }
     if (!n.totalDocs) continue
     artistHit.set(k0, {
       name: d.name,
@@ -769,6 +785,74 @@ export type PickAlbum = {
   firstTrack: string | null
 }
 
+// ── 곡·앨범 목록 검색 ─────────────────────────────────────────
+// 영어 검색은 단어 시작에서만 걸려요 ("IVE"가 Live·drivers·Five에 걸리지 않게).
+// 3글자 이하는 단어 전체가 같아야 하고(Bon Iver도 제외), 한국어·일본어는 글자 일부만 맞아도 돼요.
+// "아이브"처럼 다른 이름은 아티스트 검색 정보(다른 이름·멤버)·아티스트 페이지(다른 이름)로 원래 이름을 찾아요.
+const reEsc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const splitNames = (v?: string | null) =>
+  String(v || '')
+    .split(/[,，、\n]/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+
+export const aliasTargets = cache(async (term: string): Promise<string[]> => {
+  const key = searchKey(term)
+  if (!key) return []
+  const payload = await getClient()
+  const [info, pages] = await Promise.all([
+    payload.find({ collection: 'artist-info', limit: 5000, depth: 0, pagination: false }),
+    payload.find({ collection: 'artists', limit: 1000, depth: 0, pagination: false }),
+  ])
+  const out = new Set<string>()
+  for (const d of info.docs) {
+    const ks = [...splitNames(d.aliases), ...splitNames(d.members)].map(searchKey)
+    if (ks.includes(key) && searchKey(d.name) !== key) out.add(d.name)
+  }
+  for (const a of pages.docs) {
+    const alt = (a as { nameAlt?: string | null }).nameAlt
+    if (splitNames(alt).map(searchKey).includes(key) && searchKey(a.name) !== key) out.add(a.name)
+  }
+  return [...out]
+})
+
+export async function pickTextCond(
+  q: string,
+  cols = { track: 'track', artist: 'artist_name', album: 'album' },
+) {
+  const term = q.trim()
+  if (!term) return null
+  const c = (k: keyof typeof cols) => sql.raw(cols[k])
+  let text
+  if (/^[\x20-\x7e]+$/.test(term)) {
+    const t = reEsc(term)
+    const re =
+      term.replace(/[^a-z0-9]/gi, '').length <= 3
+        ? `(^|[^[:alnum:]])${t}([^[:alnum:]]|$)`
+        : `(^|[^[:alnum:]])${t}`
+    text = sql`(${c('track')} ~* ${re} or ${c('artist')} ~* ${re} or ${c('album')} ~* ${re})`
+  } else {
+    const like = `%${term}%`
+    text = sql`(${c('track')} ilike ${like} or ${c('artist')} ilike ${like} or ${c('album')} ilike ${like})`
+  }
+  const names = await aliasTargets(term)
+  if (!names.length) return text
+  const exact = names.map((n) => sql`${c('artist')} ~* ${`(^|,\\s*)${reEsc(n)}(\\s*,|$)`}`)
+  return sql`(${text} or ${sql.join(exact, sql` or `)})`
+}
+
+/** 곡 목록(Payload 쿼리)용: 검색에 걸리는 곡 번호 */
+export async function pickIdsForQuery(q: string): Promise<number[]> {
+  const cond = await pickTextCond(q)
+  if (!cond) return []
+  const payload = await getClient()
+  const db = payload.db as unknown as {
+    drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
+  const res = await db.drizzle.execute(sql`select id from picks where ${cond} limit 3000`)
+  return res.rows.map((r) => Number(r.id))
+}
+
 export async function findPickAlbums({
   page = 1,
   limit = 48,
@@ -788,11 +872,8 @@ export async function findPickAlbums({
   const db = payload.db as unknown as {
     drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
   }
-  const like = q.trim() ? `%${q.trim()}%` : null
-  const conds = [
-    ...(like ? [sql`(alb ilike ${like} or artist_name ilike ${like} or track ilike ${like})`] : []),
-    ...pickFilterSql(f),
-  ]
+  const qc = await pickTextCond(q, { track: 'track', artist: 'artist_name', album: 'alb' })
+  const conds = [...(qc ? [qc] : []), ...pickFilterSql(f)]
   if (sort === 'new' || sort === 'old') conds.push(sql`release_date is not null`)
   // 고른 장르가 붙은 앨범 (앨범 장르는 수록곡 전체에 같이 붙어 있어서 곡 단위로 걸러도 돼요)
   if (f.g?.length) {
