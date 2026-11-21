@@ -8,6 +8,8 @@ import { trackNamesEn } from './spotify'
 // 한 번 찾은 영상은 곡에 저장해 두고 다시 검색하지 않아요.
 const DAILY_LIMIT = 90
 const MISS_DAYS = 30
+// 2026-11-21: 길이 기준을 풀었어요. 이 전에 '못 찾음'으로 표시된 곡은 다시 찾아봐요.
+const RELAXED_AT = Date.parse('2026-11-21T08:00:00Z')
 
 const kstDay = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
 
@@ -83,6 +85,17 @@ function lengthOk(video: number | undefined, song: number | null | undefined) {
   return video >= 60
 }
 
+/**
+ * 느슨한 기준 — 뮤직비디오는 앞뒤 인트로·아웃트로 때문에 음원보다 꽤 길 수 있어요.
+ * 공식 채널 + 제목이 맞는 영상이면, 곡보다 조금 짧거나(최대 15%) 꽤 길어도(최대 1.6배 + 90초) 받아요.
+ * 쇼츠·티저처럼 1분 안 되는 영상은 여전히 버려요.
+ */
+function lengthLoose(video: number | undefined, song: number | null | undefined) {
+  if (video === undefined || video < 60) return false
+  if (!song) return true
+  return video >= song * 0.85 - 20 && video <= song * 1.6 + 90
+}
+
 async function useQuota(payload: Payload) {
   const g = (await payload.findGlobal({ slug: 'youtube-usage', overrideAccess: true })) as { day?: string | null; count?: number | null }
   const day = kstDay()
@@ -102,7 +115,8 @@ export async function resolveYoutube(
     .catch(() => null)
   if (!pick) return { id: null, reason: 'not-found' }
   if (pick.youtubeId && !opts.debug) return { id: pick.youtubeId }
-  if (!opts.debug && pick.youtubeMissAt && Date.now() - new Date(pick.youtubeMissAt).getTime() < MISS_DAYS * 86400_000) {
+  const missAt = pick.youtubeMissAt ? new Date(pick.youtubeMissAt).getTime() : 0
+  if (!opts.debug && missAt && missAt >= RELAXED_AT && Date.now() - missAt < MISS_DAYS * 86400_000) {
     return { id: null, reason: 'miss' }
   }
   const key = process.env.YOUTUBE_API_KEY?.trim()
@@ -146,7 +160,10 @@ export async function resolveYoutube(
   // 공식 채널 영상 중에서 곡 길이와 맞는 첫 영상 (쇼츠·짧은 클립은 버려요)
   const good = ranked.filter((r) => r.s >= 10).slice(0, 6)
   const secs = good.length ? await videoSeconds(good.map((r) => r.it.id!.videoId!), key) : null
-  const best = good.find((r) => (secs ? lengthOk(secs.get(r.it.id!.videoId!), en?.duration) : true))
+  // 1차: 길이가 곡과 거의 같은 영상(공식 음원) → 2차: 길이를 넉넉하게 본 영상(뮤직비디오 등)
+  const best =
+    good.find((r) => (secs ? lengthOk(secs.get(r.it.id!.videoId!), en?.duration) : true)) ||
+    good.find((r) => (secs ? lengthLoose(secs.get(r.it.id!.videoId!), en?.duration) : false))
   // 공식 채널 영상이 없거나 제목이 곡과 안 맞으면 쓰지 않아요 (Spotify로 재생)
   if (!best) {
     await payload.update({ collection: 'picks', id: pickId, overrideAccess: true, data: { youtubeMissAt: new Date().toISOString() } })
