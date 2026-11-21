@@ -839,10 +839,22 @@ export async function pickTextCond(
     const like = `%${term}%`
     text = sql`(${c('track')} ilike ${like} or ${c('artist')} ilike ${like} or ${c('album')} ilike ${like})`
   }
-  const names = await aliasTargets(term)
-  if (!names.length) return text
+  // 검색어가 아티스트 이름(또는 다른 이름) 그대로면 그 아티스트 곡만 — DEAN이 Olivia Dean에, Crush가 제목에 crush 든 곡에 섞이지 않게
+  const names = [...new Set([term, ...(await aliasTargets(term))])]
   const exact = names.map((n) => sql`${c('artist')} ~* ${`(^|,\\s*)${reEsc(n)}(\\s*,|$)`}`)
-  return sql`(${text} or ${sql.join(exact, sql` or `)})`
+  const exactCond = sql`(${sql.join(exact, sql` or `)})`
+  const payload = await getClient()
+  const db = payload.db as unknown as {
+    drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
+  const hit = await db.drizzle.execute(
+    sql`select 1 from picks where ${sql.join(
+      names.map((n) => sql`artist_name ~* ${`(^|,\\s*)${reEsc(n)}(\\s*,|$)`}`),
+      sql` or `,
+    )} limit 1`,
+  )
+  if (hit.rows.length) return exactCond
+  return text
 }
 
 /** 곡 목록(Payload 쿼리)용: 검색에 걸리는 곡 번호 */
