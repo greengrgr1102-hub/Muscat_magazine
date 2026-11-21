@@ -940,6 +940,14 @@ button {
   align-items: flex-end;
   gap: 32px;
 }
+/* 제목 위 작은 라벨(EXPLORE 등)은 한 줄 위에 따로 — 제목·설명이 가운데로 밀리지 않게 */
+.page-title {
+  flex-wrap: wrap;
+}
+.page-title > .label {
+  flex-basis: 100%;
+  margin-bottom: -20px;
+}
 .page-title__h {
   display: flex;
   align-items: flex-start;
@@ -966,6 +974,9 @@ button {
   .page-title__desc {
     padding-bottom: 0;
     font-size: 14px;
+  }
+  .page-title > .label {
+    margin-bottom: 0;
   }
 }
 .filter-bar {
@@ -4910,4 +4921,18 @@ a.explore-card:hover {
 }
 .gmap__links button:hover span:first-child {
   color: var(--accent-ink);
+}
+
+/* 형광펜 강조 — 글자 아래쪽 절반만 칠해서 손으로 그은 느낌 */
+mark.hl {
+  color: inherit;
+  background: linear-gradient(
+    transparent 58%,
+    color-mix(in srgb, var(--accent) 45%, transparent) 58%,
+    color-mix(in srgb, var(--accent) 45%, transparent) 92%,
+    transparent 92%
+  );
+  padding: 0 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }

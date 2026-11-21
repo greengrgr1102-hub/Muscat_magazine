@@ -12,7 +12,7 @@ export default async function AboutPage() {
       <section className="wrap about-intro">
         <p className="label">About</p>
         <h1 className="h-xl">
-          <Lines text={about.statement} />
+          <Lines text={about.statement} mark="머스캣 매거진" />
         </h1>
       </section>
 

@@ -16,7 +16,15 @@ const paths = {
 }
 export type IconName = keyof typeof paths | 'search'
 
-export function Icon({ name, size = 16, className }: { name: IconName; size?: number; className?: string }) {
+export function Icon({
+  name,
+  size = 16,
+  className,
+}: {
+  name: IconName
+  size?: number
+  className?: string
+}) {
   return (
     <svg
       className={className}
@@ -73,7 +81,9 @@ export function Img({
     .map((x) => `${x!.url} ${x!.width}w`)
     .join(', ')
   const pos =
-    typeof m.focalX === 'number' && typeof m.focalY === 'number' ? `${m.focalX}% ${m.focalY}%` : 'center'
+    typeof m.focalX === 'number' && typeof m.focalY === 'number'
+      ? `${m.focalX}% ${m.focalY}%`
+      : 'center'
   return (
     <div className={`img ${className}`} style={style}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -166,7 +176,15 @@ export function ArrowLink({
   )
 }
 
-export function Chip({ href, children, active }: { href?: string; children: ReactNode; active?: boolean }) {
+export function Chip({
+  href,
+  children,
+  active,
+}: {
+  href?: string
+  children: ReactNode
+  active?: boolean
+}) {
   const cls = `chip${active ? ' chip--active' : ''}`
   return href ? (
     <Link className={cls} href={href} aria-current={active ? 'page' : undefined}>
@@ -250,14 +268,25 @@ export function CardGrid({ articles, empty }: { articles: Article[]; empty?: str
 }
 
 /* ---------- Plain multi-line text ---------- */
-export function Lines({ text }: { text?: string | null }) {
+// mark: 이 글자를 형광펜으로 칠해요 (예: About 첫 문장의 "머스캣 매거진")
+export function Lines({ text, mark }: { text?: string | null; mark?: string }) {
   if (!text) return null
   const parts = text.split('\n')
+  const paint = (line: string) => {
+    if (!mark || !line.includes(mark)) return line
+    const bits = line.split(mark)
+    return bits.map((b, j) => (
+      <span key={j}>
+        {b}
+        {j < bits.length - 1 ? <mark className="hl">{mark}</mark> : null}
+      </span>
+    ))
+  }
   return (
     <>
       {parts.map((p, i) => (
         <span key={i}>
-          {p}
+          {paint(p)}
           {i < parts.length - 1 ? (
             <>
               {' '}
