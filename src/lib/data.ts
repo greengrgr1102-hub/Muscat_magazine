@@ -805,13 +805,17 @@ export const aliasTargets = cache(async (term: string): Promise<string[]> => {
     payload.find({ collection: 'artists', limit: 1000, depth: 0, pagination: false }),
   ])
   const out = new Set<string>()
+  // 이름·다른 이름·멤버 중 하나라도 맞으면 그 아티스트의 모든 표기로 곡을 찾아요
+  // (곡 기록에 영어로 적혀 있든 한국어로 적혀 있든)
   for (const d of info.docs) {
-    const ks = [...splitNames(d.aliases), ...splitNames(d.members)].map(searchKey)
-    if (ks.includes(key) && searchKey(d.name) !== key) out.add(d.name)
+    const forms = [d.name, ...splitNames(d.aliases)]
+    const ks = [...forms, ...splitNames(d.members)].map(searchKey)
+    if (ks.includes(key)) forms.forEach((f) => out.add(f))
   }
   for (const a of pages.docs) {
-    const alt = (a as { nameAlt?: string | null }).nameAlt
-    if (splitNames(alt).map(searchKey).includes(key) && searchKey(a.name) !== key) out.add(a.name)
+    const forms = [a.name, ...splitNames((a as { nameAlt?: string | null }).nameAlt)]
+    const members = (a.members || []).map((m) => m.name)
+    if ([...forms, ...members].map(searchKey).includes(key)) forms.forEach((f) => out.add(f))
   }
   return [...out]
 })
