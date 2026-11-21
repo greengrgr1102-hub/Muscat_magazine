@@ -82,19 +82,20 @@ export async function getGenresByUse() {
   }
   const rows = (
     await db.drizzle.execute(sql`
-      select g.id, g.name, g.slug, count(*)::int as n
+      select g.id, g.name, g.slug, g.aliases, count(*)::int as n
       from (
         select genres_id as gid from picks_rels where path = 'genres' and genres_id is not null
         union all
         select genres_id from articles_rels where path = 'genres' and genres_id is not null
       ) x join genres g on g.id = x.gid
-      group by g.id, g.name, g.slug
+      group by g.id, g.name, g.slug, g.aliases
       order by n desc, g.name`)
   ).rows
   return rows.map((r) => ({
     id: Number(r.id),
     name: String(r.name),
     slug: String(r.slug),
+    aliases: r.aliases ? String(r.aliases) : '',
     n: Number(r.n),
   }))
 }
@@ -793,6 +794,13 @@ export async function findPickAlbums({
     ...pickFilterSql(f),
   ]
   if (sort === 'new' || sort === 'old') conds.push(sql`release_date is not null`)
+  // 고른 장르가 붙은 앨범 (앨범 장르는 수록곡 전체에 같이 붙어 있어서 곡 단위로 걸러도 돼요)
+  if (f.g?.length) {
+    const has = (slug: string) =>
+      sql`id in (select r.parent_id from picks_rels r join genres gg on gg.id = r.genres_id where r.path = 'genres' and gg.slug = ${slug})`
+    if (f.gm === 'any') conds.push(sql`(${sql.join(f.g.map(has), sql` or `)})`)
+    else for (const slug of f.g) conds.push(has(slug))
+  }
   // 이 장르가 붙은 곡이 하나라도 있는 앨범
   if (genreId)
     conds.push(
@@ -1048,7 +1056,15 @@ export async function similarAlbums(
 
 /* ───────── 곡·앨범 필터 (시기 · 나라 · 앨범 형태) ───────── */
 
-export type PickFilter = { era?: string; c?: string; type?: string }
+export type PickFilter = {
+  era?: string
+  c?: string
+  type?: string
+  /** 장르 슬러그 (최대 5개) — 앨범 보기에서만 */
+  g?: string[]
+  /** 장르를 여러 개 골랐을 때: 기본은 모두 포함, 'any'면 하나라도 */
+  gm?: 'any'
+}
 export const ERA_OPTIONS = [
   { v: 'recent', label: '최근 1년' },
   { v: '2020s', label: '2020년대' },
@@ -1076,6 +1092,12 @@ export function cleanFilter(sp: Record<string, string | undefined>): PickFilter 
   if (ERA_OPTIONS.some((o) => o.v === sp.era)) f.era = sp.era
   if (COUNTRY_OPTIONS.some((o) => o.v === sp.c)) f.c = sp.c
   if (TYPE_OPTIONS.some((o) => o.v === sp.type)) f.type = sp.type
+  const g = (sp.g || '')
+    .split(',')
+    .map((x) => x.trim().toLowerCase())
+    .filter((x) => /^[a-z0-9-]{1,60}$/.test(x))
+  if (g.length) f.g = [...new Set(g)].slice(0, 5)
+  if (f.g && f.g.length > 1 && sp.gm === 'any') f.gm = 'any'
   return f
 }
 

@@ -29,6 +29,7 @@ export function PickFilters({
     { key: 'type' as const, label: '형태', options: TYPE_OPTIONS },
   ]
   const any = Boolean(f.era || f.c || f.type)
+  // 장르(g)는 앨범 보기의 장르 고르기가 따로 다뤄요 — 여기서는 keep으로만 이어 받아요
   return (
     <div className="pfilters" role="group" aria-label="필터">
       {rows.map((r) => (
