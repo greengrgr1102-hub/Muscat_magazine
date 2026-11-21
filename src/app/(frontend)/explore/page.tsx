@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ExploreTabs } from '@/components/ExploreTabs'
 import { exploreSeeds } from '@/lib/data'
+import Reshuffle from './Reshuffle'
 
 export const metadata: Metadata = {
   title: 'Explore',
@@ -70,8 +71,7 @@ export default async function ExplorePage() {
               <p className="label">Web</p>
               <h2 className="h-md">거미줄</h2>
               <p className="muted">
-                곡이나 앨범 하나에서 비슷한 음악이 거미줄처럼 펼쳐져요. 오늘의 출발점에서 시작해
-                보세요.
+                곡이나 앨범 하나에서 비슷한 음악이 거미줄처럼 펼쳐져요. 아무 데서나 시작해 보세요.
               </p>
               <div className="explore-seeds">
                 {seeds.song ? (
@@ -99,7 +99,10 @@ export default async function ExplorePage() {
                   </Link>
                 ) : null}
               </div>
-              <p className="small muted">곡·앨범 페이지의 거미줄 버튼으로도 시작할 수 있어요.</p>
+              <p className="small muted explore-seeds__foot">
+                <span>곡·앨범 페이지의 거미줄 버튼으로도 시작할 수 있어요.</span>
+                <Reshuffle />
+              </p>
             </div>
           </li>
         </ul>

@@ -5056,3 +5056,27 @@ mark.hl {
     font-size: 14px;
   }
 }
+
+/* 거미줄 출발점 다시 뽑기 */
+.explore-seeds__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.seed-shuffle {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--ink, inherit);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.seed-shuffle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

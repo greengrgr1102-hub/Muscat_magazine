@@ -1400,20 +1400,26 @@ export async function randomPick({
   return { pick, total: Number(left.rows[0]?.n || 0), fresh: Boolean(row) }
 }
 
-/** 탐험 첫 화면에서 거미줄을 시작할 곡·앨범 하나씩 (날마다 바뀌어요) */
+/** 탐험 첫 화면에서 거미줄을 시작할 곡·앨범 하나씩 (들어올 때마다 랜덤) */
 export async function exploreSeeds() {
   const payload = await getClient()
   const db = payload.db as unknown as {
     drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
   }
-  const pick = (
+  const hasGenre = sql`p.cover_url like '%/image/%' and exists (select 1 from picks_rels r where r.parent_id = p.id and r.path = 'genres')`
+  const song = (
     await db.drizzle.execute(sql`
       select p.id, p.track, p.artist_name, p.album, p.cover_url from picks p
-      where p.cover_url like '%/image/%' and exists (select 1 from picks_rels r where r.parent_id = p.id and r.path = 'genres')
-      order by md5(p.id::text || current_date::text) limit 2`)
-  ).rows
-  const song = pick[0]
-  const alb = pick[1]
+      where ${hasGenre} order by random() limit 1`)
+  ).rows[0]
+  // 앨범은 정규·EP 중에서, 곡과 다른 앨범으로 (형태 정보가 없으면 아무 다른 앨범)
+  const otherAlbum = sql`right(p.cover_url, 24) <> ${song ? String(song.cover_url).slice(-24) : ''}`
+  const albumQ = (typed: boolean) =>
+    db.drizzle.execute(sql`
+      select p.id, p.track, p.artist_name, p.album, p.cover_url from picks p
+      where ${hasGenre} and ${otherAlbum} ${typed ? sql`and p.release_type in ('album', 'ep')` : sql``}
+      order by random() limit 1`)
+  const alb = (await albumQ(true)).rows[0] ?? (await albumQ(false)).rows[0]
   return {
     song: song
       ? {
