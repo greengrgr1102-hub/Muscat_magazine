@@ -30,6 +30,7 @@ import * as migration_20261120_071115_youtube_checked from './20261120_071115_yo
 import * as migration_20261121_130000_festivals from './20261121_130000_festivals'
 import * as migration_20261122_140000_updates from './20261122_140000_updates'
 import * as migration_20261122_150000_members from './20261122_150000_members'
+import * as migration_20261123_090000_festival_flat from './20261123_090000_festival_flat'
 
 export const migrations = [
   {
@@ -191,5 +192,10 @@ export const migrations = [
     up: migration_20261122_150000_members.up,
     down: migration_20261122_150000_members.down,
     name: '20261122_150000_members',
+  },
+  {
+    up: migration_20261123_090000_festival_flat.up,
+    down: migration_20261123_090000_festival_flat.down,
+    name: '20261123_090000_festival_flat',
   },
 ]

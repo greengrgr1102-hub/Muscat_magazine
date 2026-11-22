@@ -119,9 +119,10 @@ export function FestivalList({ fests }: { fests: Fest[] }) {
                     .filter(({ a }) => isOpen || shown++ < SHOW || Boolean(a.artist))
                   if (!acts.length) return null
                   // 포스터처럼: 앞 순서일수록 크게 (여러 날이면 날마다 2팀·4팀, 하루면 3팀·5팀)
+                  // 출연 순서가 없는 페스티벌은 모두 같은 크기
                   const multi = f.days.length > 1
-                  const t1 = multi ? 2 : 3
-                  const t2 = t1 + (multi ? 4 : 5)
+                  const t1 = f.flat ? 0 : multi ? 2 : 3
+                  const t2 = f.flat ? 0 : t1 + (multi ? 4 : 5)
                   const tiers = [
                     acts.filter(({ i }) => i < t1),
                     acts.filter(({ i }) => i >= t1 && i < t2),

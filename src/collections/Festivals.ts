@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache'
 import type { CollectionConfig } from 'payload'
 
 /**
@@ -15,6 +16,23 @@ export const Festivals: CollectionConfig = {
     description: '올해 페스티벌 출연진. 출연진은 한 줄에 한 팀, "## 날짜"로 날짜를 나눠요.',
   },
   access: { read: () => true },
+  // 관리자에서 고치면 페스티벌 페이지를 바로 새로 만들어요
+  hooks: {
+    afterChange: [
+      () => {
+        try {
+          revalidatePath('/explore/festivals')
+        } catch {}
+      },
+    ],
+    afterDelete: [
+      () => {
+        try {
+          revalidatePath('/explore/festivals')
+        } catch {}
+      },
+    ],
+  },
   defaultSort: 'startDate',
   fields: [
     {
@@ -71,6 +89,15 @@ export const Festivals: CollectionConfig = {
       label: '출연진 일부만 확인됨',
       type: 'checkbox',
       admin: { description: '켜 두면 페이지에 "공개된 기사 기준 일부"라고 표시돼요.' },
+    },
+    {
+      name: 'flat',
+      label: '출연 순서 없음',
+      type: 'checkbox',
+      admin: {
+        description:
+          '켜 두면 포스터처럼 앞 팀을 크게 하지 않고 모두 같은 크기로 보여요 (쇼케이스형 페스티벌처럼 헤드라이너가 없을 때).',
+      },
     },
     {
       name: 'source',

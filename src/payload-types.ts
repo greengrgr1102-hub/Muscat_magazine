@@ -711,6 +711,10 @@ export interface Festival {
    */
   partial?: boolean | null;
   /**
+   * 켜 두면 포스터처럼 앞 팀을 크게 하지 않고 모두 같은 크기로 보여요 (쇼케이스형 페스티벌처럼 헤드라이너가 없을 때).
+   */
+  flat?: boolean | null;
+  /**
    * 라인업을 확인한 곳 (페이지엔 안 보여요)
    */
   source?: string | null;
@@ -1115,6 +1119,7 @@ export interface FestivalsSelect<T extends boolean = true> {
   url?: T;
   lineup?: T;
   partial?: T;
+  flat?: T;
   source?: T;
   updatedAt?: T;
   createdAt?: T;

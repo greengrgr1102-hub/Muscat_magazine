@@ -15,6 +15,7 @@ export type Fest = {
   place: string | null
   url: string | null
   partial: boolean
+  flat: boolean
   days: FestDay[]
   total: number
   matched: string[]
@@ -116,6 +117,7 @@ export async function getFestivals(): Promise<Fest[]> {
       place: d.place || null,
       url: d.url || null,
       partial: Boolean(d.partial),
+      flat: Boolean((d as { flat?: boolean | null }).flat),
       days,
       total: days.reduce((n, x) => n + x.acts.length, 0),
       matched,
@@ -168,7 +170,10 @@ const shortName = (n: string) =>
 
 // 한 줄에서 같은 팀을 알아볼 열쇠들: "혁오 (HYUKOH)" → 혁오, hyukoh / 맞춘 아티스트가 있으면 그 이름도
 function actKeys(a: FestAct): string[] {
-  const base = a.text.replace(/\s*\((?:공연|취소)[^)]*\)\s*/g, ' ').trim()
+  const base = a.text
+    .replace(/\s*\((?:공연|취소)[^)]*\)\s*/g, ' ')
+    .replace(/\s*\[[^\]]*\]\s*/g, ' ')
+    .trim()
   const ks = [base]
   const m = base.match(/^(.*?)\s*[（(]([^）)]+)[）)]\s*$/)
   if (m) ks.push(m[1], m[2])
