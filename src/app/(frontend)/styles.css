@@ -2902,8 +2902,21 @@ body.is-moving {
 .mbar-queue ol {
   list-style: none;
   margin: 0;
-  padding: 0 8px;
+  padding: 0 4px 0 8px;
   overflow-y: auto;
+  /* 얇은 스크롤바 — 목록이 얼마나 남았는지 보이게 */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ink-muted) 45%, transparent) transparent;
+}
+.mbar-queue ol::-webkit-scrollbar {
+  width: 6px;
+}
+.mbar-queue ol::-webkit-scrollbar-track {
+  background: transparent;
+}
+.mbar-queue ol::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-muted) 45%, transparent);
+  border-radius: 3px;
 }
 .mbar-queue li {
   display: flex;

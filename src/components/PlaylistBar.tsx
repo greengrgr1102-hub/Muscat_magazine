@@ -54,6 +54,13 @@ export function PlaylistBar() {
   const [mounted, setMounted] = useState(false)
   const [note, setNote] = useState<Toast | null>(null)
   const [queueOpen, setQueueOpen] = useState(false)
+  const queueList = useRef<HTMLOListElement>(null)
+  // 목록을 열면 지금 듣는 곡이 보이게 스크롤해요
+  useEffect(() => {
+    if (!queueOpen) return
+    const el = queueList.current?.querySelector<HTMLElement>('li.is-now')
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [queueOpen])
   // 영상 창 너비 — 오른쪽 위 모서리를 끌어서 조절 (YouTube 규정상 높이 200px = 너비 356px이 최소)
   const [videoW, setVideoW] = useState(356)
   useEffect(() => {
@@ -589,9 +596,11 @@ export function PlaylistBar() {
         <div className="mbar-queue" role="dialog" aria-label="다음 곡">
           <div className="mbar-queue__head">
             <strong>다음 곡</strong>
-            <span>{player!.label} 순서대로</span>
+            <span>
+              {player!.label} · {player!.index + 1} / {player!.queue.length}곡
+            </span>
           </div>
-          <ol>
+          <ol ref={queueList}>
             {player!.queue.map((s, i) => (
               <li
                 key={`${s.id}-${i}`}
