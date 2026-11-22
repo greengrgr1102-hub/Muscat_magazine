@@ -73,6 +73,7 @@ export interface Config {
     artists: Artist;
     'artist-info': ArtistInfo;
     festivals: Festival;
+    updates: Update;
     genres: Genre;
     tags: Tag;
     media: Media;
@@ -93,6 +94,7 @@ export interface Config {
     artists: ArtistsSelect<false> | ArtistsSelect<true>;
     'artist-info': ArtistInfoSelect<false> | ArtistInfoSelect<true>;
     festivals: FestivalsSelect<false> | FestivalsSelect<true>;
+    updates: UpdatesSelect<false> | UpdatesSelect<true>;
     genres: GenresSelect<false> | GenresSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -714,6 +716,25 @@ export interface Festival {
   createdAt: string;
 }
 /**
+ * 날짜 하나에 한 칸. 독자에게 보이는 짧은 소식만 적어요 (숫자는 자동).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "updates".
+ */
+export interface Update {
+  id: number;
+  /**
+   * 예: 2026-11-22
+   */
+  day: string;
+  /**
+   * 한 줄에 하나. 링크를 걸려면 줄 끝에 → /주소 (예: 탐험에 페스티벌이 생겼어요 → /explore/festivals)
+   */
+  note: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "inquiries".
  */
@@ -794,6 +815,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'festivals';
         value: number | Festival;
+      } | null)
+    | ({
+        relationTo: 'updates';
+        value: number | Update;
       } | null)
     | ({
         relationTo: 'genres';
@@ -1059,6 +1084,16 @@ export interface FestivalsSelect<T extends boolean = true> {
   lineup?: T;
   partial?: T;
   source?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "updates_select".
+ */
+export interface UpdatesSelect<T extends boolean = true> {
+  day?: T;
+  note?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -16,6 +16,7 @@ import { Picks } from './collections/Picks'
 import { Tags } from './collections/Tags'
 import { Artists } from './collections/Artists'
 import { Festivals } from './collections/Festivals'
+import { Updates } from './collections/Updates'
 import { ArtistInfo } from './collections/ArtistInfo'
 import { Articles } from './collections/Articles'
 import { Inquiries, Subscribers } from './collections/Inquiries'
@@ -70,6 +71,7 @@ export default buildConfig({
     Artists,
     ArtistInfo,
     Festivals,
+    Updates,
     Genres,
     Tags,
     Media,

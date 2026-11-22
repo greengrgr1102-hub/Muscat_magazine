@@ -26,6 +26,7 @@ export async function Footer() {
             <Link href="/picks">Editor&apos;s Picks</Link>
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
+            <Link href="/updates">Updates</Link>
           </div>
           {social.length ? (
             <div className="footer__col">
@@ -44,7 +45,8 @@ export async function Footer() {
         </div>
       </div>
       <p className="footer__wordmark" aria-hidden="true">
-        <span className="footer__wm-sans">Muscat</span> <span className="footer__wm-serif">Magazine</span>
+        <span className="footer__wm-sans">Muscat</span>{' '}
+        <span className="footer__wm-serif">Magazine</span>
       </p>
       {s.businessInfo ? (
         <p className="footer__legal">

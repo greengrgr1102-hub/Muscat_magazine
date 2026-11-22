@@ -5080,3 +5080,61 @@ mark.hl {
   opacity: 0.5;
   cursor: default;
 }
+
+/* 업데이트 노트 */
+.updates__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 880px;
+}
+.updates__day {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--gutter);
+  padding: 28px 0;
+  border-top: 1px solid var(--line);
+}
+.updates__date {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+.updates__md {
+  font-family: var(--serif);
+  font-size: 32px;
+  line-height: 1;
+}
+.updates__lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 17px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.updates__lines a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line);
+}
+.updates__lines a:hover {
+  text-decoration-color: var(--ink);
+}
+@media (max-width: 720px) {
+  .updates__day {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 22px 0;
+  }
+  .updates__md {
+    font-size: 26px;
+  }
+  .updates__lines {
+    font-size: 16px;
+  }
+}

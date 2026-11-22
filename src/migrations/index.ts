@@ -28,6 +28,7 @@ import * as migration_20261120_051326_genre_aliases from './20261120_051326_genr
 import * as migration_20261120_053108_artist_info from './20261120_053108_artist_info'
 import * as migration_20261120_071115_youtube_checked from './20261120_071115_youtube_checked'
 import * as migration_20261121_130000_festivals from './20261121_130000_festivals'
+import * as migration_20261122_140000_updates from './20261122_140000_updates'
 
 export const migrations = [
   {
@@ -179,5 +180,10 @@ export const migrations = [
     up: migration_20261121_130000_festivals.up,
     down: migration_20261121_130000_festivals.down,
     name: '20261121_130000_festivals',
+  },
+  {
+    up: migration_20261122_140000_updates.up,
+    down: migration_20261122_140000_updates.down,
+    name: '20261122_140000_updates',
   },
 ]

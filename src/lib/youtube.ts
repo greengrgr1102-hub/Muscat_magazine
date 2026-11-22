@@ -11,13 +11,18 @@ const MISS_DAYS = 30
 // 2026-11-21: 길이 기준을 풀었어요. 이 전에 '못 찾음'으로 표시된 곡은 다시 찾아봐요.
 const RELAXED_AT = Date.parse('2026-11-21T08:00:00Z')
 
-const kstDay = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
+// YouTube 하루 한도는 미국 서부 시간 자정(한국 오후 4~5시)에 다시 채워져요. 그 날짜로 세요.
+const quotaDay = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date())
 
 export function youtubeConfigured() {
   return Boolean(process.env.YOUTUBE_API_KEY?.trim())
 }
 
-type SearchItem = { id?: { videoId?: string }; snippet?: { title?: string; channelTitle?: string; description?: string } }
+type SearchItem = {
+  id?: { videoId?: string }
+  snippet?: { title?: string; channelTitle?: string; description?: string }
+}
 
 const norm = (s: string) => s.toLowerCase().replace(/[\s'’"「」()\[\]\-–—.,!?·:]/g, '')
 
@@ -39,7 +44,13 @@ function score(it: SearchItem, n: Names) {
   const artists = n.artists.map(norm).filter((a) => a.length >= 2)
   const isTopic = / - Topic$/.test(ch)
   const chBase = norm(ch.replace(/ - Topic$/, '').replace(/vevo$/i, ''))
-  const chIsArtist = artists.some((a) => chBase === a || chBase === `${a}official` || chBase === `official${a}` || chBase.startsWith(a))
+  const chIsArtist = artists.some(
+    (a) =>
+      chBase === a ||
+      chBase === `${a}official` ||
+      chBase === `official${a}` ||
+      chBase.startsWith(a),
+  )
   if (!chIsArtist) return -99
   const titleOk = n.tracks.some((t) => {
     const b = norm(stripParen(t)) || norm(t)
@@ -48,7 +59,12 @@ function score(it: SearchItem, n: Names) {
   if (!titleOk) return -99
   let s = isTopic ? 14 : 10
   if (/official (audio|music video|video)|공식|m\/?v/i.test(rawTitle)) s += 1
-  if (/live|cover|커버|라이브|reaction|karaoke|노래방|1 ?hour|loop|sped ?up|slowed|teaser|티저|behind|비하인드|instrumental|inst\.?\)/i.test(rawTitle)) s -= 6
+  if (
+    /live|cover|커버|라이브|reaction|karaoke|노래방|1 ?hour|loop|sped ?up|slowed|teaser|티저|behind|비하인드|instrumental|inst\.?\)/i.test(
+      rawTitle,
+    )
+  )
+    s -= 6
   return s
 }
 
@@ -56,7 +72,7 @@ function score(it: SearchItem, n: Names) {
 function isoSeconds(d?: string) {
   const m = d?.match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/)
   if (!m) return null
-  return (+(m[1] || 0)) * 86400 + (+(m[2] || 0)) * 3600 + (+(m[3] || 0)) * 60 + +(m[4] || 0)
+  return +(m[1] || 0) * 86400 + +(m[2] || 0) * 3600 + +(m[3] || 0) * 60 + +(m[4] || 0)
 }
 
 /** 영상 길이 (영상 50개까지 한 번에, 1점만 써요). 지워졌거나 비공개면 빠져요. */
@@ -66,7 +82,9 @@ async function videoSeconds(ids: string[], key: string): Promise<Map<string, num
   url.search = new URLSearchParams({ part: 'contentDetails', id: ids.join(','), key }).toString()
   const res = await fetch(url, { cache: 'no-store' }).catch(() => null)
   if (!res?.ok) return null
-  const items = ((await res.json()) as { items?: { id: string; contentDetails?: { duration?: string } }[] }).items || []
+  const items =
+    ((await res.json()) as { items?: { id: string; contentDetails?: { duration?: string } }[] })
+      .items || []
   const out = new Map<string, number>()
   for (const it of items) {
     const sec = isoSeconds(it.contentDetails?.duration)
@@ -97,11 +115,18 @@ function lengthLoose(video: number | undefined, song: number | null | undefined)
 }
 
 async function useQuota(payload: Payload) {
-  const g = (await payload.findGlobal({ slug: 'youtube-usage', overrideAccess: true })) as { day?: string | null; count?: number | null }
-  const day = kstDay()
+  const g = (await payload.findGlobal({ slug: 'youtube-usage', overrideAccess: true })) as {
+    day?: string | null
+    count?: number | null
+  }
+  const day = `pt-${quotaDay()}`
   const count = g.day === day ? g.count || 0 : 0
   if (count >= DAILY_LIMIT) return false
-  await payload.updateGlobal({ slug: 'youtube-usage', overrideAccess: true, data: { day, count: count + 1 } })
+  await payload.updateGlobal({
+    slug: 'youtube-usage',
+    overrideAccess: true,
+    data: { day, count: count + 1 },
+  })
   return true
 }
 
@@ -109,14 +134,25 @@ export async function resolveYoutube(
   payload: Payload,
   pickId: number,
   opts: { debug?: boolean } = {},
-): Promise<{ id: string | null; reason?: string; candidates?: unknown[]; q?: string; names?: unknown }> {
+): Promise<{
+  id: string | null
+  reason?: string
+  candidates?: unknown[]
+  q?: string
+  names?: unknown
+}> {
   const pick = await payload
     .findByID({ collection: 'picks', id: pickId, depth: 0, overrideAccess: true })
     .catch(() => null)
   if (!pick) return { id: null, reason: 'not-found' }
   if (pick.youtubeId && !opts.debug) return { id: pick.youtubeId }
   const missAt = pick.youtubeMissAt ? new Date(pick.youtubeMissAt).getTime() : 0
-  if (!opts.debug && missAt && missAt >= RELAXED_AT && Date.now() - missAt < MISS_DAYS * 86400_000) {
+  if (
+    !opts.debug &&
+    missAt &&
+    missAt >= RELAXED_AT &&
+    Date.now() - missAt < MISS_DAYS * 86400_000
+  ) {
     return { id: null, reason: 'miss' }
   }
   const key = process.env.YOUTUBE_API_KEY?.trim()
@@ -147,36 +183,60 @@ export async function resolveYoutube(
   }).toString()
   const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) return { id: null, reason: `api-${res.status}` }
-  const items = (((await res.json()) as { items?: SearchItem[] }).items || []).filter((it) => it.id?.videoId)
+  const items = (((await res.json()) as { items?: SearchItem[] }).items || []).filter(
+    (it) => it.id?.videoId,
+  )
   const ranked = items.map((it) => ({ it, s: score(it, names) })).sort((x, y) => y.s - x.s)
   if (opts.debug) {
     return {
       id: ranked[0] && ranked[0].s >= 10 ? ranked[0].it.id!.videoId! : null,
       q,
       names,
-      candidates: ranked.map((r) => ({ s: r.s, title: r.it.snippet?.title, channel: r.it.snippet?.channelTitle, id: r.it.id?.videoId })),
+      candidates: ranked.map((r) => ({
+        s: r.s,
+        title: r.it.snippet?.title,
+        channel: r.it.snippet?.channelTitle,
+        id: r.it.id?.videoId,
+      })),
     }
   }
   // 공식 채널 영상 중에서 곡 길이와 맞는 첫 영상 (쇼츠·짧은 클립은 버려요)
   const good = ranked.filter((r) => r.s >= 10).slice(0, 6)
-  const secs = good.length ? await videoSeconds(good.map((r) => r.it.id!.videoId!), key) : null
+  const secs = good.length
+    ? await videoSeconds(
+        good.map((r) => r.it.id!.videoId!),
+        key,
+      )
+    : null
   // 1차: 길이가 곡과 거의 같은 영상(공식 음원) → 2차: 길이를 넉넉하게 본 영상(뮤직비디오 등)
   const best =
     good.find((r) => (secs ? lengthOk(secs.get(r.it.id!.videoId!), en?.duration) : true)) ||
     good.find((r) => (secs ? lengthLoose(secs.get(r.it.id!.videoId!), en?.duration) : false))
   // 공식 채널 영상이 없거나 제목이 곡과 안 맞으면 쓰지 않아요 (Spotify로 재생)
   if (!best) {
-    await payload.update({ collection: 'picks', id: pickId, overrideAccess: true, data: { youtubeMissAt: new Date().toISOString() } })
+    await payload.update({
+      collection: 'picks',
+      id: pickId,
+      overrideAccess: true,
+      data: { youtubeMissAt: new Date().toISOString() },
+    })
     return { id: null, reason: 'no-match' }
   }
   const id = best.it.id!.videoId!
-  await payload.update({ collection: 'picks', id: pickId, overrideAccess: true, data: { youtubeId: id, youtubeCheckedAt: new Date().toISOString() } })
+  await payload.update({
+    collection: 'picks',
+    id: pickId,
+    overrideAccess: true,
+    data: { youtubeId: id, youtubeCheckedAt: new Date().toISOString() },
+  })
   return { id }
 }
 
 /** 영상이 다른 사이트에서 재생 금지(오류 101·150)일 때: 저장한 영상을 지우고 한동안 다시 찾지 않아요 */
 export async function markYoutubeBad(payload: Payload, pickId: number, videoId: string) {
-  const pick = await payload.findByID({ collection: 'picks', id: pickId, depth: 0, overrideAccess: true }).catch(() => null)
+  const pick = await payload
+    .findByID({ collection: 'picks', id: pickId, depth: 0, overrideAccess: true })
+    .catch(() => null)
   if (!pick || pick.youtubeId !== videoId) return
   await payload.update({
     collection: 'picks',
@@ -193,7 +253,9 @@ export async function markYoutubeBad(payload: Payload, pickId: number, videoId: 
 export async function checkSavedYoutube(payload: Payload) {
   const key = process.env.YOUTUBE_API_KEY?.trim()
   if (!key) return { checked: 0, cleared: 0, left: 0 }
-  const db = payload.db as unknown as { drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> } }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
   const { sql } = await import('@payloadcms/db-postgres')
   const rows = (
     await db.drizzle.execute(
@@ -201,10 +263,17 @@ export async function checkSavedYoutube(payload: Payload) {
     )
   ).rows
   const left = Number(
-    (await db.drizzle.execute(sql`select count(*)::int as n from picks where youtube_id is not null and youtube_checked_at is null`)).rows[0]?.n || 0,
+    (
+      await db.drizzle.execute(
+        sql`select count(*)::int as n from picks where youtube_id is not null and youtube_checked_at is null`,
+      )
+    ).rows[0]?.n || 0,
   )
   if (!rows.length) return { checked: 0, cleared: 0, left: 0 }
-  const secs = await videoSeconds(rows.map((r) => String(r.youtube_id)), key)
+  const secs = await videoSeconds(
+    rows.map((r) => String(r.youtube_id)),
+    key,
+  )
   if (!secs) return { checked: 0, cleared: 0, left }
   let cleared = 0
   for (const r of rows) {
@@ -224,4 +293,67 @@ export async function checkSavedYoutube(payload: Payload) {
     await payload.update({ collection: 'picks', id: Number(r.id), overrideAccess: true, data })
   }
   return { checked: rows.length, cleared, left: Math.max(0, left - rows.length) }
+}
+
+/**
+ * 아직 영상이 없는 곡들을 한꺼번에 찾아요 (매일 Vercel 예약 실행 · 관리자가 직접 부를 때).
+ * 인터뷰·아티스트 페이지가 있는 아티스트 곡 먼저, 그다음 최근에 넣은 곡부터.
+ * 하루 한도(90번)를 다 쓰거나 시간이 다 되면 멈춰요.
+ */
+export async function fillYoutube(payload: Payload, budgetMs = 50_000) {
+  const started = Date.now()
+  if (!youtubeConfigured()) return { tried: 0, found: 0, missed: 0, stop: 'no-key', left: null }
+  const db = payload.db as unknown as {
+    drizzle: { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
+  }
+  const { sql } = await import('@payloadcms/db-postgres')
+  const rows = (
+    await db.drizzle.execute(
+      sql`select id, artist_name, picked_at, youtube_miss_at from picks where youtube_id is null`,
+    )
+  ).rows
+  const artists = (await db.drizzle.execute(sql`select name, name_alt from artists`)).rows.flatMap(
+    (a) => [String(a.name || ''), ...String(a.name_alt || '').split(/[,，]/)],
+  )
+  const known = new Set(artists.map((n) => n.trim().toLowerCase()).filter((n) => n.length >= 2))
+  const now = Date.now()
+  const open = rows.filter((r) => {
+    const m = r.youtube_miss_at ? new Date(String(r.youtube_miss_at)).getTime() : 0
+    return !(m && m >= RELAXED_AT && now - m < MISS_DAYS * 86400_000)
+  })
+  const isKnown = (r: Record<string, unknown>) =>
+    String(r.artist_name || '')
+      .split(', ')
+      .some((n) => known.has(n.trim().toLowerCase()))
+  const byRecent = (a: Record<string, unknown>, b: Record<string, unknown>) =>
+    String(b.picked_at || '').localeCompare(String(a.picked_at || ''))
+  const queue = [
+    ...open.filter(isKnown).sort(byRecent),
+    ...open.filter((r) => !isKnown(r)).sort(byRecent),
+  ].map((r) => Number(r.id))
+  let tried = 0
+  let found = 0
+  let missed = 0
+  let stop: string | null = null
+  // 세 곡씩 동시에 찾아요
+  while (queue.length && !stop && Date.now() - started < budgetMs) {
+    const batch = queue.splice(0, 3)
+    const res = await Promise.all(
+      batch.map((id) => resolveYoutube(payload, id).catch(() => ({ id: null, reason: 'error' }))),
+    )
+    for (const r of res) {
+      if (
+        r.reason === 'quota' ||
+        r.reason === 'no-key' ||
+        String(r.reason || '').startsWith('api-')
+      ) {
+        stop = r.reason || 'stop'
+        continue
+      }
+      tried++
+      if (r.id) found++
+      else missed++
+    }
+  }
+  return { tried, found, missed, stop, left: queue.length }
 }
