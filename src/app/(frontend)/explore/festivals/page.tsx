@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { ExploreTabs } from '@/components/ExploreTabs'
-import { getFestivals } from '@/lib/festivals'
+import { getFestivalStats, getFestivals } from '@/lib/festivals'
 import { FestivalList } from './FestivalList'
+import { FestivalStats } from './FestivalStats'
 
 export const metadata: Metadata = {
   title: '페스티벌',
@@ -11,6 +12,7 @@ export const revalidate = 3600
 
 export default async function FestivalsPage() {
   const fests = await getFestivals()
+  const stats = await getFestivalStats(fests)
   const year = fests[0]?.start.slice(0, 4) || String(new Date().getFullYear())
   return (
     <>
@@ -26,6 +28,7 @@ export default async function FestivalsPage() {
         </p>
       </section>
       <ExploreTabs />
+      <FestivalStats s={stats} />
       <FestivalList fests={fests} />
     </>
   )

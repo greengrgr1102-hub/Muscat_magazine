@@ -111,40 +111,59 @@ export function FestivalList({ fests }: { fests: Fest[] }) {
                   </button>
                 ) : null}
               </header>
-              {f.days.map((d, di) => {
-                // 접혀 있을 땐 앞쪽 팀 + 에디터가 들은 팀은 항상 보여요
-                const acts = isOpen
-                  ? d.acts
-                  : d.acts.filter((a) => shown++ < SHOW || Boolean(a.artist))
-                if (!acts.length) return null
-                return (
-                  <div key={di} className="fest-day">
-                    {d.label ? <p className="fest-day__label">{d.label}</p> : null}
-                    <p className="fest-day__acts">
-                      {acts.map((a, i) => (
-                        <span key={i} className="fest-act">
-                          {a.artist ? (
-                            <button
-                              type="button"
-                              className="fest-act__on"
-                              title={`${a.artist} 듣기`}
-                              disabled={busy === `${f.id}-${a.artist}`}
-                              onClick={() =>
-                                play(`${f.id}-${a.artist}`, [a.artist!], `${f.name} · ${a.artist}`)
-                              }
-                            >
-                              <span className="fest-dot" aria-hidden />
-                              {a.text}
-                            </button>
-                          ) : (
-                            <span>{a.text}</span>
-                          )}
-                        </span>
-                      ))}
-                    </p>
-                  </div>
-                )
-              })}
+              <div className="fest-poster">
+                {f.days.map((d, di) => {
+                  // 접혀 있을 땐 앞쪽 팀 + 에디터가 들은 팀은 항상 보여요
+                  const acts = d.acts
+                    .map((a, i) => ({ a, i }))
+                    .filter(({ a }) => isOpen || shown++ < SHOW || Boolean(a.artist))
+                  if (!acts.length) return null
+                  // 포스터처럼: 앞 순서일수록 크게 (여러 날이면 날마다 2팀·4팀, 하루면 3팀·5팀)
+                  const multi = f.days.length > 1
+                  const t1 = multi ? 2 : 3
+                  const t2 = t1 + (multi ? 4 : 5)
+                  const tiers = [
+                    acts.filter(({ i }) => i < t1),
+                    acts.filter(({ i }) => i >= t1 && i < t2),
+                    acts.filter(({ i }) => i >= t2),
+                  ]
+                  return (
+                    <div key={di} className="fest-day">
+                      {d.label ? <p className="fest-day__label">{d.label}</p> : null}
+                      {tiers.map((tier, ti) =>
+                        tier.length ? (
+                          <p key={ti} className={`fest-day__acts fest-tier fest-tier--${ti + 1}`}>
+                            {tier.map(({ a, i }) => (
+                              <span key={i} className="fest-act">
+                                {a.artist ? (
+                                  <button
+                                    type="button"
+                                    className="fest-act__on"
+                                    title={`${a.artist} 듣기`}
+                                    disabled={busy === `${f.id}-${a.artist}`}
+                                    onClick={() =>
+                                      play(
+                                        `${f.id}-${a.artist}`,
+                                        [a.artist!],
+                                        `${f.name} · ${a.artist}`,
+                                      )
+                                    }
+                                  >
+                                    <span className="fest-dot" aria-hidden />
+                                    {a.text}
+                                  </button>
+                                ) : (
+                                  <span>{a.text}</span>
+                                )}
+                              </span>
+                            ))}
+                          </p>
+                        ) : null,
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
               <footer className="fest-card__foot small muted">
                 {f.total > SHOW ? (
                   <button
