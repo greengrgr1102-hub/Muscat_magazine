@@ -11,6 +11,10 @@
     {
       "path": "/spotify/sync",
       "schedule": "30 18 * * *"
+    },
+    {
+      "path": "/youtube/fill",
+      "schedule": "10 8 * * *"
     }
   ]
 }
