@@ -5494,3 +5494,225 @@ mark.hl {
   font-size: 14px;
   color: var(--ink-muted);
 }
+
+/* 페스티벌 — 상위 3개 + 펼쳐 보기 */
+.fstat__more {
+  margin-top: 6px;
+}
+.fstat__more > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-muted);
+  list-style: none;
+  padding: 4px 0;
+}
+.fstat__more > summary::-webkit-details-marker {
+  display: none;
+}
+.fstat__more > summary::after {
+  content: ' ↓';
+}
+.fstat__more[open] > summary::after {
+  content: ' ↑';
+}
+.fstat__more > summary:hover {
+  color: var(--ink);
+}
+
+/* 아티스트별 출연 횟수 */
+.fstat__rank {
+  margin-top: 44px;
+}
+.frank {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.frank__row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 200px) minmax(0, 1fr) 44px;
+  grid-template-areas: 'no name bar n' '. fests fests fests';
+  align-items: center;
+  column-gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.frank__no {
+  grid-area: no;
+  color: var(--ink-subtle);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.frank__name {
+  grid-area: name;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.frank__bar {
+  grid-area: bar;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+  display: flex;
+}
+.frank__bar > span {
+  background: var(--accent);
+  border-radius: 4px;
+}
+.frank__n {
+  grid-area: n;
+  text-align: right;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.frank__fests {
+  grid-area: fests;
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+/* 페스티벌 카드 + 팝업 */
+.fest__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.fest__top .fest__filter {
+  margin-bottom: 0;
+}
+.fest-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.fest-tile {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 18px 18px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.fest-tile:hover {
+  border-color: var(--ink);
+}
+.fest-tile__date {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.fest-tile__name {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.fest-tile__heads {
+  font-size: 13px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  flex: 1;
+}
+.fest-tile__foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--ink-subtle);
+  margin-top: 6px;
+}
+.fest-tile__heard {
+  color: var(--ink-muted);
+}
+.fest-modal {
+  width: min(880px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--ink);
+  overflow: auto;
+}
+.fest-modal::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+.fest-modal__in {
+  padding: 28px 32px 24px;
+}
+.fest-modal__in > .fest-card__all {
+  margin-bottom: 20px;
+}
+.fest-modal__x {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+}
+.fest-modal__x:hover {
+  border-color: var(--ink);
+}
+@media (max-width: 768px) {
+  .fest-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .fest-tile {
+    padding: 14px 14px 12px;
+  }
+  .fest-tile__name {
+    font-size: 15px;
+  }
+  .fest-modal {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92vh;
+    margin: auto 0 0;
+    border-radius: 16px 16px 0 0;
+  }
+  .fest-modal__in {
+    padding: 22px 18px 20px;
+  }
+  .fest-modal .fest-card__head {
+    flex-direction: row;
+  }
+  .frank__row {
+    grid-template-columns: 24px minmax(0, 1fr) 64px 36px;
+  }
+}
+.fest__filter--top {
+  margin: 28px auto 0;
+}
+.fest__filter--top + .fstat {
+  padding-top: 28px;
+}
+.chip__n {
+  font-size: 11px;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+.fest__h {
+  margin-bottom: 16px;
+}

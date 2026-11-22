@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { ExploreTabs } from '@/components/ExploreTabs'
-import { getFestivalStats, getFestivals } from '@/lib/festivals'
-import { FestivalList } from './FestivalList'
-import { FestivalStats } from './FestivalStats'
+import { artistCats, getFestivalStats, getFestivals } from '@/lib/festivals'
+import type { FestStats } from '@/lib/festivalShared'
+import { FestivalsView } from './FestivalsView'
 
 export const metadata: Metadata = {
   title: '페스티벌',
@@ -12,7 +12,15 @@ export const revalidate = 3600
 
 export default async function FestivalsPage() {
   const fests = await getFestivals()
-  const stats = await getFestivalStats(fests)
+  // 전체 + 나라별 통계 (나라 칩을 누르면 통계와 카드가 같이 바뀌어요)
+  const cats = artistCats()
+  const countries = [...new Set(fests.map((f) => f.country).filter(Boolean) as string[])]
+  const stats: Record<string, FestStats> = { '': await getFestivalStats(fests, cats) }
+  for (const c of countries)
+    stats[c] = await getFestivalStats(
+      fests.filter((f) => f.country === c),
+      cats,
+    )
   const year = fests[0]?.start.slice(0, 4) || String(new Date().getFullYear())
   return (
     <>
@@ -28,8 +36,7 @@ export default async function FestivalsPage() {
         </p>
       </section>
       <ExploreTabs />
-      <FestivalStats s={stats} />
-      <FestivalList fests={fests} />
+      <FestivalsView fests={fests} stats={stats} />
     </>
   )
 }

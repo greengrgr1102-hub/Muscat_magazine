@@ -2,6 +2,7 @@ import { sql } from '@payloadcms/db-postgres'
 import 'server-only'
 import { getClient } from './data'
 import { searchKey } from './searchKey'
+import { FEST_CATS, type FestStats } from './festivalShared'
 
 export type FestAct = { text: string; artist?: string }
 export type FestDay = { label: string | null; acts: FestAct[] }
@@ -126,18 +127,7 @@ export async function getFestivals(): Promise<Fest[]> {
 }
 
 /* ── 페스티벌 통계 ── */
-export type FestStats = {
-  fests: number
-  teams: number
-  multi: number
-  heard: number
-  sync: { id: number; short: string; heard: number; total: number }[]
-  genres: { id: number; short: string; n: number; mix: { cat: string; n: number }[] }[]
-  pairs: { a: string; b: string; n: number }[]
-  often: { name: string; n: number }[]
-}
-
-export const FEST_CATS = ['록', '팝', 'R&B·소울', '힙합', '일렉트로닉', '재즈', '포크'] as const
+export { FEST_CATS, type FestStats }
 
 // 장르 이름 → 큰 갈래 (위에서부터 먼저 맞는 것)
 function catOf(genre: string): string | null {
@@ -182,50 +172,8 @@ function actKeys(a: FestAct): string[] {
   return out
 }
 
-export async function getFestivalStats(fests: Fest[]): Promise<FestStats> {
-  // 같은 팀 묶기
-  const alias = new Map<string, string>()
-  const occ = new Map<string, Set<number>>()
-  const label = new Map<string, string>()
-  for (const f of fests)
-    for (const d of f.days)
-      for (const a of d.acts) {
-        const ks = actKeys(a)
-        if (!ks.length) continue
-        const canon = ks.map((k) => alias.get(k)).find(Boolean) || ks[ks.length - 1]
-        for (const k of ks) if (!alias.has(k)) alias.set(k, canon)
-        if (!occ.has(canon)) occ.set(canon, new Set())
-        occ.get(canon)!.add(f.id)
-        if (!label.has(canon) || a.artist) label.set(canon, a.artist || a.text)
-      }
-  const short = new Map(fests.map((f) => [f.id, shortName(f.name)]))
-  const pairCount = new Map<string, number>()
-  for (const ids of occ.values()) {
-    const xs = [...ids].sort((p, q) => p - q)
-    for (let i = 0; i < xs.length; i++)
-      for (let j = i + 1; j < xs.length; j++) {
-        const k = `${xs[i]}:${xs[j]}`
-        pairCount.set(k, (pairCount.get(k) || 0) + 1)
-      }
-  }
-  const pairs = [...pairCount.entries()]
-    .filter(([, n]) => n >= 2)
-    .sort((p, q) => q[1] - p[1])
-    .slice(0, 6)
-    .map(([k, n]) => {
-      const [a, b] = k.split(':').map(Number)
-      return { a: short.get(a) || '', b: short.get(b) || '', n }
-    })
-  const often = [...occ.entries()]
-    .filter(([, s]) => s.size >= 3)
-    .sort((p, q) => q[1].size - p[1].size)
-    .slice(0, 12)
-    .map(([k, s]) => ({
-      name: (label.get(k) || '').replace(/\s*[（(][^）)]*[）)]\s*$/, ''),
-      n: s.size,
-    }))
-
-  // 에디터가 들은 아티스트의 대표 갈래
+/** 곡 기록의 아티스트별 장르 갈래 개수 — 나라별 통계를 여러 번 낼 때 한 번만 불러요 */
+export async function artistCats(): Promise<Map<string, Map<string, number>>> {
   const payload = await getClient()
   const db = payload.db as unknown as {
     drizzle: { execute: (x: unknown) => Promise<{ rows: Record<string, unknown>[] }> }
@@ -248,6 +196,71 @@ export async function getFestivalStats(fests: Fest[]): Promise<FestStats> {
       byArtist.set(one.trim(), m)
     }
   }
+  return byArtist
+}
+
+export async function getFestivalStats(
+  fests: Fest[],
+  cats?: Promise<Map<string, Map<string, number>>>,
+): Promise<FestStats> {
+  // 같은 팀 묶기
+  const alias = new Map<string, string>()
+  const occ = new Map<string, Set<number>>()
+  const label = new Map<string, string>()
+  const heardSet = new Set<string>()
+  for (const f of fests)
+    for (const d of f.days)
+      for (const a of d.acts) {
+        const ks = actKeys(a)
+        if (!ks.length) continue
+        const canon = ks.map((k) => alias.get(k)).find(Boolean) || ks[ks.length - 1]
+        for (const k of ks) if (!alias.has(k)) alias.set(k, canon)
+        if (!occ.has(canon)) occ.set(canon, new Set())
+        occ.get(canon)!.add(f.id)
+        // 보여줄 이름: 괄호 앞 이름, 한글 이름이 있으면 한글 우선
+        const shown = a.text
+          .replace(/\s*\[[^\]]*\]\s*/g, ' ')
+          .replace(/\s*[（(][^）)]*[）)]\s*$/, '')
+          .trim()
+        const prev = label.get(canon)
+        if (shown && (!prev || (!/[가-힣]/.test(prev) && /[가-힣]/.test(shown))))
+          label.set(canon, shown)
+        if (a.artist) heardSet.add(canon)
+      }
+  const short = new Map(fests.map((f) => [f.id, shortName(f.name)]))
+  const pairCount = new Map<string, number>()
+  for (const ids of occ.values()) {
+    const xs = [...ids].sort((p, q) => p - q)
+    for (let i = 0; i < xs.length; i++)
+      for (let j = i + 1; j < xs.length; j++) {
+        const k = `${xs[i]}:${xs[j]}`
+        pairCount.set(k, (pairCount.get(k) || 0) + 1)
+      }
+  }
+  const pairs = [...pairCount.entries()]
+    .filter(([, n]) => n >= 2)
+    .sort((p, q) => q[1] - p[1])
+    .map(([k, n]) => {
+      const [a, b] = k.split(':').map(Number)
+      return { a: short.get(a) || '', b: short.get(b) || '', n }
+    })
+  // 아티스트별 출연 횟수 — 두 곳 이상 선 팀, 많이 선 순 (같으면 이름순)
+  const order = new Map(fests.map((f, i) => [f.id, i]))
+  const often = [...occ.entries()]
+    .filter(([, s]) => s.size >= 2)
+    .map(([k, s]) => ({
+      name: label.get(k) || '',
+      n: s.size,
+      heard: heardSet.has(k),
+      fests: [...s]
+        .sort((p, q) => (order.get(p) || 0) - (order.get(q) || 0))
+        .map((id) => short.get(id) || ''),
+    }))
+    .filter((x) => x.name)
+    .sort((p, q) => q.n - p.n || p.name.localeCompare(q.name, 'ko'))
+
+  // 에디터가 들은 아티스트의 대표 갈래
+  const byArtist = await (cats ?? artistCats())
   const topCat = (artist: string) => {
     const m = byArtist.get(artist)
     if (!m) return null
