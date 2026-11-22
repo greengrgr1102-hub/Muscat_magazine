@@ -480,6 +480,33 @@ function spreadByArtist<T extends { artist: string }>(list: T[], gap = 12): T[] 
   return out
 }
 
+// 랜덤 섞기에 쓰는 전체 곡 목록(아이디·아티스트·앨범)은 10분 동안 기억해 둬요.
+// 곡은 하루 몇 번만 바뀌는데 매번 5,800곡을 다시 불러오면 에디터 픽 첫 화면이 느려져서요. 섞기는 매번 새로.
+type RandomBase = { id: number | string; artistName?: string | null; album?: string | null }[]
+const RANDOM_TTL = 10 * 60 * 1000
+const randomCache = new Map<string, { at: number; docs: Promise<RandomBase> }>()
+function randomBase(where?: Where): Promise<RandomBase> {
+  const key = JSON.stringify(where ?? null)
+  const hit = randomCache.get(key)
+  if (hit && Date.now() - hit.at < RANDOM_TTL) return hit.docs
+  const docs = getClient()
+    .then((payload) =>
+      payload.find({
+        collection: 'picks',
+        where,
+        pagination: false,
+        depth: 0,
+        sort: 'id',
+        select: { artistName: true, album: true },
+      }),
+    )
+    .then((r) => r.docs as RandomBase)
+  docs.catch(() => randomCache.delete(key))
+  if (randomCache.size > 50) randomCache.clear()
+  randomCache.set(key, { at: Date.now(), docs })
+  return docs
+}
+
 export async function findPickRowsRandom({
   where,
   seed,
@@ -492,16 +519,7 @@ export async function findPickRowsRandom({
   limit?: number
 }) {
   const payload = await getClient()
-  const all = (
-    await payload.find({
-      collection: 'picks',
-      where,
-      pagination: false,
-      depth: 0,
-      sort: 'id',
-      select: { artistName: true, album: true },
-    })
-  ).docs.map((d) => {
+  const all = (await randomBase(where)).map((d) => {
     const artist = String((d as { artistName?: string }).artistName || '')
       .split(',')[0]
       .trim()
