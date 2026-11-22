@@ -96,14 +96,31 @@ export async function googleProfile(code: string) {
     }),
     cache: 'no-store',
   })
-  if (!tok.ok) return null
+  if (!tok.ok) {
+    // 비밀값은 찍지 않고 구글이 돌려준 오류 이름만 남겨요
+    const e = (await tok.json().catch(() => ({}))) as { error?: string; error_description?: string }
+    console.error(
+      '[google-login] token',
+      tok.status,
+      e.error,
+      e.error_description,
+      googleRedirect(),
+    )
+    return null
+  }
   const { access_token } = (await tok.json()) as { access_token?: string }
-  if (!access_token) return null
+  if (!access_token) {
+    console.error('[google-login] token: access_token 없음')
+    return null
+  }
   const me = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
     headers: { Authorization: `Bearer ${access_token}` },
     cache: 'no-store',
   })
-  if (!me.ok) return null
+  if (!me.ok) {
+    console.error('[google-login] userinfo', me.status)
+    return null
+  }
   const p = (await me.json()) as {
     sub?: string
     email?: string
@@ -111,7 +128,10 @@ export async function googleProfile(code: string) {
     name?: string
     picture?: string
   }
-  if (!p.sub || !p.email || p.email_verified === false) return null
+  if (!p.sub || !p.email || p.email_verified === false) {
+    console.error('[google-login] profile', !!p.sub, !!p.email, p.email_verified)
+    return null
+  }
   return { sub: p.sub, email: p.email.toLowerCase(), name: p.name || '', picture: p.picture || '' }
 }
 
