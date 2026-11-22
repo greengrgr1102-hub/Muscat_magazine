@@ -8,19 +8,26 @@ import { Footer } from '@/components/Footer'
 import { SiteAnalytics } from '@/components/SiteAnalytics'
 import { PageTracker } from '@/components/Track'
 import { PlaylistBar } from '@/components/PlaylistBar'
+import { RoomSync } from '@/components/RoomSync'
 import { getSettings } from '@/lib/data'
 
 export const dynamic = 'force-dynamic'
 
-const SITE_DESC = '에디터의 귀로 고른 음악을 소개하는 인디 음악 매거진. 앨범 리뷰, 큐레이션, 인터뷰, 발매 소식.'
+const SITE_DESC =
+  '에디터의 귀로 고른 음악을 소개하는 인디 음악 매거진. 앨범 리뷰, 큐레이션, 인터뷰, 발매 소식.'
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings()
   // 확인 코드는 앞에 'google-site-verification=' 같은 글자가 붙어 있어도 값만 골라 써요.
-  const clean = (v?: string | null) => v?.trim().replace(/^.*verification[=:]\s*/i, '').replace(/["'<>]/g, '') || undefined
+  const clean = (v?: string | null) =>
+    v
+      ?.trim()
+      .replace(/^.*verification[=:]\s*/i, '')
+      .replace(/["'<>]/g, '') || undefined
   const naver = clean(settings?.naverVerification)
   // 관리자 화면에 값이 없으면 처음 받은 구글 확인 코드를 기본으로 씁니다.
-  const google = clean(settings?.googleVerification) || 'ygGKovcB3KBkPdntKycyWAO1V5uEgx6ubl18dyvSHwg'
+  const google =
+    clean(settings?.googleVerification) || 'ygGKovcB3KBkPdntKycyWAO1V5uEgx6ubl18dyvSHwg'
   return {
     metadataBase: new URL(
       process.env.NEXT_PUBLIC_SERVER_URL ||
@@ -30,7 +37,15 @@ export async function generateMetadata(): Promise<Metadata> {
     ),
     title: { default: 'Muscat Magazine — 머스캣 매거진', template: '%s — Muscat Magazine' },
     description: SITE_DESC,
-    keywords: ['머스캣 매거진', 'Muscat Magazine', '인디 음악', '음악 매거진', '앨범 리뷰', '인터뷰', '슈게이징'],
+    keywords: [
+      '머스캣 매거진',
+      'Muscat Magazine',
+      '인디 음악',
+      '음악 매거진',
+      '앨범 리뷰',
+      '인터뷰',
+      '슈게이징',
+    ],
     openGraph: {
       siteName: 'Muscat Magazine',
       type: 'website',
@@ -70,6 +85,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <PlaylistBar />
         <SiteAnalytics />
         <PageTracker />
+        <RoomSync />
       </body>
     </html>
   )

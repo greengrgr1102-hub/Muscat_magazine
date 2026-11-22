@@ -74,6 +74,7 @@ export interface Config {
     'artist-info': ArtistInfo;
     festivals: Festival;
     updates: Update;
+    members: Member;
     genres: Genre;
     tags: Tag;
     media: Media;
@@ -95,6 +96,7 @@ export interface Config {
     'artist-info': ArtistInfoSelect<false> | ArtistInfoSelect<true>;
     festivals: FestivalsSelect<false> | FestivalsSelect<true>;
     updates: UpdatesSelect<false> | UpdatesSelect<true>;
+    members: MembersSelect<false> | MembersSelect<true>;
     genres: GenresSelect<false> | GenresSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -735,6 +737,32 @@ export interface Update {
   createdAt: string;
 }
 /**
+ * 구글로 로그인한 방문자. 프렌즈(후원) 여부는 여기서 표시해요.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "members".
+ */
+export interface Member {
+  id: number;
+  email: string;
+  name?: string | null;
+  image?: string | null;
+  googleSub: string;
+  friend?: boolean | null;
+  lastLoginAt?: string | null;
+  room?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "inquiries".
  */
@@ -819,6 +847,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'updates';
         value: number | Update;
+      } | null)
+    | ({
+        relationTo: 'members';
+        value: number | Member;
       } | null)
     | ({
         relationTo: 'genres';
@@ -1094,6 +1126,21 @@ export interface FestivalsSelect<T extends boolean = true> {
 export interface UpdatesSelect<T extends boolean = true> {
   day?: T;
   note?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "members_select".
+ */
+export interface MembersSelect<T extends boolean = true> {
+  email?: T;
+  name?: T;
+  image?: T;
+  googleSub?: T;
+  friend?: T;
+  lastLoginAt?: T;
+  room?: T;
   updatedAt?: T;
   createdAt?: T;
 }

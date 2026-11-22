@@ -54,7 +54,10 @@ export async function Footer() {
         </p>
       ) : null}
       <div className="footer__bottom">
-        <p>© {new Date().getFullYear()} Muscat Magazine</p>
+        <p>
+          © {new Date().getFullYear()} Muscat Magazine ·{' '}
+          <Link href="/privacy">개인정보 처리방침</Link>
+        </p>
         <a href="#top" className="arrow-link">
           <span>Top</span>
           <Icon name="up" />

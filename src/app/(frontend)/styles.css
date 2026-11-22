@@ -5138,3 +5138,84 @@ mark.hl {
     font-size: 16px;
   }
 }
+
+/* 방문자 로그인 (My Room) */
+.my-login {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  padding-bottom: var(--section);
+}
+.my-login__google {
+  gap: 10px;
+}
+.my-login__google svg {
+  background: #fff;
+  border-radius: 50%;
+  padding: 2px;
+  box-sizing: content-box;
+}
+.my-login__notes {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 560px;
+}
+.my-login__notes a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.my-account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding-bottom: 8px;
+}
+.my-account img {
+  border-radius: 50%;
+}
+.my-account__name {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.my-account__badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--tint);
+  color: var(--accent-ink);
+}
+.my-account__out {
+  margin-left: auto;
+}
+.my-withdraw {
+  padding-top: 0;
+}
+/* 개인정보 처리방침 같은 긴 안내 글 */
+.prose-page {
+  max-width: 760px;
+  font-size: 16px;
+  line-height: 1.75;
+}
+.prose-page h2 {
+  font-size: 18px;
+  margin: 36px 0 10px;
+}
+.prose-page h2:first-child {
+  margin-top: 0;
+}
+.prose-page ul {
+  padding-left: 20px;
+  margin: 0 0 10px;
+}
+.prose-page a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

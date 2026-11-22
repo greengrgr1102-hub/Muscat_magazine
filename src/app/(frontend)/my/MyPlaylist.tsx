@@ -41,14 +41,22 @@ export function MyPlaylist({ asSection = false }: { asSection?: boolean }) {
               setEditing(false)
             }}
           >
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={40} aria-label="플리 이름" autoFocus />
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              maxLength={40}
+              aria-label="플리 이름"
+              autoFocus
+            />
             <button className="btn btn--filled" type="submit">
               <span>저장</span>
             </button>
           </form>
         ) : (
           <h2 className={asSection ? 'my-sec__h' : 'page-title__h'}>
-            <span className={asSection ? 'h-lg' : 'display-lg'}>{mounted ? name : '좋아요한 곡'}</span>
+            <span className={asSection ? 'h-lg' : 'display-lg'}>
+              {mounted ? name : '좋아요한 곡'}
+            </span>
             <sup className="label">{mounted ? songs.length : 0}</sup>
           </h2>
         )}
@@ -62,15 +70,32 @@ export function MyPlaylist({ asSection = false }: { asSection?: boolean }) {
               <button className="btn btn--filled" onClick={() => myPlaylist.play(songs, 0, name)}>
                 <span>▶ 처음부터 듣기</span>
               </button>
-              <button className="btn btn--outline" onClick={() => myPlaylist.play([...songs].sort(() => Math.random() - 0.5), 0, name)}>
+              <button
+                className="btn btn--outline"
+                onClick={() =>
+                  myPlaylist.play(
+                    [...songs].sort(() => Math.random() - 0.5),
+                    0,
+                    name,
+                  )
+                }
+              >
                 <span>섞어서 듣기</span>
               </button>
-              <button className="btn btn--outline" onClick={() => copy(shareUrl(name, songs), 'link')}>
+              <button
+                className="btn btn--outline"
+                onClick={() => copy(shareUrl(name, songs), 'link')}
+              >
                 <span>{copied === 'link' ? '링크를 복사했어요' : '공유 · 다른 기기로 옮기기'}</span>
               </button>
               <button
                 className="btn btn--outline"
-                onClick={() => copy(songs.map((s, i) => `${i + 1}. ${s.artistName} - ${s.track || ''}`).join('\n'), 'text')}
+                onClick={() =>
+                  copy(
+                    songs.map((s, i) => `${i + 1}. ${s.artistName} - ${s.track || ''}`).join('\n'),
+                    'text',
+                  )
+                }
               >
                 <span>{copied === 'text' ? '목록을 복사했어요' : '곡 목록 복사'}</span>
               </button>
@@ -84,7 +109,11 @@ export function MyPlaylist({ asSection = false }: { asSection?: boolean }) {
               {songs.map((s, i) => (
                 <li key={s.id} className={nowId === s.id ? 'is-now' : ''}>
                   <span className="my-list__no">{i + 1}</span>
-                  <button className="my-list__cover" onClick={() => myPlaylist.play(songs, i, name)} aria-label={`${s.track} 듣기`}>
+                  <button
+                    className="my-list__cover"
+                    onClick={() => myPlaylist.play(songs, i, name)}
+                    aria-label={`${s.track} 듣기`}
+                  >
                     {s.coverUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={small(s.coverUrl) || ''} alt="" width={44} height={44} />
@@ -98,13 +127,24 @@ export function MyPlaylist({ asSection = false }: { asSection?: boolean }) {
                     <span className="plist__artist">{s.artistName}</span>
                   </span>
                   <span className="my-list__tools">
-                    <button onClick={() => myPlaylist.move(s.id, -1)} disabled={i === 0} aria-label="위로">
+                    <button
+                      onClick={() => myPlaylist.move(s.id, -1)}
+                      disabled={i === 0}
+                      aria-label="위로"
+                    >
                       ↑
                     </button>
-                    <button onClick={() => myPlaylist.move(s.id, 1)} disabled={i === songs.length - 1} aria-label="아래로">
+                    <button
+                      onClick={() => myPlaylist.move(s.id, 1)}
+                      disabled={i === songs.length - 1}
+                      aria-label="아래로"
+                    >
                       ↓
                     </button>
-                    <button onClick={() => myPlaylist.remove(s.id)} aria-label={`${s.track} 좋아요 취소`}>
+                    <button
+                      onClick={() => myPlaylist.remove(s.id)}
+                      aria-label={`${s.track} 좋아요 취소`}
+                    >
                       ✕
                     </button>
                   </span>
@@ -112,8 +152,8 @@ export function MyPlaylist({ asSection = false }: { asSection?: boolean }) {
               ))}
             </ol>
             <p className="small muted my-foot">
-              Spotify 계정에 바로 저장하는 건 Spotify 정책상 안 돼요. 「곡 목록 복사」로 옮기거나, 곡 제목을 눌러 Spotify에서 열 수
-              있어요.{' '}
+              Spotify 계정에 바로 저장하는 건 Spotify 정책상 안 돼요. 「곡 목록 복사」로 옮기거나,
+              곡 제목을 눌러 Spotify에서 열 수 있어요.{' '}
               <button
                 className="text-btn"
                 onClick={() => {
@@ -127,7 +167,9 @@ export function MyPlaylist({ asSection = false }: { asSection?: boolean }) {
         ) : mounted ? (
           <div className="my-empty">
             <p>아직 좋아요한 곡이 없어요.</p>
-            <p className="muted">Editor&apos;s Picks에서 마음에 드는 곡 옆의 하트(♥)를 누르면 여기에 모여요.</p>
+            <p className="muted">
+              Editor&apos;s Picks에서 마음에 드는 곡 옆의 하트(♥)를 누르면 여기에 모여요.
+            </p>
             <Link href="/picks" className="btn btn--filled">
               <span>Editor&apos;s Picks 둘러보기</span>
             </Link>
@@ -136,18 +178,36 @@ export function MyPlaylist({ asSection = false }: { asSection?: boolean }) {
       </section>
 
       {sheet ? (
-        <div className="copy-sheet" role="dialog" aria-modal="true" aria-label={`${sheet.title} 복사`} onClick={() => setSheet(null)}>
+        <div
+          className="copy-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${sheet.title} 복사`}
+          onClick={() => setSheet(null)}
+        >
           <div className="copy-sheet__box" onClick={(e) => e.stopPropagation()}>
             <p className="label">{sheet.title}</p>
-            <p className="small muted">이 브라우저에서는 자동 복사가 막혀 있어요. 아래 글을 길게 눌러 「전체 선택 → 복사」해 주세요.</p>
-            <textarea readOnly value={sheet.text} onFocus={(e) => e.currentTarget.select()} autoFocus />
+            <p className="small muted">
+              이 브라우저에서는 자동 복사가 막혀 있어요. 아래 글을 길게 눌러 「전체 선택 → 복사」해
+              주세요.
+            </p>
+            <textarea
+              readOnly
+              value={sheet.text}
+              onFocus={(e) => e.currentTarget.select()}
+              autoFocus
+            />
             <div className="my-actions">
               {typeof navigator !== 'undefined' && 'share' in navigator ? (
                 <button
                   className="btn btn--filled"
                   onClick={() =>
                     navigator
-                      .share(sheet.text.startsWith('http') ? { title: name, url: sheet.text } : { title: name, text: sheet.text })
+                      .share(
+                        sheet.text.startsWith('http')
+                          ? { title: name, url: sheet.text }
+                          : { title: name, text: sheet.text },
+                      )
                       .catch(() => null)
                   }
                 >

@@ -17,6 +17,7 @@ import { Tags } from './collections/Tags'
 import { Artists } from './collections/Artists'
 import { Festivals } from './collections/Festivals'
 import { Updates } from './collections/Updates'
+import { Members } from './collections/Members'
 import { ArtistInfo } from './collections/ArtistInfo'
 import { Articles } from './collections/Articles'
 import { Inquiries, Subscribers } from './collections/Inquiries'
@@ -72,6 +73,7 @@ export default buildConfig({
     ArtistInfo,
     Festivals,
     Updates,
+    Members,
     Genres,
     Tags,
     Media,

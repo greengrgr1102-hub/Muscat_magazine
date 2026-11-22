@@ -5,12 +5,16 @@ import { myPlaylist, useMyPlaylist } from '@/lib/myPlaylist'
 import { usePlayed, useRecent } from '@/lib/played'
 import { loadTaste, type Taste } from '@/lib/taste'
 import { MyPlaylist } from './MyPlaylist'
+import { Withdraw } from './Withdraw'
 
 const small = (u?: string | null) => (u ? u.replace('ab67616d0000b273', 'ab67616d00004851') : null)
 
-// My Room — 이 브라우저에 쌓인 내 기록을 한곳에.
-// 지금은 로그인 없이 브라우저에 저장되고, 나중에 로그인·결제를 붙이면 계정 페이지(주문 내역 등)로 넓혀요.
-export function MyHub() {
+// My Room — 로그인한 방문자의 기록을 한곳에. 기록은 브라우저에 두고 RoomSync가 계정과 맞춰요.
+export function MyHub({
+  member,
+}: {
+  member: { name: string; email: string; image: string | null; friend: boolean }
+}) {
   const { player } = useMyPlaylist()
   const played = usePlayed()
   const recent = useRecent()
@@ -31,9 +35,24 @@ export function MyHub() {
         </h1>
         <p className="muted page-title__desc">
           {mounted && played.size ? `지금까지 ${played.size.toLocaleString()}곡을 들었어요. ` : ''}
-          기록은 이 기기(브라우저)에만 저장돼요 — 다른 기기로 옮기려면 아래 좋아요한 곡의 「공유 ·
-          다른 기기로 옮기기」를 쓰면 돼요.
+          기록은 내 계정에 저장돼서 다른 기기에서도 이어서 볼 수 있어요.
         </p>
+      </section>
+      <section className="wrap my-account">
+        {member.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={member.image} alt="" width={36} height={36} referrerPolicy="no-referrer" />
+        ) : null}
+        <span className="my-account__name">
+          {member.name}
+          {member.friend ? <span className="my-account__badge">Friends</span> : null}
+        </span>
+        <span className="muted small">{member.email}</span>
+        <form action="/auth/logout" method="post" className="my-account__out">
+          <button type="submit" className="text-btn">
+            로그아웃
+          </button>
+        </form>
       </section>
 
       {mounted && now ? (
@@ -128,6 +147,9 @@ export function MyHub() {
             </Link>
           </p>
         )}
+      </section>
+      <section className="wrap my-sec my-withdraw">
+        <Withdraw />
       </section>
     </>
   )
