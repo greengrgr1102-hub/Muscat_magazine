@@ -1016,6 +1016,7 @@ export async function findAlbumPicks(key: string) {
       genres: true,
       youtubeId: true,
       releaseType: true,
+      artist: true,
     },
   })
   return res.docs.length ? res.docs : null

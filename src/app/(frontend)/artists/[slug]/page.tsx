@@ -1,12 +1,34 @@
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { RichText } from '@/components/RichText'
-import { ArrowLink, Button, Caption, CardGrid, Chip, Img, Lines, ListenLinks, SectionHeader, articleHref } from '@/components/ui'
+import {
+  ArrowLink,
+  Button,
+  Caption,
+  CardGrid,
+  Chip,
+  Img,
+  Lines,
+  ListenLinks,
+  SectionHeader,
+  articleHref,
+} from '@/components/ui'
 import { toRow } from '@/components/Picks'
 import { PickList } from '@/components/PickList'
-import { TYPE_LABEL, TYPE_ORDER, asGenres, asMedia, findArticles, findPicks, formatDate, getArtist } from '@/lib/data'
-import type { Artist } from '@/payload-types'
+import {
+  TYPE_LABEL,
+  TYPE_ORDER,
+  albumKeyOf,
+  asGenres,
+  asMedia,
+  findArticles,
+  findPicks,
+  formatDate,
+  getArtist,
+} from '@/lib/data'
+import type { Artist, Pick } from '@/payload-types'
 
 type Params = Promise<{ slug: string }>
 type SP = Promise<{ type?: string }>
@@ -22,7 +44,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   }
 }
 
-export default async function ArtistPage({ params, searchParams }: { params: Params; searchParams: SP }) {
+export default async function ArtistPage({
+  params,
+  searchParams,
+}: {
+  params: Params
+  searchParams: SP
+}) {
   const { slug } = await params
   const sp = await searchParams
   const artist = await getArtist(decodeURIComponent(slug))
@@ -31,13 +59,18 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
   const genres = asGenres(artist.genres)
   const filter = TYPE_ORDER.includes(sp.type as never) ? sp.type : undefined
   const [interviews, all, picks] = await Promise.all([
-    findArticles({ where: { and: [{ artists: { in: [artist.id] } }, { type: { equals: 'interview' } }] }, limit: 10 }),
+    findArticles({
+      where: { and: [{ artists: { in: [artist.id] } }, { type: { equals: 'interview' } }] },
+      limit: 10,
+    }),
     findArticles({ where: { artists: { in: [artist.id] } }, limit: 100 }),
-    findPicks({ where: { artist: { equals: artist.id } }, limit: 50 }),
+    findPicks({ where: { artist: { equals: artist.id } }, limit: 500 }),
   ])
   const nonInterview = all.docs.filter((a) => a.type !== 'interview')
   const shown = filter ? all.docs.filter((a) => a.type === filter) : nonInterview
-  const types = TYPE_ORDER.filter((t) => t !== 'interview' && nonInterview.some((a) => a.type === t))
+  const types = TYPE_ORDER.filter(
+    (t) => t !== 'interview' && nonInterview.some((a) => a.type === t),
+  )
   const info = [
     ['Genre', genres.map((g) => g.name).join(', ')],
     ['Based in', artist.basedIn],
@@ -70,7 +103,12 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
       <section className="wrap section grid12 artist-intro">
         <div className="col-5">
           <figure>
-            <Img media={artist.photo} label="Artist photo 4:5" sizes="(max-width: 768px) 100vw, 40vw" priority />
+            <Img
+              media={artist.photo}
+              label="Artist photo 4:5"
+              sizes="(max-width: 768px) 100vw, 40vw"
+              priority
+            />
             <Caption media={artist.photo} />
           </figure>
         </div>
@@ -103,12 +141,21 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
 
       {interviews.docs.length ? (
         <section className="wrap section">
-          <SectionHeader title="Interview" right={<span className="muted">{interviews.docs.length}</span>} />
+          <SectionHeader
+            title="Interview"
+            right={<span className="muted">{interviews.docs.length}</span>}
+          />
           <div className="stack-48">
             {interviews.docs.map((iv) => (
               <div key={iv.id} className="interview-item grid12">
                 <Link href={articleHref(iv)} className="col-6">
-                  <Img media={iv.cover} ratio="3 / 2" tone="dark" label="Interview image 3:2" sizes="(max-width: 768px) 100vw, 50vw" />
+                  <Img
+                    media={iv.cover}
+                    ratio="3 / 2"
+                    tone="dark"
+                    label="Interview image 3:2"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
                 </Link>
                 <div className="col-5 col-start-8 interview-item__copy">
                   <p className="label">Interview · {formatDate(iv.publishedAt)}</p>
@@ -149,13 +196,104 @@ export default async function ArtistPage({ params, searchParams }: { params: Par
         </section>
       ) : null}
 
+      <Discography picks={picks.docs} />
+
       {picks.docs.length ? (
         <section className="wrap section">
-          <SectionHeader title="Editor's Picks" right={<span className="muted">{picks.totalDocs}</span>} />
-          <PickList rows={picks.docs.map(toRow)} groupByMonth={false} label={artist.name} />
+          <SectionHeader
+            title="Editor's Picks"
+            right={<span className="muted">{picks.totalDocs}</span>}
+          />
+          <PickList
+            rows={picks.docs.slice(0, 50).map(toRow)}
+            groupByMonth={false}
+            label={artist.name}
+          />
         </section>
       ) : null}
     </>
+  )
+}
+
+const DISCO_TYPE: Record<string, string> = { album: '정규', ep: 'EP', single: '싱글' }
+
+// 이 아티스트 픽의 앨범을 발매 연도별로 쌓아 보여 줘요 (최근 연도가 위)
+function Discography({ picks }: { picks: Pick[] }) {
+  type Album = {
+    title: string
+    cover?: string | null
+    date?: string | null
+    type?: string | null
+    n: number
+    key?: string | null
+  }
+  const albums = new Map<string, Album>()
+  for (const p of picks) {
+    const title = (p.album || '').trim()
+    if (!title) continue
+    const a = albums.get(title) || { title, n: 0 }
+    a.n += 1
+    a.cover = a.cover || p.coverUrl
+    a.key = a.key || albumKeyOf(p.coverUrl)
+    a.date = a.date || p.releaseDate
+    a.type = a.type || p.releaseType
+    albums.set(title, a)
+  }
+  if (!albums.size) return null
+  const byYear = new Map<string, Album[]>()
+  for (const a of albums.values()) {
+    const y = /^\d{4}/.test(a.date || '') ? (a.date as string).slice(0, 4) : ''
+    byYear.set(y, [...(byYear.get(y) || []), a])
+  }
+  const years = [...byYear.entries()].sort(([a], [b]) => (!a ? 1 : !b ? -1 : b.localeCompare(a)))
+  return (
+    <section className="wrap section">
+      <SectionHeader title="Discography" right={<span className="muted">{albums.size}</span>} />
+      <ol className="disco">
+        {years.map(([y, list]) => (
+          <li key={y || 'none'} className="disco__year">
+            <p className="disco__y">{y || '연도 모름'}</p>
+            <ul className="disco__albums">
+              {list
+                .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+                .map((a) => (
+                  <li key={a.title} className="disco__item">
+                    <DiscoLink albumKey={a.key}>
+                      {a.cover ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={a.cover.replace('ab67616d00004851', 'ab67616d00001e02')}
+                          alt=""
+                          className="disco__cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="disco__cover disco__cover--empty" aria-hidden />
+                      )}
+                      <span className="disco__title">{a.title}</span>
+                      <span className="disco__meta">
+                        {[a.type ? DISCO_TYPE[a.type] : null, `${a.n}곡 픽`]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </DiscoLink>
+                  </li>
+                ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+function DiscoLink({ albumKey, children }: { albumKey?: string | null; children: ReactNode }) {
+  return albumKey ? (
+    <Link href={`/picks/albums/${albumKey}`} className="disco__link">
+      {children}
+    </Link>
+  ) : (
+    <div className="disco__link">{children}</div>
   )
 }
 

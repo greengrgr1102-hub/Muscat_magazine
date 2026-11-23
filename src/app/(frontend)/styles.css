@@ -5857,3 +5857,101 @@ mark.hl {
     padding: 22px 18px 18px;
   }
 }
+
+/* 아티스트 페이지 — 앨범을 발매 연도별로 쌓기 */
+.disco {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 1px solid var(--line);
+}
+.disco__year {
+  position: relative;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 24px;
+  padding: 0 0 40px 28px;
+}
+.disco__year::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.disco__y {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 40px;
+  line-height: 1;
+  color: var(--ink);
+}
+.disco__albums {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
+}
+.disco__item {
+  min-width: 0;
+}
+.disco__link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+a.disco__link:hover .disco__title {
+  text-decoration: underline;
+}
+a.disco__link:hover .disco__cover {
+  opacity: 0.85;
+}
+.palb-hero__artist-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+}
+.palb-hero__artist-link:hover {
+  border-bottom-color: currentColor;
+}
+.disco__cover {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  background: var(--surface);
+  margin-bottom: 6px;
+  display: block;
+}
+.disco__title {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.disco__meta {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+@media (max-width: 768px) {
+  .disco__year {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 0 0 32px 20px;
+  }
+  .disco__y {
+    font-size: 28px;
+  }
+  .disco__albums {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
