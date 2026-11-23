@@ -17,5 +17,7 @@ export async function GET(req: NextRequest) {
   }
   res.cookies.set('mm_oauth_state', state, opts)
   res.cookies.set('mm_oauth_next', next, opts)
+  // 「로그인 상태 유지」를 골랐는지
+  res.cookies.set('mm_oauth_keep', req.nextUrl.searchParams.get('keep') === '1' ? '1' : '0', opts)
   return res
 }

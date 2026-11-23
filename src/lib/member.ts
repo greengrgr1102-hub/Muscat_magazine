@@ -8,7 +8,12 @@ import { siteUrl } from './spotify'
 // 세션 쿠키 mm_sess = 회원번호.만료시각.서명 (서버만 읽음), mm_in = 로그인했는지 표시(브라우저가 읽음)
 export const SESSION_COOKIE = 'mm_sess'
 export const FLAG_COOKIE = 'mm_in'
-const DAYS = 60
+// 로그인 상태 유지: 켜면 30일 동안 안 들어오면 자동 로그아웃(들어올 때마다 30일 연장),
+// 끄면 브라우저를 닫거나 3시간 동안 아무것도 안 하면 자동 로그아웃
+export const KEEP_DAYS = 30
+export const IDLE_HOURS = 3
+const keepMs = KEEP_DAYS * 86400_000
+const idleMs = IDLE_HOURS * 3600_000
 
 const secret = () =>
   process.env.PAYLOAD_SECRET ||
@@ -18,23 +23,69 @@ const secret = () =>
 
 const b64 = (b: Buffer) => b.toString('base64url')
 const sign = (v: string) => b64(createHmac('sha256', secret()).update(v).digest())
+const same = (a: string, b: string) => {
+  const x = Buffer.from(a)
+  const y = Buffer.from(b)
+  return x.length === y.length && timingSafeEqual(x, y)
+}
 
-export function makeSession(memberId: number) {
-  const exp = Date.now() + DAYS * 86400_000
-  const v = `${memberId}.${exp}`
-  return { value: `${v}.${sign(v)}`, maxAge: DAYS * 86400 }
+export type Session = { id: number; exp: number; keep: boolean }
+
+/** 회원번호.만료시각.유지여부.서명 — 유지면 30일 쿠키, 아니면 브라우저 닫으면 사라지는 쿠키 */
+export function makeSession(memberId: number, keep: boolean) {
+  const exp = Date.now() + (keep ? keepMs : idleMs)
+  const v = `${memberId}.${exp}.${keep ? 1 : 0}`
+  return { value: `${v}.${sign(v)}`, maxAge: keep ? KEEP_DAYS * 86400 : undefined }
+}
+
+export function parseSession(raw?: string | null): Session | null {
+  if (!raw) return null
+  const parts = raw.split('.')
+  let id: string, exp: string, keep: boolean
+  if (parts.length === 4) {
+    // 지금 모양: 회원번호.만료.유지여부.서명
+    const [i, e, k, sig] = parts
+    if (!same(sign(`${i}.${e}.${k}`), sig)) return null
+    ;[id, exp, keep] = [i, e, k === '1']
+  } else if (parts.length === 3) {
+    // 예전 모양(유지 여부 없음) — 유지로 보고, 다음 연장 때 새 모양으로 바뀌어요
+    const [i, e, sig] = parts
+    if (!same(sign(`${i}.${e}`), sig)) return null
+    ;[id, exp, keep] = [i, e, true]
+  } else return null
+  if (Number(exp) < Date.now()) return null
+  const n = Number(id)
+  return Number.isInteger(n) && n > 0 ? { id: n, exp: Number(exp), keep } : null
 }
 
 export function readSession(raw?: string | null): number | null {
-  if (!raw) return null
-  const [id, exp, sig] = raw.split('.')
-  if (!id || !exp || !sig) return null
-  const want = Buffer.from(sign(`${id}.${exp}`))
-  const got = Buffer.from(sig)
-  if (want.length !== got.length || !timingSafeEqual(want, got)) return null
-  if (Number(exp) < Date.now()) return null
-  const n = Number(id)
-  return Number.isInteger(n) && n > 0 ? n : null
+  return parseSession(raw)?.id ?? null
+}
+
+/** 쓰고 있으면 만료를 다시 늘려요 (10분에 한 번까지만) */
+export function shouldRenew(s: Session) {
+  const full = s.keep ? keepMs : idleMs
+  return s.exp - Date.now() < full - 10 * 60_000
+}
+
+type CookieRes = {
+  cookies: {
+    set: (name: string, value: string, opts: Record<string, unknown>) => unknown
+    delete: (name: string) => unknown
+  }
+}
+
+export function setSessionCookies(res: CookieRes, memberId: number, keep: boolean) {
+  const s = makeSession(memberId, keep)
+  const secure = process.env.NODE_ENV === 'production'
+  const base = { secure, sameSite: 'lax', path: '/', ...(s.maxAge ? { maxAge: s.maxAge } : {}) }
+  res.cookies.set(SESSION_COOKIE, s.value, { ...base, httpOnly: true })
+  res.cookies.set(FLAG_COOKIE, '1', { ...base, httpOnly: false })
+}
+
+export function clearSessionCookies(res: CookieRes) {
+  res.cookies.delete(SESSION_COOKIE)
+  res.cookies.delete(FLAG_COOKIE)
 }
 
 export type MemberView = {

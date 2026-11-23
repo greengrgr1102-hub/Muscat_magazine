@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getClient } from '@/lib/data'
-import { FLAG_COOKIE, SESSION_COOKIE, googleProfile, makeSession, safeNext } from '@/lib/member'
+import { googleProfile, safeNext, setSessionCookies } from '@/lib/member'
 
 // 구글에서 돌아오는 곳 — 회원을 찾거나 새로 만들고 로그인 쿠키를 심어요
 export async function GET(req: NextRequest) {
@@ -42,24 +42,11 @@ export async function GET(req: NextRequest) {
         overrideAccess: true,
       })
 
-  const s = makeSession(member.id)
+  const keep = req.cookies.get('mm_oauth_keep')?.value === '1'
   const res = NextResponse.redirect(new URL(next, req.url))
-  const secure = process.env.NODE_ENV === 'production'
-  res.cookies.set(SESSION_COOKIE, s.value, {
-    httpOnly: true,
-    secure,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: s.maxAge,
-  })
-  res.cookies.set(FLAG_COOKIE, '1', {
-    httpOnly: false,
-    secure,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: s.maxAge,
-  })
+  setSessionCookies(res, member.id, keep)
   res.cookies.delete('mm_oauth_state')
   res.cookies.delete('mm_oauth_next')
+  res.cookies.delete('mm_oauth_keep')
   return res
 }
