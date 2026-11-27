@@ -6310,3 +6310,8 @@ a.disco__link:hover .disco__cover {
     font-size: 13px;
   }
 }
+
+.wd-back {
+  margin-left: 12px;
+  text-transform: none;
+}

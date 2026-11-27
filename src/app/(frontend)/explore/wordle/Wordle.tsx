@@ -105,6 +105,30 @@ export function Wordle() {
   const [date, setDate] = useState('')
   const [opt, setOpt] = useState<Opt | null>(null)
   const [guesses, setGuesses] = useState<string[]>([])
+  // 0 = 오늘의 문제, 1부터 = 다시 하기(연습) 판 — 오늘 안에서만 이어져요
+  const [round, setRound] = useState(0)
+  useEffect(() => {
+    if (!date) return
+    try {
+      const r = JSON.parse(localStorage.getItem('mm_wordle_round') || 'null') as {
+        d?: string
+        n?: number
+      } | null
+      setRound(r?.d === date ? Number(r.n) || 0 : 0)
+    } catch {
+      setRound(0)
+    }
+  }, [date])
+  const nextRound = () => {
+    const n = round + 1
+    setRound(n)
+    try {
+      localStorage.setItem('mm_wordle_round', JSON.stringify({ d: date, n }))
+    } catch {
+      /* 무시 */
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   const [q, setQ] = useState('')
   const [hi, setHi] = useState(0)
   const [open, setOpen] = useState(false)
@@ -139,7 +163,9 @@ export function Wordle() {
           ),
     [albums, opt],
   )
-  const saveKey = opt ? `mm_wordle_v1:${date}:${opt.scope}:${opt.from}-${opt.to}` : ''
+  const saveKey = opt
+    ? `mm_wordle_v1:${date}:${opt.scope}:${opt.from}-${opt.to}${round ? `:r${round}` : ''}`
+    : ''
   // 정답: 날짜·범위로 정해져요. 구성·성별을 아는 앨범이 충분하면 그중에서.
   // 앨범이 새로 늘어도 오늘 정답이 웬만하면 안 바뀌게, 앨범마다 따로 점수를 매겨 가장 낮은 것을 골라요.
   const answer = useMemo(() => {
@@ -235,7 +261,26 @@ export function Wordle() {
   return (
     <section className="wrap section wd">
       <p className="label wd-no">
-        오늘의 문제 #{dayNo(date)} · {date.replace(/-/g, '.')}
+        {round
+          ? `다시 하기 ${round}판 · 오늘의 문제 #${dayNo(date)}과 다른 문제`
+          : `오늘의 문제 #${dayNo(date)}`}{' '}
+        · {date.replace(/-/g, '.')}
+        {round ? (
+          <button
+            type="button"
+            className="text-btn wd-back"
+            onClick={() => {
+              setRound(0)
+              try {
+                localStorage.setItem('mm_wordle_round', JSON.stringify({ d: date, n: 0 }))
+              } catch {
+                /* 무시 */
+              }
+            }}
+          >
+            오늘의 문제로
+          </button>
+        ) : null}
       </p>
 
       <div className="wd-opts">
@@ -379,7 +424,14 @@ export function Wordle() {
           ) : null}
 
           {done && answer ? (
-            <Result answer={answer} won={won} rows={rows} no={dayNo(date)} />
+            <Result
+              answer={answer}
+              won={won}
+              rows={rows}
+              no={dayNo(date)}
+              round={round}
+              onAgain={nextRound}
+            />
           ) : null}
 
           <div className="wd-board-wrap">
@@ -488,11 +540,15 @@ function Result({
   won,
   rows,
   no,
+  round,
+  onAgain,
 }: {
   answer: Album
   won: boolean
   rows: Album[]
   no: number
+  round: number
+  onAgain: () => void
 }) {
   const [busy, setBusy] = useState(false)
   const toast = (text: string) =>
@@ -520,7 +576,8 @@ function Result({
           .join('')
       })
       .join('\n')
-    const text = `머스캣 인디 워들 #${no} (앨범) ${won ? rows.length : 'X'}/${TRIES}\n${grid}\n${window.location.origin}/explore/wordle`
+    const title = round ? `머스캣 인디 워들 (다시 하기)` : `머스캣 인디 워들 #${no}`
+    const text = `${title} (앨범) ${won ? rows.length : 'X'}/${TRIES}\n${grid}\n${window.location.origin}/explore/wordle`
     try {
       if (navigator.share) await navigator.share({ text })
       else {
@@ -562,6 +619,9 @@ function Result({
           </Link>
           <button type="button" className="btn btn--outline" onClick={share}>
             <span>결과 공유</span>
+          </button>
+          <button type="button" className="btn btn--outline" onClick={onAgain}>
+            <span>↻ 다시 하기</span>
           </button>
         </div>
       </div>
