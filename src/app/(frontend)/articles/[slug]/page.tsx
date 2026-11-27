@@ -25,6 +25,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: a.title,
     description: a.excerpt || undefined,
+    alternates: { canonical: `/articles/${encodeURIComponent(a.slug || slug)}` },
     openGraph: { title: a.title, description: a.excerpt || undefined },
   }
 }

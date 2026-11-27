@@ -13,7 +13,9 @@ const PER_PAGE = 24
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params
   const g = await getGenre(decodeURIComponent(slug))
-  return g ? { title: g.name, description: g.description || undefined } : {}
+  return g
+    ? { title: g.name, description: g.description || undefined, alternates: { canonical: `/genres/${g.slug}` } }
+    : {}
 }
 
 // 장르 페이지: Editor's Picks에서 이 장르의 앨범 + 같이 자주 붙는 장르

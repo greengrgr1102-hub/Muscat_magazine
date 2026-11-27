@@ -17,6 +17,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title,
     description: pick.comment || "머스캣 매거진 Editor's Picks",
+    alternates: { canonical: `/picks/${pick.id}` },
     openGraph: { title },
   }
 }

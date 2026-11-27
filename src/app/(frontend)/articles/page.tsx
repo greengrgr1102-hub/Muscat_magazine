@@ -4,7 +4,7 @@ import type { Where } from 'payload'
 import { CardGrid, Chip } from '@/components/ui'
 import { TYPE_LABEL, TYPE_ORDER, findArticles, getArticleGenres } from '@/lib/data'
 
-export const metadata: Metadata = { title: 'Articles' }
+export const metadata: Metadata = { title: 'Articles', alternates: { canonical: '/articles' } }
 
 const PER_PAGE = 12
 

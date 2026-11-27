@@ -1,6 +1,10 @@
 import Link from 'next/link'
 import { ArrowLink, CardGrid, Img, Lines, SectionHeader, articleHref } from '@/components/ui'
 import { TYPE_LABEL, findArticles, formatDate, getSettings } from '@/lib/data'
+import type { Metadata } from 'next'
+
+// 첫 화면 주소에 ?utm 같은 꼬리가 붙어도 이 주소를 대표로
+export const metadata: Metadata = { alternates: { canonical: '/' } }
 
 export default async function HomePage() {
   const [settings, featuredRes, latestRes] = await Promise.all([

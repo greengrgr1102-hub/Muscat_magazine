@@ -7,6 +7,7 @@ import { cleanFilter, findPickAlbums, getGenresByUse } from '@/lib/data'
 
 export const metadata: Metadata = {
   title: "Albums — Editor's Picks",
+  alternates: { canonical: '/picks/albums' },
   description: '머스캣 에디터가 들은 곡을 앨범 단위로 묶어 봤어요.',
 }
 

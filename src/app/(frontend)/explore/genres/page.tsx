@@ -5,6 +5,7 @@ import { GenreMap } from './GenreMap'
 
 export const metadata: Metadata = {
   title: '장르 지도',
+  alternates: { canonical: '/explore/genres' },
   description: '에디터가 고른 곡의 장르들이 한눈에 펼쳐진 지도. 장르를 누르면 이어진 장르와 대표곡이 나와요.',
 }
 // 장르 자리는 한 시간에 한 번만 다시 계산해요

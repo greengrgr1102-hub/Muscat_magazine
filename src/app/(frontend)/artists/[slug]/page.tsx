@@ -40,6 +40,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: a.name,
     description: a.noteHeadline || undefined,
+    alternates: { canonical: `/artists/${encodeURIComponent(a.slug || slug)}` },
     openGraph: { title: a.name },
   }
 }

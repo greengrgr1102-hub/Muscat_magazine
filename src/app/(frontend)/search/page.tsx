@@ -5,7 +5,8 @@ import { CardGrid, Chip, Icon, SectionHeader } from '@/components/ui'
 import { GenreLine } from '@/components/GenreLine'
 import { articleCountFor, getGenresByUse, search } from '@/lib/data'
 
-export const metadata: Metadata = { title: 'Search' }
+// 검색 결과 화면은 검색어마다 주소가 달라 검색엔진 목록에는 안 올려요 (링크는 따라가도 돼요)
+export const metadata: Metadata = { title: 'Search', robots: { index: false, follow: true } }
 
 type SP = Promise<{ q?: string }>
 

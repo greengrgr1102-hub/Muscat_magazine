@@ -24,6 +24,8 @@ import type { Pick } from '@/payload-types'
 
 export const metadata: Metadata = {
   title: "Editor's Picks",
+  // 필터·정렬·검색 주소(?era=… 등)는 모두 이 주소를 대표로 봐 달라고 검색엔진에 알려요
+  alternates: { canonical: '/picks' },
   description: '에디터가 들은 노래를 모두 기록합니다. 한 줄을 남긴 곡은 따로 모아 보여 드려요.',
 }
 

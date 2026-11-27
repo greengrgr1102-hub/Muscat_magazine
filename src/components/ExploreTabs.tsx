@@ -9,6 +9,7 @@ const TABS = [
   { href: '/explore/shuffle', label: '아무거나 틀어줘' },
   { href: '/explore/festivals', label: '페스티벌' },
   { href: '/taste', label: '취향 찾기' },
+  { href: '/explore/wordle', label: '인디 워들' },
 ]
 
 export function ExploreTabs() {

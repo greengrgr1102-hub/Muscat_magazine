@@ -45,6 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!docs) return {}
   return {
     title: `${titleOf(docs)} — ${artistOf(docs)}`,
+    alternates: { canonical: `/picks/albums/${key}` },
     description: `머스캣 에디터가 이 앨범에서 담은 ${docs.length}곡`,
   }
 }
