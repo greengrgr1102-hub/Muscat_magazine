@@ -6141,14 +6141,14 @@ a.disco__link:hover .disco__cover {
   padding: 0 4px;
 }
 .wd-board {
-  min-width: 860px;
+  min-width: 1080px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 .wd-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 0.7fr 1fr 0.7fr 2.4fr;
+  grid-template-columns: 2fr 1fr 0.8fr 0.7fr 0.6fr 1fr 0.6fr 2.2fr;
   gap: 8px;
 }
 .wd-row--head span {
@@ -6214,7 +6214,16 @@ a.disco__link:hover .disco__cover {
 .wd-row--empty .wd-cell {
   background: transparent;
   border: 1px dashed var(--line);
-  min-height: 56px;
+  min-height: 36px;
+}
+.wd-cell.is-unk {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--ink-subtle);
+}
+.wd-legend i.is-unk {
+  background: transparent;
+  border: 1px dashed var(--ink-subtle);
 }
 .wd-legend {
   display: flex;

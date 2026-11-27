@@ -16,12 +16,14 @@ type Album = {
   c: string
   f: string
   g: string[]
+  s?: string
+  x?: string
 }
-type Cell = 'hit' | 'near' | 'miss'
+type Cell = 'hit' | 'near' | 'miss' | 'unk'
 type Scope = 'kr' | 'all'
 type Opt = { scope: Scope; from: number; to: number }
 
-const TRIES = 6
+const TRIES = 10
 const FIRST_DAY = Date.UTC(2026, 10, 28) // #1 = 2026-11-28 (한국 시간)
 const OPT_KEY = 'mm_wordle_opt'
 const TYPE: Record<string, string> = { album: '정규', ep: 'EP', single: '싱글' }
@@ -45,7 +47,9 @@ const COUNTRY: Record<string, string> = {
   FI: '핀란드',
   BR: '브라질',
 }
-const SQUARE: Record<Cell, string> = { hit: '🟩', near: '🟨', miss: '⬜' }
+const SQUARE: Record<Cell, string> = { hit: '🟩', near: '🟨', miss: '⬜', unk: '⬜' }
+const KIND: Record<string, string> = { solo: '솔로', band: '밴드·그룹' }
+const SEX: Record<string, string> = { male: '남성', female: '여성', mixed: '혼성' }
 
 const todayKST = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
 const dayNo = (date: string) => Math.floor((Date.parse(date) - FIRST_DAY) / 86400_000) + 1
@@ -66,8 +70,12 @@ function compare(g: Album, ans: Album) {
   const dy = ans.y - g.y
   const set = new Set(ans.g)
   const match = g.g.filter((x) => set.has(x)).length
+  // 구성·성별은 한쪽이라도 모르면 비교하지 않아요
+  const same = (a?: string, b?: string): Cell => (!a || !b ? 'unk' : a === b ? 'hit' : 'miss')
   return {
     artist: (mainArtist(g.a) === mainArtist(ans.a) ? 'hit' : 'miss') as Cell,
+    kind: same(g.s, ans.s),
+    sex: same(g.x, ans.x),
     country: (g.c === ans.c ? 'hit' : 'miss') as Cell,
     year: (dy === 0 ? 'hit' : Math.abs(dy) <= 2 ? 'near' : 'miss') as Cell,
     dy,
@@ -132,7 +140,22 @@ export function Wordle() {
     [albums, opt],
   )
   const saveKey = opt ? `mm_wordle_v1:${date}:${opt.scope}:${opt.from}-${opt.to}` : ''
-  const answer = pool.length ? pool[hash(saveKey) % pool.length] : null
+  // 정답: 날짜·범위로 정해져요. 구성·성별을 아는 앨범이 충분하면 그중에서.
+  // 앨범이 새로 늘어도 오늘 정답이 웬만하면 안 바뀌게, 앨범마다 따로 점수를 매겨 가장 낮은 것을 골라요.
+  const answer = useMemo(() => {
+    const known = pool.filter((a) => a.s && a.x)
+    const src = known.length >= 30 ? known : pool
+    let best: Album | null = null
+    let bestH = Infinity
+    for (const a of src) {
+      const h = hash(`${saveKey}|${a.k}`)
+      if (h < bestH) {
+        bestH = h
+        best = a
+      }
+    }
+    return best
+  }, [pool, saveKey])
 
   // 오늘·이 범위에서 넣었던 답 불러오기
   useEffect(() => {
@@ -362,7 +385,7 @@ export function Wordle() {
           <div className="wd-board-wrap">
             <div className="wd-board" role="table" aria-label="넣은 답">
               <div className="wd-row wd-row--head" role="row">
-                {['앨범', '아티스트', '나라', '발매', '형태', '장르'].map((h) => (
+                {['앨범', '아티스트', '구성', '성별', '나라', '발매', '형태', '장르'].map((h) => (
                   <span key={h} role="columnheader">
                     {h}
                   </span>
@@ -382,6 +405,12 @@ export function Wordle() {
                     </div>
                     <div className={`wd-cell is-${r.artist}`} role="cell">
                       {r.artist === 'hit' ? '같은 아티스트' : '다른 아티스트'}
+                    </div>
+                    <div className={`wd-cell is-${r.kind}`} role="cell">
+                      {g.s ? KIND[g.s] || g.s : '모름'}
+                    </div>
+                    <div className={`wd-cell is-${r.sex}`} role="cell">
+                      {g.x ? SEX[g.x] || g.x : '모름'}
                     </div>
                     <div
                       className={`wd-cell is-${r.country}`}
@@ -419,9 +448,9 @@ export function Wordle() {
                   </div>
                 )
               })}
-              {Array.from({ length: Math.max(0, TRIES - rows.length) }, (_, i) => (
+              {Array.from({ length: done ? 0 : Math.max(0, TRIES - rows.length) }, (_, i) => (
                 <div key={`e${i}`} className="wd-row wd-row--empty" aria-hidden>
-                  {Array.from({ length: 6 }, (_, j) => (
+                  {Array.from({ length: 8 }, (_, j) => (
                     <span key={j} className="wd-cell" />
                   ))}
                 </div>
@@ -438,6 +467,9 @@ export function Wordle() {
             </span>
             <span>
               <i className="is-miss" /> 다름
+            </span>
+            <span>
+              <i className="is-unk" /> 모름 (비교 안 함)
             </span>
             <span>↑ ↓ 정답이 더 늦게/이르게</span>
           </p>
@@ -483,7 +515,9 @@ function Result({
     const grid = rows
       .map((g) => {
         const r = compare(g, answer)
-        return [r.artist, r.country, r.year, r.type, r.genre].map((c) => SQUARE[c]).join('')
+        return [r.artist, r.kind, r.sex, r.country, r.year, r.type, r.genre]
+          .map((c) => SQUARE[c])
+          .join('')
       })
       .join('\n')
     const text = `머스캣 인디 워들 #${no} (앨범) ${won ? rows.length : 'X'}/${TRIES}\n${grid}\n${window.location.origin}/explore/wordle`
@@ -508,8 +542,16 @@ function Result({
         <p className="wd-result__t">{answer.t}</p>
         <p className="wd-result__a">{answer.a}</p>
         <p className="small muted">
-          {answer.y} · {TYPE[answer.f] || answer.f} · {COUNTRY[answer.c] || answer.c} ·{' '}
-          {answer.g.join(', ')}
+          {[
+            answer.y,
+            TYPE[answer.f] || answer.f,
+            COUNTRY[answer.c] || answer.c,
+            answer.s ? KIND[answer.s] : null,
+            answer.x ? SEX[answer.x] : null,
+            answer.g.join(', '),
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
         <div className="wd-result__btns">
           <button type="button" className="btn btn--filled" onClick={play} disabled={busy}>

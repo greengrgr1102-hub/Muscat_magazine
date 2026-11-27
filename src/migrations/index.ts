@@ -32,6 +32,7 @@ import * as migration_20261122_140000_updates from './20261122_140000_updates'
 import * as migration_20261122_150000_members from './20261122_150000_members'
 import * as migration_20261123_090000_festival_flat from './20261123_090000_festival_flat'
 import * as migration_20261128_020000_member_artist from './20261128_020000_member_artist'
+import * as migration_20261128_030000_artist_profile from './20261128_030000_artist_profile'
 
 export const migrations = [
   {
@@ -203,5 +204,10 @@ export const migrations = [
     up: migration_20261128_020000_member_artist.up,
     down: migration_20261128_020000_member_artist.down,
     name: '20261128_020000_member_artist',
+  },
+  {
+    up: migration_20261128_030000_artist_profile.up,
+    down: migration_20261128_030000_artist_profile.down,
+    name: '20261128_030000_artist_profile',
   },
 ]

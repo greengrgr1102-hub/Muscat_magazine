@@ -678,7 +678,16 @@ export interface ArtistInfo {
    * 쉼표로 구분 (예: 영어 이름, 옛 이름)
    */
   aliases?: string | null;
+  /**
+   * 인디 워들에 쓰여요. 비어 있으면 MusicBrainz로 자동으로 채워요.
+   */
+  kind?: ('solo' | 'band') | null;
+  /**
+   * 그룹은 멤버 성별로 (남성만·여성만·혼성). 고쳐 두면 자동 채우기가 덮어쓰지 않아요.
+   */
+  gender?: ('male' | 'female' | 'mixed') | null;
   checkedAt?: string | null;
+  profileCheckedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1106,7 +1115,10 @@ export interface ArtistInfoSelect<T extends boolean = true> {
   name?: T;
   members?: T;
   aliases?: T;
+  kind?: T;
+  gender?: T;
   checkedAt?: T;
+  profileCheckedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

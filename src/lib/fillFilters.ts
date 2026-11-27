@@ -1,4 +1,5 @@
 import { fillArtistInfo } from './fillArtistInfo'
+import { fillArtistProfile } from './fillArtistProfile'
 import { checkSavedYoutube } from './youtube'
 import 'server-only'
 import type { Payload } from 'payload'
@@ -465,7 +466,12 @@ export async function fillFilters(payload: Payload, budgetMs = 45_000) {
     return { en, types }
   }
   const noInfo = { done: 0, found: 0, busy: false, left: -1 }
-  const infoP = infoTurn ? countriesP.then(() => fillArtistInfo(payload, deadline)) : Promise.resolve(noInfo)
+  const infoP = infoTurn
+    ? countriesP
+        .then(() => fillArtistInfo(payload, deadline))
+        // 남는 시간에 인디 워들용 구성(솔로/밴드)·성별도
+        .then(async (r) => (await fillArtistProfile(payload, deadline).catch(() => null), r))
+    : Promise.resolve(noInfo)
   const [{ en, types }, countries, info] = await Promise.all([spotifySide(), countriesP, infoP])
   const roman = Date.now() < deadline - 5000 ? await romanizeNames(payload, deadline) : { changed: 0, scanned: 0 }
   const parts = [

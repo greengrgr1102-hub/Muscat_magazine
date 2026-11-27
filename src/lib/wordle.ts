@@ -21,6 +21,10 @@ export type WordleAlbum = {
   f: string
   /** 장르 이름 */
   g: string[]
+  /** 구성: solo · band (모르면 없음) */
+  s?: string
+  /** 성별: male · female · mixed (모르면 없음) */
+  x?: string
 }
 
 type Row = Record<string, unknown>
@@ -33,17 +37,26 @@ export async function wordleAlbums(): Promise<WordleAlbum[]> {
   const db = payload.db as unknown as {
     drizzle: { execute: (x: unknown) => Promise<{ rows: Row[] }> }
   }
+  // 나라는 앨범이 아니라 아티스트 기준 (같은 아티스트면 앨범마다 같은 나라)
   const base = await db.drizzle.execute(sql`
-    select right(cover_url, 24) as k,
-           max(album) as t,
-           mode() within group (order by artist_name) as a,
-           max(cover_url) as cv,
-           min(left(release_date, 4)) as y,
-           mode() within group (order by country) as c,
-           mode() within group (order by release_type) as f
-    from picks
-    where cover_url like 'https://%/image/%' and release_date ~ '^[0-9]{4}' and album is not null
-    group by right(cover_url, 24)`)
+    with ac as (
+      select lower(split_part(artist_name, ', ', 1)) as a, mode() within group (order by country) as c
+      from picks where country is not null group by 1
+    )
+    select right(p.cover_url, 24) as k,
+           max(p.album) as t,
+           mode() within group (order by p.artist_name) as a,
+           max(p.cover_url) as cv,
+           min(left(p.release_date, 4)) as y,
+           mode() within group (order by ac.c) as c,
+           mode() within group (order by p.release_type) as f,
+           max(i.kind::text) as s,
+           max(i.gender::text) as x
+    from picks p
+    left join ac on ac.a = lower(split_part(p.artist_name, ', ', 1))
+    left join artist_info i on lower(i.name) = lower(split_part(p.artist_name, ', ', 1))
+    where p.cover_url like 'https://%/image/%' and p.release_date ~ '^[0-9]{4}' and p.album is not null
+    group by right(p.cover_url, 24)`)
   const gen = await db.drizzle.execute(sql`
     select right(p.cover_url, 24) as k, array_agg(distinct g.name) as gs
     from picks p
@@ -67,6 +80,8 @@ export async function wordleAlbums(): Promise<WordleAlbum[]> {
       c: String(r.c),
       f: String(r.f),
       g: g.slice(0, 8),
+      ...(r.s ? { s: String(r.s) } : {}),
+      ...(r.x ? { x: String(r.x) } : {}),
     })
   }
   list.sort((x, z) => (x.k < z.k ? -1 : 1))
