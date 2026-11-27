@@ -20,6 +20,8 @@ export type Player = {
   label: string
   /** true면 재생바만 떠 있고 플레이어(영상)는 내려 둔 상태 — ▶를 누르면 이어서 재생 */
   idle: boolean
+  /** 재생바가 아니라 지금 보는 페이지의 플레이어로 듣는 중 (곡 페이지 등) */
+  elsewhere?: boolean
 }
 
 type State = {
@@ -66,6 +68,9 @@ function load() {
 
 function set(next: Partial<State>, resetTime = false) {
   state = { ...state, ...next }
+  // 재생바가 다시 소리를 내면 「페이지에서 듣는 중」 표시는 끝나요
+  if (state.player?.elsewhere && !state.player.idle)
+    state = { ...state, player: { ...state.player, elsewhere: false } }
   try {
     window.localStorage.setItem(KEY, JSON.stringify({ name: state.name, songs: state.songs }))
     if ('player' in next) {
@@ -197,6 +202,39 @@ export const myPlaylist = {
       youtubeId: song.youtubeId,
     }
     set({ player: { ...p, queue: [...p.queue, s2], index: p.queue.length, idle: false } }, true)
+  },
+  /**
+   * 곡 페이지 같은 곳의 플레이어로 듣기 시작했을 때: 재생바 목록 끝에 그 곡을 쌓고(누른 순서대로),
+   * 재생바는 소리를 내리고 「이 페이지에서 듣는 중」으로 보여 줘요. 재생바의 ▶·이전·다음을 누르면 재생바가 이어받아요.
+   */
+  noteInline(song: Song) {
+    load()
+    const s2 = {
+      id: song.id,
+      track: song.track,
+      artistName: song.artistName,
+      coverUrl: song.coverUrl,
+      embed: song.embed,
+      youtubeId: song.youtubeId,
+    }
+    const p = state.player
+    if (p && p.queue[p.index]?.id === song.id) {
+      if (!p.idle || !p.elsewhere) set({ player: { ...p, idle: true, elsewhere: true } }, true)
+      return
+    }
+    const queue = p ? [...p.queue, s2] : [s2]
+    set(
+      {
+        player: {
+          queue,
+          index: queue.length - 1,
+          label: p?.label || '들은 곡',
+          idle: true,
+          elsewhere: true,
+        },
+      },
+      true,
+    )
   },
   /** 내려 둔 재생바를 다시 재생 */
   resume() {

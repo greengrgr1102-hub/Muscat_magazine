@@ -307,6 +307,8 @@ function Members({ list }: { list?: Artist['members'] }) {
   const Row = ({ m }: { m: MemberRow }) => {
     const md = asMedia(m.photo)
     const src = md?.sizes?.thumb?.url || md?.sizes?.card?.url || md?.url
+    // 멤버에 아티스트 페이지가 연결돼 있으면 이름을 누를 수 있어요 (예: 김춘추 → 놀이도감)
+    const page = m.artist && typeof m.artist === 'object' ? m.artist.slug : null
     return (
       <li className={`member${m.left ? ' member--left' : ''}`}>
         {src ? (
@@ -317,7 +319,13 @@ function Members({ list }: { list?: Artist['members'] }) {
             {m.name.slice(0, 1)}
           </span>
         )}
-        <span className="member__name">{m.name}</span>
+        {page ? (
+          <Link href={`/artists/${page}`} className="member__name member__name--link">
+            {m.name}
+          </Link>
+        ) : (
+          <span className="member__name">{m.name}</span>
+        )}
         {m.role || m.period ? (
           <span className="member__role">{[m.role, m.period].filter(Boolean).join(' · ')}</span>
         ) : null}

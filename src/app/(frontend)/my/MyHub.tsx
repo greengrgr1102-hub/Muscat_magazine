@@ -20,6 +20,7 @@ export function MyHub({
   const recent = useRecent()
   const [taste, setTaste] = useState<Taste | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [moreRecent, setMoreRecent] = useState(false)
   useEffect(() => {
     setMounted(true)
     setTaste(loadTaste())
@@ -99,7 +100,7 @@ export function MyHub({
             </button>
           </div>
           <ol className="my-recent">
-            {recent.slice(0, 20).map((s, i) => (
+            {recent.slice(0, moreRecent ? 20 : 5).map((s, i) => (
               <li key={s.id}>
                 <button
                   type="button"
@@ -127,6 +128,15 @@ export function MyHub({
               </li>
             ))}
           </ol>
+          {recent.length > 5 ? (
+            <button
+              type="button"
+              className="text-btn my-recent__more"
+              onClick={() => setMoreRecent((v) => !v)}
+            >
+              {moreRecent ? '접기' : `더보기 (${Math.min(recent.length, 20) - 5}곡)`}
+            </button>
+          ) : null}
         </section>
       ) : null}
 

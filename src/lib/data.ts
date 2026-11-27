@@ -1212,11 +1212,24 @@ export const TYPE_OPTIONS = [
   { v: 'single', label: '싱글' },
 ] as const
 const BIG = ['KR', 'JP', 'US', 'GB']
+const DECADES: Record<string, number> = { '2020s': 2020, '2010s': 2010, '2000s': 2000 }
+const isYear = (v?: string) => Boolean(v && /^(19|20)\d\d$/.test(v))
+/** 시기 값이 속한 10년 묶음 (2020s·2010s·2000s) — 연도를 골랐으면 그 연도가 속한 묶음 */
+export function eraDecade(era?: string): { key: string; from: number } | null {
+  if (!era) return null
+  if (DECADES[era] !== undefined) return { key: era, from: DECADES[era] }
+  if (isYear(era)) {
+    const from = Math.floor(Number(era) / 10) * 10
+    const key = Object.keys(DECADES).find((k) => DECADES[k] === from)
+    return key ? { key, from } : { key: 'old', from }
+  }
+  return null
+}
 
 /** 주소에서 받은 값 중 아는 값만 남겨요 */
 export function cleanFilter(sp: Record<string, string | undefined>): PickFilter {
   const f: PickFilter = {}
-  if (ERA_OPTIONS.some((o) => o.v === sp.era)) f.era = sp.era
+  if (ERA_OPTIONS.some((o) => o.v === sp.era) || isYear(sp.era)) f.era = sp.era
   if (COUNTRY_OPTIONS.some((o) => o.v === sp.c)) f.c = sp.c
   if (TYPE_OPTIONS.some((o) => o.v === sp.type)) f.type = sp.type
   const g = (sp.g || '')
@@ -1238,6 +1251,7 @@ function eraRange(era?: string): [string | null, string | null] | null {
   if (era === '2010s') return ['2010', '2020']
   if (era === '2000s') return ['2000', '2010']
   if (era === 'old') return ['1000', '2000']
+  if (isYear(era)) return [era, String(Number(era) + 1)]
   return null
 }
 

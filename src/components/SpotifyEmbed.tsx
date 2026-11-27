@@ -49,6 +49,7 @@ export function SpotifyEmbed({
   autoPlay = false,
   className = '',
   onEnded,
+  onStart,
 }: {
   embed: string | null
   title: string
@@ -56,12 +57,16 @@ export function SpotifyEmbed({
   autoPlay?: boolean
   className?: string
   onEnded?: () => void
+  /** 재생이 시작될 때마다 (멈췄다 다시 틀 때도) */
+  onStart?: () => void
 }) {
   const box = useRef<HTMLDivElement>(null)
   const uri = embedToUri(embed)
   // 최신 onEnded를 기억해 두어, 플레이어를 다시 만들지 않고도 쓸 수 있게
   const endedRef = useRef(onEnded)
   endedRef.current = onEnded
+  const startRef = useRef(onStart)
+  startRef.current = onStart
 
   useEffect(() => {
     if (!uri || !box.current) return
@@ -80,8 +85,11 @@ export function SpotifyEmbed({
           // 곡이 끝나면 알려줘요 (플리 이어 듣기용)
           let last = 0
           let done = false
+          let paused = true
           c.addListener('playback_update', (e) => {
             const d = (e as { data?: { isPaused?: boolean; position?: number; duration?: number } }).data
+            if (d && paused && d.isPaused === false) startRef.current?.()
+            if (d && typeof d.isPaused === 'boolean') paused = d.isPaused
             if (!d?.duration || done) return
             const pos = d.position || 0
             const atEnd = pos >= d.duration - 700 || (d.isPaused && last >= d.duration - 1500 && pos < 1000)

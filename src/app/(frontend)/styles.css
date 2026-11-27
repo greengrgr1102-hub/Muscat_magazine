@@ -5955,3 +5955,38 @@ a.disco__link:hover .disco__cover {
     gap: 14px;
   }
 }
+
+.my-recent__more {
+  margin-top: 16px;
+}
+
+/* 시기 > 연도 (10년 묶음을 고르면 나와요) */
+.pfilters__row--years .chip {
+  padding: 4px 12px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 멤버 이름 → 그 멤버의 아티스트 페이지 */
+.member__name--link {
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 4px;
+}
+.member__name--link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Spotify로 들을 때 플레이어 양옆의 이전·다음 */
+.mbar__ctrl--sp {
+  gap: 8px;
+}
+.mbar__ctrl--sp .mbar__sp {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 768px) {
+  .mbar__ctrl--sp {
+    width: 100%;
+  }
+}

@@ -472,6 +472,10 @@ export interface Artist {
          */
         role?: string | null;
         photo?: (number | null) | Media;
+        /**
+         * 솔로 활동 페이지가 있으면 골라 주세요. 아티스트 페이지에서 멤버 이름을 누르면 그 페이지로 가요. 예: 실리카겔 김춘추 → 놀이도감
+         */
+        artist?: (number | null) | Artist;
         left?: boolean | null;
         /**
          * 예: 2015 – 2021
@@ -1074,6 +1078,7 @@ export interface ArtistsSelect<T extends boolean = true> {
         name?: T;
         role?: T;
         photo?: T;
+        artist?: T;
         left?: T;
         period?: T;
         id?: T;

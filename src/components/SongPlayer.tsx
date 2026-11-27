@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { reportBadVideo, setSource, useSource, youtubeFor } from '@/lib/listenSource'
-import { markPlayed } from '@/lib/played'
+import { myPlaylist, type Song } from '@/lib/myPlaylist'
+import { markPlayed, pushRecent } from '@/lib/played'
 import { SpotifyEmbed } from './SpotifyEmbed'
 import { YouTubeEmbed } from './YouTubeEmbed'
 
@@ -17,6 +18,7 @@ export function SongPlayer({
   autoPlay = false,
   className = '',
   onEnded,
+  song,
 }: {
   pickId: number
   embed: string | null
@@ -27,8 +29,16 @@ export function SongPlayer({
   autoPlay?: boolean
   className?: string
   onEnded?: () => void
+  /** 있으면 여기서 듣기 시작할 때 아래 재생바 목록에 쌓고, 재생바에 「이 페이지에서 듣는 중」으로 보여요 */
+  song?: Song
 }) {
   const source = useSource()
+  const started = () => {
+    if (!song) return
+    myPlaylist.noteInline(song)
+    pushRecent(song)
+    markPlayed(song.id)
+  }
   const [vid, setVid] = useState<string | null | undefined>(youtubeId ?? undefined) // undefined = 찾는 중
   const [blocked, setBlocked] = useState(false)
   // 아래 재생바가 재생을 시작하면, 여기 있던 플레이어는 꺼서 두 곡이 겹치지 않게 해요.
@@ -78,6 +88,7 @@ export function SongPlayer({
           title={title}
           autoPlay={autoPlay}
           onEnded={onEnded}
+          onPlaying={(on) => on && started()}
           onBlocked={() => {
             setBlocked(true)
             reportBadVideo(pickId, vid!)
@@ -86,7 +97,14 @@ export function SongPlayer({
       ) : searching ? (
         <div className="song-player__wait small muted">YouTube에서 찾는 중…</div>
       ) : (
-        <SpotifyEmbed embed={embed} title={title} height={spotifyHeight} autoPlay={autoPlay} onEnded={onEnded} />
+        <SpotifyEmbed
+          embed={embed}
+          title={title}
+          height={spotifyHeight}
+          autoPlay={autoPlay}
+          onEnded={onEnded}
+          onStart={started}
+        />
       )}
       <div className="song-player__src small">
         <button type="button" className={source === 'youtube' ? 'is-on' : ''} onClick={() => setSource('youtube')}>

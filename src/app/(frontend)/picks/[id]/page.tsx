@@ -47,6 +47,14 @@ export default async function PickPage({ params }: { params: Params }) {
                 title={`${pick.track || ''} — ${pick.artistName}`}
                 spotifyHeight={352}
                 size="large"
+                song={{
+                  id: pick.id,
+                  track: pick.track,
+                  artistName: pick.artistName,
+                  coverUrl: pick.coverUrl,
+                  embed,
+                  youtubeId: pick.youtubeId,
+                }}
               />
             ) : null}
           </div>

@@ -480,7 +480,11 @@ export function PlaylistBar() {
                 {now.track || 'Untitled'}
               </Link>
               <span className="mbar__sub">
-                {live ? now.artistName : '멈춤 · ▶ 눌러서 이어 듣기'}
+                {live
+                  ? now.artistName
+                  : player!.elsewhere
+                    ? `${now.artistName} · 이 페이지에서 듣는 중`
+                    : '멈춤 · ▶ 눌러서 이어 듣기'}
                 {live ? <span className="mbar__label"> · {player!.label}</span> : null}
               </span>
             </div>
@@ -538,15 +542,35 @@ export function PlaylistBar() {
                 ) : null}
               </>
             ) : (
-              <div className="mbar__sp">
-                <SpotifyEmbed
-                  key={`${now.id}-${player!.index}`}
-                  embed={now.embed}
-                  title={`${now.track || ''} — ${now.artistName}`}
-                  height={80}
-                  autoPlay
-                  onEnded={() => void next()}
-                />
+              // Spotify로 들을 때도 이전·다음 곡으로 넘길 수 있게 플레이어 양옆에 버튼을 둬요
+              <div className="mbar__ctrl mbar__ctrl--sp">
+                <button
+                  type="button"
+                  className="mbar__prev"
+                  aria-label="이전 곡"
+                  disabled={player!.index === 0}
+                  onClick={() => myPlaylist.step(-1)}
+                >
+                  <Icon d={I.prev} />
+                </button>
+                <div className="mbar__sp">
+                  <SpotifyEmbed
+                    key={`${now.id}-${player!.index}`}
+                    embed={now.embed}
+                    title={`${now.track || ''} — ${now.artistName}`}
+                    height={80}
+                    autoPlay
+                    onEnded={() => void next()}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="mbar__next"
+                  aria-label="다음 곡"
+                  onClick={() => void next()}
+                >
+                  <Icon d={I.next} />
+                </button>
               </div>
             )}
           </div>

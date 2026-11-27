@@ -61,6 +61,15 @@ export const Artists: CollectionConfig = {
         },
         { name: 'photo', label: '얼굴 사진 (정사각형이 좋아요)', type: 'upload', relationTo: 'media' },
         {
+          name: 'artist',
+          label: '이 멤버의 아티스트 페이지 (선택)',
+          type: 'relationship',
+          relationTo: 'artists',
+          admin: {
+            description: '솔로 활동 페이지가 있으면 골라 주세요. 아티스트 페이지에서 멤버 이름을 누르면 그 페이지로 가요. 예: 실리카겔 김춘추 → 놀이도감',
+          },
+        },
+        {
           type: 'row',
           fields: [
             { name: 'left', label: '탈퇴한 멤버', type: 'checkbox', admin: { width: '50%' } },
