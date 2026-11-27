@@ -42,7 +42,11 @@ async function mb<T>(path: string): Promise<T | 'busy' | null> {
   return 'busy'
 }
 
-const sexOf = (g?: string) => (g === 'Male' ? 'male' : g === 'Female' ? 'female' : null)
+// 검색 결과는 'male', 상세 조회는 'Male'처럼 글자 크기가 달라요
+const sexOf = (g?: string) => {
+  const v = (g || '').toLowerCase()
+  return v === 'male' ? 'male' : v === 'female' ? 'female' : null
+}
 
 async function profileOf(
   name: string,
@@ -87,8 +91,13 @@ async function profileOf(
   }
 }
 
-export async function fillArtistProfile(payload: Payload, deadline: number) {
+export async function fillArtistProfile(payload: Payload, deadline: number, recheck = false) {
   const db = payload.db as unknown as DB
+  // 성별을 못 채운 아티스트를 다시 확인하기 (관리자가 한꺼번에 채울 때)
+  if (recheck)
+    await db.drizzle.execute(
+      sql`update artist_info set profile_checked_at = null where gender is null and profile_checked_at is not null`,
+    )
   // 사이트 아티스트 페이지에 멤버가 있으면 밴드 (MusicBrainz보다 먼저)
   await db.drizzle.execute(sql`
     update artist_info i set kind = 'band'

@@ -8,7 +8,8 @@ export async function POST(req: Request) {
   const { user } = await payload.auth({ headers: req.headers }).catch(() => ({ user: null }))
   if (!user || (user as { collection?: string }).collection !== 'users')
     return NextResponse.json({ error: 'admin only' }, { status: 401 })
-  const r = await fillArtistProfile(payload, Date.now() + 52_000)
+  const recheck = new URL(req.url).searchParams.get('recheck') === '1'
+  const r = await fillArtistProfile(payload, Date.now() + 52_000, recheck)
   return NextResponse.json(r, { headers: { 'Cache-Control': 'no-store' } })
 }
 
