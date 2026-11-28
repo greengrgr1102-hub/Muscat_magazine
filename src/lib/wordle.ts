@@ -21,7 +21,7 @@ export type WordleAlbum = {
   f: string
   /** 장르 이름 */
   g: string[]
-  /** 구성: solo · band (모르면 없음) */
+  /** 구성: solo · band · idol (모르면 없음) */
   s?: string
   /** 성별: male · female · mixed (모르면 없음) */
   x?: string
@@ -65,6 +65,14 @@ export async function wordleAlbums(): Promise<WordleAlbum[]> {
     where p.cover_url like 'https://%/image/%'
     group by right(p.cover_url, 24)`)
   const gmap = new Map(gen.rows.map((r) => [String(r.k), (r.gs as string[]) || []]))
+  // 아이돌: K-Pop 장르가 붙은 아티스트 (K-Pop은 아이돌에만 붙여요)
+  const idol = await db.drizzle.execute(sql`
+    select distinct lower(split_part(p.artist_name, ', ', 1)) as a
+    from picks p
+    join picks_rels r on r.parent_id = p.id and r.path = 'genres'
+    join genres g on g.id = r.genres_id
+    where g.name = 'K-Pop'`)
+  const idols = new Set(idol.rows.map((r) => String(r.a)))
   const list: WordleAlbum[] = []
   for (const r of base.rows) {
     const k = String(r.k)
@@ -80,7 +88,15 @@ export async function wordleAlbums(): Promise<WordleAlbum[]> {
       c: String(r.c),
       f: String(r.f),
       g: g.slice(0, 8),
-      ...(r.s ? { s: String(r.s) } : {}),
+      ...(idols.has(
+        String(r.a || '')
+          .split(', ')[0]
+          .toLowerCase(),
+      )
+        ? { s: 'idol' }
+        : r.s
+          ? { s: String(r.s) }
+          : {}),
       ...(r.x ? { x: String(r.x) } : {}),
     })
   }

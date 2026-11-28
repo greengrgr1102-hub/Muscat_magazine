@@ -36,15 +36,15 @@ export const ArtistInfo: CollectionConfig = {
             { label: '솔로', value: 'solo' },
             { label: '밴드·그룹', value: 'band' },
           ],
-          admin: { width: '50%', description: '인디 워들에 쓰여요. 비어 있으면 MusicBrainz로 자동으로 채워요.' },
+          admin: { width: '50%', description: '인디 워들에 쓰여요. 비어 있으면 MusicBrainz로 자동으로 채워요. 아이돌은 K-Pop 장르가 붙은 아티스트로 자동 표시돼요.' },
         },
         {
           name: 'gender',
           label: '성별',
           type: 'select',
           options: [
-            { label: '남성', value: 'male' },
-            { label: '여성', value: 'female' },
+            { label: '남', value: 'male' },
+            { label: '녀', value: 'female' },
             { label: '혼성', value: 'mixed' },
           ],
           admin: { width: '50%', description: '그룹은 멤버 성별로 (남성만·여성만·혼성). 고쳐 두면 자동 채우기가 덮어쓰지 않아요.' },

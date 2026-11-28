@@ -48,8 +48,8 @@ const COUNTRY: Record<string, string> = {
   BR: '브라질',
 }
 const SQUARE: Record<Cell, string> = { hit: '🟩', near: '🟨', miss: '⬜', unk: '⬜' }
-const KIND: Record<string, string> = { solo: '솔로', band: '밴드·그룹' }
-const SEX: Record<string, string> = { male: '남성', female: '여성', mixed: '혼성' }
+const KIND: Record<string, string> = { solo: '솔로', band: '밴드', idol: '아이돌' }
+const SEX: Record<string, string> = { male: '남', female: '녀', mixed: '혼성' }
 
 const todayKST = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
 const dayNo = (date: string) => Math.floor((Date.parse(date) - FIRST_DAY) / 86400_000) + 1
